@@ -26,9 +26,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import placeholderData from '@/app/lib/placeholder-images.json';
 import { toast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart } = useStore();
+  const db = useFirestore();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -69,10 +74,43 @@ export default function CheckoutPage() {
       await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setLoading(false);
-    clearCart();
-    setStep(4);
+    const orderData = {
+      orderId: orderId,
+      customerName: formData.name,
+      customerPhone: formData.phone,
+      address: formData.address,
+      instructions: formData.instructions,
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      })),
+      subtotal,
+      deliveryFee,
+      total,
+      status: 'Pending',
+      paymentMethod: formData.paymentMethod,
+      createdAt: serverTimestamp()
+    };
+
+    const orderRef = doc(collection(db, 'orders'), orderId!);
+    
+    setDoc(orderRef, orderData)
+      .then(() => {
+        setLoading(false);
+        clearCart();
+        setStep(4);
+      })
+      .catch(async (error) => {
+        setLoading(false);
+        const permissionError = new FirestorePermissionError({
+          path: orderRef.path,
+          operation: 'create',
+          requestResourceData: orderData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const qrImage = placeholderData.placeholderImages.find(img => img.id === 'qr-code')?.imageUrl || '';

@@ -1,6 +1,6 @@
 
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,16 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { 
-  BarChart3, Users, IndianRupee, MessageSquare, Sparkles, Loader2, 
+  BarChart3, IndianRupee, MessageSquare, Sparkles, Loader2, 
   Package, Clock, CheckCircle2, ShoppingCart,
-  ArrowUpRight, MoreHorizontal, Megaphone,
-  LayoutDashboard, Zap, Star
+  ArrowUpRight, Megaphone,
+  LayoutDashboard, Zap, Star, Trash2
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MENU_ITEMS } from '@/app/lib/menu-data';
 import { reviewSummaryGenerator } from '@/ai/flows/review-summary-generator';
 import { dailySpecialGenerator } from '@/ai/flows/daily-special-generator';
 import { toast } from '@/hooks/use-toast';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy, limit, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const MOCK_REVIEWS: Record<string, string[]> = {
   '1': ["Balanced spices!", "A bit too much onion", "Best campus snack", "Fast delivery"],
@@ -25,26 +29,65 @@ const MOCK_REVIEWS: Record<string, string[]> = {
   '5': ["Rich chocolate", "Too sweet for me", "Best presentation", "Nuts add great crunch"]
 };
 
-const INITIAL_ORDERS = [
-  { id: "#EB-9231", customer: "Rahul Sharma", items: "Chicken Biryani, Coke", total: "₹289", status: "Delivered", time: "10 mins ago" },
-  { id: "#EB-9232", customer: "Priya V.", items: "Veg Maggie, Sundae", total: "₹218", status: "Preparing", time: "15 mins ago" },
-  { id: "#EB-9233", customer: "Anand K.", items: "Paneer Momos (x2)", total: "₹258", status: "Pending", time: "22 mins ago" },
-  { id: "#EB-9234", customer: "Sneha G.", items: "Egg Maggie Special", total: "₹89", status: "Delivered", time: "45 mins ago" },
-];
-
 export const AdminSection = () => {
+  const db = useFirestore();
+  
+  // Real-time Orders
+  const ordersQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(50));
+  }, [db]);
+  
+  const { data: realOrders, loading: ordersLoading } = useCollection(ordersQuery);
+
   const [selectedDish, setSelectedDish] = useState('1');
   const [summary, setSummary] = useState('');
   const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
   
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoResult, setPromoResult] = useState<any>(null);
   const [selectedPromoDish, setSelectedPromoDish] = useState(MENU_ITEMS[0]);
 
+  // Dynamic Stats
+  const stats = useMemo(() => {
+    if (!realOrders) return { revenue: 0, count: 0, delivered: 0 };
+    const deliveredOrders = realOrders.filter(o => o.status === 'Delivered');
+    const revenue = deliveredOrders.reduce((acc, curr) => acc + (curr.total || 0), 0);
+    return {
+      revenue,
+      count: realOrders.length,
+      delivered: deliveredOrders.length
+    };
+  }, [realOrders]);
+
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
-    toast({ title: `Order ${id} updated to ${newStatus}` });
+    const orderRef = doc(db, 'orders', id);
+    updateDoc(orderRef, { status: newStatus })
+      .then(() => {
+        toast({ title: `Order ${id} updated to ${newStatus}` });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: orderRef.path,
+          operation: 'update',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+  };
+
+  const handleDeleteOrder = (id: string) => {
+    const orderRef = doc(db, 'orders', id);
+    deleteDoc(orderRef)
+      .then(() => {
+        toast({ title: `Order ${id} deleted` });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: orderRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   const handleGenerateSummary = async () => {
@@ -89,14 +132,16 @@ export const AdminSection = () => {
           </div>
           <div className="flex gap-2">
              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 px-3 py-1 font-bold">Kitchen: LIVE</Badge>
-             <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1 font-bold">Delivery: BUSY</Badge>
+             <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1 font-bold">Delivery: {stats.count > 0 ? 'BUSY' : 'IDLE'}</Badge>
           </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card p-1 rounded-2xl border w-full md:w-auto shadow-sm">
             <TabsTrigger value="overview" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Overview</TabsTrigger>
-            <TabsTrigger value="orders" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Orders</TabsTrigger>
+            <TabsTrigger value="orders" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
+              Orders {stats.count > 0 && <Badge className="ml-1 bg-white text-primary h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">{stats.count}</Badge>}
+            </TabsTrigger>
             <TabsTrigger value="inventory" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Inventory</TabsTrigger>
             <TabsTrigger value="marketing" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4" /> Marketing
@@ -106,9 +151,9 @@ export const AdminSection = () => {
           <TabsContent value="overview" className="space-y-8 animate-in fade-in duration-500">
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                {[
-                 { label: "Today's Revenue", value: "₹42,500", icon: IndianRupee, color: "text-green-600" },
-                 { label: "Orders Today", value: "128", icon: Package, color: "text-blue-600" },
-                 { label: "Avg Prep Time", value: "18m", icon: Clock, color: "text-orange-600" },
+                 { label: "Total Revenue", value: `₹${stats.revenue.toLocaleString()}`, icon: IndianRupee, color: "text-green-600" },
+                 { label: "Total Orders", value: stats.count.toString(), icon: Package, color: "text-blue-600" },
+                 { label: "Success Rate", value: stats.count > 0 ? `${Math.round((stats.delivered / stats.count) * 100)}%` : "0%", icon: CheckCircle2, color: "text-orange-600" },
                  { label: "AI Rating", value: "4.8", icon: Star, color: "text-yellow-600" }
                ].map((s, i) => (
                  <Card key={i} className="rounded-3xl border-none shadow-md overflow-hidden bg-card">
@@ -126,12 +171,13 @@ export const AdminSection = () => {
              <div className="grid lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2 rounded-3xl shadow-md border-none">
                   <CardHeader className="border-b">
-                    <CardTitle className="text-lg">Sales Trend</CardTitle>
+                    <CardTitle className="text-lg">Recent Order Volume</CardTitle>
                   </CardHeader>
                   <CardContent className="h-[200px] flex items-end gap-2 p-6">
-                    {[40, 60, 45, 90, 100, 80, 50, 70, 85].map((v, i) => (
+                    {/* Simplified live chart mock using real counts if needed */}
+                    {[20, 45, 30, 70, 85, 60, 40, 55, 90].map((v, i) => (
                       <div key={i} className="flex-1 bg-primary/10 rounded-t-lg relative group hover:bg-primary transition-all" style={{ height: `${v}%` }}>
-                         <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100">{v}%</span>
+                         <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100">{v}</span>
                       </div>
                     ))}
                   </CardContent>
@@ -140,18 +186,18 @@ export const AdminSection = () => {
                 <Card className="rounded-3xl shadow-md border-none bg-primary text-white overflow-hidden relative">
                    <Zap className="absolute -right-8 -bottom-8 w-40 h-40 opacity-10" />
                    <CardHeader>
-                     <CardTitle className="text-lg">Kitchen Rush</CardTitle>
-                     <CardDescription className="text-white/70">8 active items being prepped</CardDescription>
+                     <CardTitle className="text-lg">Live Status</CardTitle>
+                     <CardDescription className="text-white/70">{stats.count} total records processed</CardDescription>
                    </CardHeader>
                    <CardContent className="space-y-4">
                       <div className="flex justify-between items-end">
-                        <span className="text-4xl font-black">92%</span>
-                        <span className="text-xs font-bold uppercase">Efficiency</span>
+                        <span className="text-4xl font-black">{stats.count > 0 ? 'ACTIVE' : 'IDLE'}</span>
+                        <span className="text-xs font-bold uppercase">System</span>
                       </div>
                       <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-white w-[92%] transition-all" />
+                        <div className={`h-full bg-white ${stats.count > 0 ? 'w-full' : 'w-0'} transition-all`} />
                       </div>
-                      <p className="text-[10px] font-medium leading-relaxed opacity-80">Estimated wait time for new orders is currently 12 minutes above average.</p>
+                      <p className="text-[10px] font-medium leading-relaxed opacity-80">Listening to Firestore collection: /orders</p>
                    </CardContent>
                 </Card>
              </div>
@@ -159,45 +205,69 @@ export const AdminSection = () => {
 
           <TabsContent value="orders" className="animate-in fade-in slide-in-from-bottom duration-500">
             <Card className="rounded-3xl shadow-md border-none overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead className="font-bold">Order</TableHead>
-                    <TableHead className="font-bold">Customer</TableHead>
-                    <TableHead className="font-bold">Items</TableHead>
-                    <TableHead className="font-bold">Status</TableHead>
-                    <TableHead className="font-bold text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-mono text-xs font-bold">{order.id}</TableCell>
-                      <TableCell className="font-bold text-sm">{order.customer}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{order.items}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`rounded-lg font-black uppercase text-[10px] ${
-                          order.status === 'Delivered' ? 'bg-green-50 text-green-700' :
-                          order.status === 'Preparing' ? 'bg-blue-50 text-blue-700' :
-                          order.status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'
-                        }`}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => handleUpdateStatus(order.id, 'Preparing')}>
-                            <Clock className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-green-600" onClick={() => handleUpdateStatus(order.id, 'Delivered')}>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {ordersLoading ? (
+                <div className="p-20 text-center flex flex-col items-center gap-4">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                  <p className="font-bold text-muted-foreground">Fetching real-time orders...</p>
+                </div>
+              ) : realOrders.length === 0 ? (
+                <div className="p-20 text-center flex flex-col items-center gap-4">
+                  <Package className="w-16 h-16 text-muted-foreground/20" />
+                  <p className="font-bold text-muted-foreground">No orders received yet.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="font-bold">Order ID</TableHead>
+                      <TableHead className="font-bold">Customer</TableHead>
+                      <TableHead className="font-bold">Items</TableHead>
+                      <TableHead className="font-bold">Total</TableHead>
+                      <TableHead className="font-bold">Status</TableHead>
+                      <TableHead className="font-bold text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {realOrders.map((order: any) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-mono text-xs font-bold">{order.orderId}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm">{order.customerName}</span>
+                            <span className="text-[10px] text-muted-foreground">{order.customerPhone}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {order.items.map((i: any) => `${i.name} (x${i.quantity})`).join(', ')}
+                        </TableCell>
+                        <TableCell className="font-black text-primary">₹{order.total}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`rounded-lg font-black uppercase text-[10px] ${
+                            order.status === 'Delivered' ? 'bg-green-50 text-green-700' :
+                            order.status === 'Preparing' ? 'bg-blue-50 text-blue-700' :
+                            order.status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'
+                          }`}>
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => handleUpdateStatus(order.id, 'Preparing')}>
+                              <Clock className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-green-600" onClick={() => handleUpdateStatus(order.id, 'Delivered')}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-destructive" onClick={() => handleDeleteOrder(order.id)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </Card>
           </TabsContent>
 

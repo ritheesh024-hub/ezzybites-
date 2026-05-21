@@ -18,6 +18,37 @@
         }
       },
       "required": ["email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer order for food items",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "address": { "type": "string" },
+        "instructions": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "number" }
+            }
+          }
+        },
+        "subtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Preparing", "Out for Delivery", "Delivered", "Cancelled"] },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "customerPhone", "address", "items", "total", "status", "createdAt"]
     }
   },
   "auth": {
@@ -27,6 +58,10 @@
     "/admins/{userId}": {
       "schema": "#/entities/AdminProfile",
       "description": "Restricted collection for admin user metadata"
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/Order",
+      "description": "Collection of customer orders"
     }
   }
 }
