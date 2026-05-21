@@ -3,74 +3,74 @@
   "placeholderImages": [
     {
       "id": "hero-bg",
-      "description": "Background image for hero section",
-      "imageUrl": "https://picsum.photos/seed/foodbg/1920/1080",
-      "imageHint": "restaurant food"
+      "description": "Premium restaurant atmosphere",
+      "imageUrl": "https://picsum.photos/seed/restaurant-ambience/1920/1080",
+      "imageHint": "restaurant interior"
     },
     {
       "id": "cat-maggie",
-      "description": "Maggie category",
-      "imageUrl": "https://picsum.photos/seed/cat-maggie/200/200",
-      "imageHint": "noodles"
+      "description": "Hot bowl of noodles",
+      "imageUrl": "https://picsum.photos/seed/spicy-noodles/200/200",
+      "imageHint": "maggie noodles"
     },
     {
       "id": "cat-biryani",
-      "description": "Biryani category",
-      "imageUrl": "https://picsum.photos/seed/cat-biryani/200/200",
-      "imageHint": "biryani"
+      "description": "Aromatic rice dish",
+      "imageUrl": "https://picsum.photos/seed/hyderabadi-biryani/200/200",
+      "imageHint": "chicken biryani"
     },
     {
       "id": "cat-momos",
-      "description": "Momos category",
-      "imageUrl": "https://picsum.photos/seed/cat-momos/200/200",
-      "imageHint": "dumplings"
+      "description": "Steamed dumplings",
+      "imageUrl": "https://picsum.photos/seed/steamed-dumplings/200/200",
+      "imageHint": "momos dumplings"
     },
     {
       "id": "cat-ice-creams",
-      "description": "Ice Creams category",
-      "imageUrl": "https://picsum.photos/seed/cat-ice-creams/200/200",
+      "description": "Cold desserts",
+      "imageUrl": "https://picsum.photos/seed/dessert-icecream/200/200",
       "imageHint": "ice cream"
     },
     {
       "id": "food-maggie-1",
-      "description": "Classic Veg Maggie",
-      "imageUrl": "https://picsum.photos/seed/maggie1/600/400",
-      "imageHint": "maggie"
+      "description": "Classic Veg Maggie with vegetables",
+      "imageUrl": "https://picsum.photos/seed/veg-maggie/600/400",
+      "imageHint": "vegetable noodles"
     },
     {
       "id": "food-maggie-2",
-      "description": "Egg Maggie Special",
-      "imageUrl": "https://picsum.photos/seed/maggie2/600/400",
+      "description": "Egg Maggie Special with boiled eggs",
+      "imageUrl": "https://picsum.photos/seed/egg-noodles-dish/600/400",
       "imageHint": "egg noodles"
     },
     {
       "id": "food-biryani-1",
-      "description": "Hyderabadi Chicken Biryani",
-      "imageUrl": "https://picsum.photos/seed/biryani1/600/400",
-      "imageHint": "biryani"
+      "description": "Authentic Chicken Biryani with saffron rice",
+      "imageUrl": "https://picsum.photos/seed/spicy-biryani/600/400",
+      "imageHint": "biryani plate"
     },
     {
       "id": "food-momos-1",
-      "description": "Paneer Steam Momos",
-      "imageUrl": "https://picsum.photos/seed/momos1/600/400",
-      "imageHint": "momos"
+      "description": "Fresh Paneer Steam Momos",
+      "imageUrl": "https://picsum.photos/seed/paneer-momos/600/400",
+      "imageHint": "steamed momos"
     },
     {
       "id": "food-icecream-1",
-      "description": "Classic Chocolate Sundae",
-      "imageUrl": "https://picsum.photos/seed/icecream1/600/400",
-      "imageHint": "chocolate icecream"
+      "description": "Rich Chocolate Sundae",
+      "imageUrl": "https://picsum.photos/seed/chocolate-sundae/600/400",
+      "imageHint": "chocolate sundae"
     },
     {
       "id": "food-maggie-3",
-      "description": "Spicy Chicken Maggie",
-      "imageUrl": "https://picsum.photos/seed/maggie3/600/400",
-      "imageHint": "chicken maggie"
+      "description": "Spicy Roasted Chicken Maggie",
+      "imageUrl": "https://picsum.photos/seed/chicken-maggie/600/400",
+      "imageHint": "chicken noodles"
     },
     {
       "id": "qr-code",
-      "description": "QR Code for payments",
-      "imageUrl": "https://picsum.photos/seed/qr/200/200",
+      "description": "Digital payment QR Code",
+      "imageUrl": "https://picsum.photos/seed/payment-qr/200/200",
       "imageHint": "qr code"
     }
   ]

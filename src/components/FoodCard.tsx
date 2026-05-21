@@ -7,9 +7,14 @@ import { FoodItem, useStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import placeholderData from '@/app/lib/placeholder-images.json';
 
 export const FoodCard = ({ item }: { item: FoodItem }) => {
   const addToCart = useStore((state) => state.addToCart);
+  
+  // Find the specific placeholder hint for this item's image
+  const imgData = placeholderData.placeholderImages.find(img => img.imageUrl === item.image);
+  const aiHint = imgData?.imageHint || item.category.toLowerCase();
 
   const handleAdd = () => {
     addToCart(item);
@@ -28,7 +33,7 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
           alt={item.name} 
           fill 
           className="object-cover group-hover:scale-110 transition-transform duration-700"
-          data-ai-hint={item.category.toLowerCase()}
+          data-ai-hint={aiHint}
         />
         <div className="absolute top-3 left-3 flex gap-2">
           {item.isVeg ? (
