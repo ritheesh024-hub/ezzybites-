@@ -69,9 +69,9 @@
     },
     {
       "id": "qr-code",
-      "description": "Digital payment QR Code",
-      "imageUrl": "https://picsum.photos/seed/payment-qr/200/200",
-      "imageHint": "qr code"
+      "description": "Official Ezzy Bites UPI QR Code",
+      "imageUrl": "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=upi://pay?pa=8639366800@ybl%26pn=Ezzy%20Bites%26cu=INR",
+      "imageHint": "payment qr"
     }
   ]
 }
