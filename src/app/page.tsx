@@ -1,8 +1,8 @@
+
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SavorTool } from '@/components/SavorTool';
-import { AdminSection } from '@/components/AdminSection';
 import { FoodCard } from '@/components/FoodCard';
 import { MENU_ITEMS, CATEGORIES } from '@/app/lib/menu-data';
 import { ShoppingBag, ArrowRight, Zap, Star, MapPin, Phone, Instagram, Twitter, Facebook } from 'lucide-react';
@@ -160,9 +160,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* Admin Panel at Bottom */}
-        <AdminSection />
       </main>
 
       {/* Footer */}

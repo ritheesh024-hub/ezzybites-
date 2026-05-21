@@ -1,0 +1,32 @@
+
+{
+  "entities": {
+    "AdminProfile": {
+      "title": "Admin Profile",
+      "description": "Details for administrative users authorized to access the dashboard",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the administrator"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "description": "The user role, must be 'admin'"
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "/admins/{userId}": {
+      "schema": "#/entities/AdminProfile",
+      "description": "Restricted collection for admin user metadata"
+    }
+  }
+}
