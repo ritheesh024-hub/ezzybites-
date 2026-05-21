@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -7,7 +8,7 @@ import { Search, Loader2, PackageX, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { FoodItem } from '@/app/lib/store';
 
 export default function MenuPage() {
@@ -17,8 +18,8 @@ export default function MenuPage() {
 
   const productsQuery = useMemo(() => {
     if (!db) return null;
-    // Newest items first. Requires a Firestore index on createdAt.
-    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    // Simple query to avoid index requirements initially
+    return query(collection(db, 'products'));
   }, [db]);
 
   const { data: menuItems, loading, error } = useCollection<FoodItem>(productsQuery);

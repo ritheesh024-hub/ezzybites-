@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -19,7 +20,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import placeholderData from '@/app/lib/placeholder-images.json';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, limit, orderBy } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
 import { FoodItem } from '@/app/lib/store';
 
 export default function Home() {
@@ -32,9 +33,8 @@ export default function Home() {
 
   const menuQuery = useMemo(() => {
     if (!db) return null;
-    // We order by createdAt to show newest first. 
-    // If this fails, it might be due to a missing Firestore index.
-    return query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(10));
+    // Simple query to avoid index requirements initially
+    return query(collection(db, 'products'), limit(12));
   }, [db]);
 
   const { data: trendingItems, loading, error } = useCollection<FoodItem>(menuQuery);

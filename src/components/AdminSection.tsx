@@ -19,7 +19,7 @@ import { CATEGORIES } from '@/app/lib/menu-data';
 import { dailySpecialGenerator } from '@/ai/flows/daily-special-generator';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -29,13 +29,13 @@ export const AdminSection = () => {
   
   const ordersQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(50));
+    return query(collection(db, 'orders'), limit(100));
   }, [db]);
   const { data: realOrders, loading: ordersLoading } = useCollection<any>(ordersQuery);
 
   const menuQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'products'));
   }, [db]);
   const { data: dbMenu, loading: menuLoading } = useCollection<any>(menuQuery);
 
@@ -60,7 +60,6 @@ export const AdminSection = () => {
   const handleUpdateStatus = (id: string, newStatus: string) => {
     if (!db) return;
     const orderRef = doc(db, 'orders', id);
-    // Non-blocking write
     updateDoc(orderRef, { status: newStatus }).catch(async (e) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ 
         path: orderRef.path, operation: 'update', requestResourceData: { status: newStatus }
@@ -71,7 +70,6 @@ export const AdminSection = () => {
   const handleDeleteOrder = (id: string) => {
     if (!db || !window.confirm("Delete order?")) return;
     const orderRef = doc(db, 'orders', id);
-    // Non-blocking delete
     deleteDoc(orderRef).catch(async (e) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: orderRef.path, operation: 'delete' }));
     });
@@ -106,7 +104,6 @@ export const AdminSection = () => {
       createdAt: editingItem?.createdAt || serverTimestamp()
     };
 
-    // Non-blocking write
     setDoc(itemRef, finalData, { merge: true })
       .then(() => {
         setSaveLoading(false);
@@ -267,19 +264,6 @@ export const AdminSection = () => {
                         />
                       </div>
                     </div>
-                    
-                    {menuFormData.imageUrl && (
-                      <div className="relative rounded-3xl overflow-hidden border shadow-sm h-48 bg-secondary/20 group">
-                        <img 
-                          src={menuFormData.imageUrl} 
-                          className="h-full w-full object-cover" 
-                          alt="Preview" 
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Invalid+Image+URL';
-                          }}
-                        />
-                      </div>
-                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -320,9 +304,6 @@ export const AdminSection = () => {
                       src={item.imageUrl} 
                       alt={item.name} 
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-                      }}
                     />
                     <Badge className="absolute top-4 left-4 bg-white/90 backdrop-blur text-[9px] uppercase font-black text-foreground border-none">
                       {item.category}
@@ -367,7 +348,6 @@ export const AdminSection = () => {
               ))}
             </div>
           </TabsContent>
-
           <TabsContent value="marketing">
              <Card className="rounded-[40px] border-none shadow-xl bg-card p-6 md:p-12">
                 <div className="max-w-2xl">
