@@ -1,24 +1,34 @@
 
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { SavorTool } from '@/components/SavorTool';
 import { FoodCard } from '@/components/FoodCard';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
-import { MENU_ITEMS, CATEGORIES } from '@/app/lib/menu-data';
-import { ShoppingBag, ArrowRight, Zap, Star, MapPin, Phone, Instagram, Twitter, Facebook, Lock, Clock, HelpCircle } from 'lucide-react';
+import { CATEGORIES } from '@/app/lib/menu-data';
+import { ShoppingBag, ArrowRight, Zap, Star, MapPin, Phone, Instagram, Twitter, Facebook, Lock, Clock, HelpCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import Link from 'next/link';
 import Image from 'next/image';
 import placeholderData from '@/app/lib/placeholder-images.json';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, limit } from 'firebase/firestore';
 
 export default function Home() {
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const db = useFirestore();
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
   }, []);
+
+  const menuQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'menu'), limit(6));
+  }, [db]);
+
+  const { data: trendingItems, loading } = useCollection<any>(menuQuery);
 
   const getImg = (id: string) => placeholderData.placeholderImages.find(img => img.id === id)?.imageUrl || '';
 
@@ -98,11 +108,21 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-              {MENU_ITEMS.slice(0, 6).map((item) => (
-                <FoodCard key={item.id} item={item} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : trendingItems.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                {trendingItems.map((item) => (
+                  <FoodCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-10 bg-muted/20 rounded-3xl">
+                <p className="text-muted-foreground font-medium">New dishes coming soon! Explore our full menu to see more.</p>
+              </div>
+            )}
           </div>
         </section>
 

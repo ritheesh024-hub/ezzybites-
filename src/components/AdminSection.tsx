@@ -1,25 +1,28 @@
 
 "use client"
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   BarChart3, IndianRupee, MessageSquare, Sparkles, Loader2, 
   Package, Clock, CheckCircle2, ShoppingCart,
   ArrowUpRight, Megaphone,
-  LayoutDashboard, Zap, Star, Trash2
+  LayoutDashboard, Zap, Star, Trash2, Plus, Edit2, X, Image as ImageIcon
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MENU_ITEMS } from '@/app/lib/menu-data';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { CATEGORIES } from '@/app/lib/menu-data';
 import { reviewSummaryGenerator } from '@/ai/flows/review-summary-generator';
 import { dailySpecialGenerator } from '@/ai/flows/daily-special-generator';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, limit, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -37,16 +40,37 @@ export const AdminSection = () => {
     if (!db) return null;
     return query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(50));
   }, [db]);
-  
   const { data: realOrders, loading: ordersLoading } = useCollection(ordersQuery);
 
+  // Real-time Menu
+  const menuQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'menu'), orderBy('category'));
+  }, [db]);
+  const { data: dbMenu, loading: menuLoading } = useCollection(menuQuery);
+
+  // AI State
   const [selectedDish, setSelectedDish] = useState('1');
   const [summary, setSummary] = useState('');
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoResult, setPromoResult] = useState<any>(null);
-  const [selectedPromoDish, setSelectedPromoDish] = useState(MENU_ITEMS[0]);
+  const [selectedPromoDish, setSelectedPromoDish] = useState<any>(null);
+
+  // Menu Form State
+  const [isMenuDialogOpen, setIsMenuDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [menuFormData, setMenuFormData] = useState({
+    name: '',
+    description: '',
+    price: 0,
+    category: 'Veg Maggie',
+    image: '',
+    isVeg: true,
+    isAvailable: true,
+    rating: 4.5
+  });
 
   // Dynamic Stats
   const stats = useMemo(() => {
@@ -67,11 +91,7 @@ export const AdminSection = () => {
         toast({ title: `Order ${id} updated to ${newStatus}` });
       })
       .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: orderRef.path,
-          operation: 'update',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: orderRef.path, operation: 'update' }));
       });
   };
 
@@ -82,11 +102,47 @@ export const AdminSection = () => {
         toast({ title: `Order ${id} deleted` });
       })
       .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: orderRef.path,
-          operation: 'delete',
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: orderRef.path, operation: 'delete' }));
+      });
+  };
+
+  const handleSaveMenuItem = () => {
+    const itemId = editingItem ? editingItem.id : `ITEM-${Date.now()}`;
+    const itemRef = doc(db, 'menu', itemId);
+    const data = {
+      ...menuFormData,
+      price: Number(menuFormData.price),
+      updatedAt: serverTimestamp()
+    };
+
+    setDoc(itemRef, data, { merge: true })
+      .then(() => {
+        toast({ title: editingItem ? "Item Updated" : "Item Added", description: `${data.name} is now live.` });
+        setIsMenuDialogOpen(false);
+        setEditingItem(null);
+        setMenuFormData({
+          name: '', description: '', price: 0, category: 'Veg Maggie', image: '', isVeg: true, isAvailable: true, rating: 4.5
         });
-        errorEmitter.emit('permission-error', permissionError);
+      })
+      .catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: itemRef.path, operation: 'write', requestResourceData: data }));
+      });
+  };
+
+  const toggleAvailability = (id: string, current: boolean) => {
+    const itemRef = doc(db, 'menu', id);
+    updateDoc(itemRef, { isAvailable: !current })
+      .catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: itemRef.path, operation: 'update' }));
+      });
+  };
+
+  const handleDeleteItem = (id: string) => {
+    const itemRef = doc(db, 'menu', id);
+    deleteDoc(itemRef)
+      .then(() => toast({ title: "Item removed from menu" }))
+      .catch(async (error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: itemRef.path, operation: 'delete' }));
       });
   };
 
@@ -104,6 +160,7 @@ export const AdminSection = () => {
   };
 
   const handleGeneratePromo = async () => {
+    if (!selectedPromoDish) return;
     setPromoLoading(true);
     try {
       const result = await dailySpecialGenerator({
@@ -128,7 +185,7 @@ export const AdminSection = () => {
               <LayoutDashboard className="w-8 h-8 text-primary" />
               Easy<span className="text-primary">Bites</span> Command Center
             </h1>
-            <p className="text-muted-foreground text-sm font-medium">Real-time operations & intelligence</p>
+            <p className="text-muted-foreground text-sm font-medium">Real-time operations & dynamic menu control</p>
           </div>
           <div className="flex gap-2">
              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 px-3 py-1 font-bold">Kitchen: LIVE</Badge>
@@ -142,7 +199,7 @@ export const AdminSection = () => {
             <TabsTrigger value="orders" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
               Orders {stats.count > 0 && <Badge className="ml-1 bg-white text-primary h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">{stats.count}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Inventory</TabsTrigger>
+            <TabsTrigger value="inventory" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Menu & Stock</TabsTrigger>
             <TabsTrigger value="marketing" className="rounded-xl px-6 py-2.5 font-bold data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4" /> Marketing
             </TabsTrigger>
@@ -166,40 +223,6 @@ export const AdminSection = () => {
                     </CardContent>
                  </Card>
                ))}
-             </div>
-             
-             <div className="grid lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 rounded-3xl shadow-md border-none">
-                  <CardHeader className="border-b">
-                    <CardTitle className="text-lg">Recent Order Volume</CardTitle>
-                  </CardHeader>
-                  <CardContent className="h-[200px] flex items-end gap-2 p-6">
-                    {/* Simplified live chart mock using real counts if needed */}
-                    {[20, 45, 30, 70, 85, 60, 40, 55, 90].map((v, i) => (
-                      <div key={i} className="flex-1 bg-primary/10 rounded-t-lg relative group hover:bg-primary transition-all" style={{ height: `${v}%` }}>
-                         <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100">{v}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-3xl shadow-md border-none bg-primary text-white overflow-hidden relative">
-                   <Zap className="absolute -right-8 -bottom-8 w-40 h-40 opacity-10" />
-                   <CardHeader>
-                     <CardTitle className="text-lg">Live Status</CardTitle>
-                     <CardDescription className="text-white/70">{stats.count} total records processed</CardDescription>
-                   </CardHeader>
-                   <CardContent className="space-y-4">
-                      <div className="flex justify-between items-end">
-                        <span className="text-4xl font-black">{stats.count > 0 ? 'ACTIVE' : 'IDLE'}</span>
-                        <span className="text-xs font-bold uppercase">System</span>
-                      </div>
-                      <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
-                        <div className={`h-full bg-white ${stats.count > 0 ? 'w-full' : 'w-0'} transition-all`} />
-                      </div>
-                      <p className="text-[10px] font-medium leading-relaxed opacity-80">Listening to Firestore collection: /orders</p>
-                   </CardContent>
-                </Card>
              </div>
           </TabsContent>
 
@@ -272,31 +295,119 @@ export const AdminSection = () => {
           </TabsContent>
 
           <TabsContent value="inventory" className="animate-in fade-in slide-in-from-bottom duration-500">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {MENU_ITEMS.map((item) => (
-                <Card key={item.id} className="rounded-3xl border-none shadow-md overflow-hidden group">
-                  <CardContent className="p-0">
-                    <div className="relative h-24 bg-muted">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-60" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-3 left-4">
-                        <h4 className="text-white font-bold text-sm">{item.name}</h4>
-                        <span className="text-white/80 text-[10px] uppercase font-black tracking-widest">{item.category}</span>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black uppercase tracking-widest">Menu Management</h2>
+              <Dialog open={isMenuDialogOpen} onOpenChange={(open) => {
+                setIsMenuDialogOpen(open);
+                if (!open) { setEditingItem(null); setMenuFormData({ name: '', description: '', price: 0, category: 'Veg Maggie', image: '', isVeg: true, isAvailable: true, rating: 4.5 }); }
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl font-bold gap-2">
+                    <Plus className="w-4 h-4" /> Add Item
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl rounded-[32px]">
+                  <DialogHeader>
+                    <DialogTitle>{editingItem ? 'Edit Food Item' : 'Add New Food Item'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid md:grid-cols-2 gap-6 py-4">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Dish Name</Label>
+                        <Input value={menuFormData.name} onChange={(e) => setMenuFormData({...menuFormData, name: e.target.value})} placeholder="e.g. Peri Peri Maggie" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Price (₹)</Label>
+                        <Input type="number" value={menuFormData.price} onChange={(e) => setMenuFormData({...menuFormData, price: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={menuFormData.category}
+                          onChange={(e) => setMenuFormData({...menuFormData, category: e.target.value})}
+                        >
+                          {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-6 pt-2">
+                        <div className="flex items-center gap-2">
+                          <Switch checked={menuFormData.isVeg} onCheckedChange={(v) => setMenuFormData({...menuFormData, isVeg: v})} />
+                          <Label>Veg</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={menuFormData.isAvailable} onCheckedChange={(v) => setMenuFormData({...menuFormData, isAvailable: v})} />
+                          <Label>Available</Label>
+                        </div>
                       </div>
                     </div>
-                    <div className="p-5 flex items-center justify-between">
-                       <div className="space-y-1">
-                          <p className="text-xs font-bold text-muted-foreground">Availability</p>
-                          <Badge className={item.isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
-                            {item.isAvailable ? "In Stock" : "Sold Out"}
-                          </Badge>
-                       </div>
-                       <Switch checked={item.isAvailable} />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Image URL</Label>
+                        <Input value={menuFormData.image} onChange={(e) => setMenuFormData({...menuFormData, image: e.target.value})} placeholder="https://picsum.photos/..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea value={menuFormData.description} onChange={(e) => setMenuFormData({...menuFormData, description: e.target.value})} placeholder="Delicious spicy noodles..." />
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsMenuDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveMenuItem} disabled={!menuFormData.name || !menuFormData.image}>Save Item</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
+
+            {menuLoading ? (
+              <div className="p-20 text-center"><Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" /></div>
+            ) : dbMenu.length === 0 ? (
+              <div className="p-20 text-center bg-card rounded-3xl border border-dashed">
+                <ImageIcon className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground font-bold">No menu items found in Firestore. Add your first item!</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {dbMenu.map((item: any) => (
+                  <Card key={item.id} className="rounded-3xl border-none shadow-md overflow-hidden group">
+                    <CardContent className="p-0">
+                      <div className="relative h-32 bg-muted">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-60" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-4 flex justify-between items-end w-[calc(100%-32px)]">
+                          <div>
+                            <h4 className="text-white font-bold text-sm">{item.name}</h4>
+                            <span className="text-white/80 text-[10px] uppercase font-black tracking-widest">{item.category}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="secondary" className="h-7 w-7 rounded-lg" onClick={() => {
+                              setEditingItem(item);
+                              setMenuFormData({...item});
+                              setIsMenuDialogOpen(true);
+                            }}>
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button size="icon" variant="destructive" className="h-7 w-7 rounded-lg" onClick={() => handleDeleteItem(item.id)}>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5 flex items-center justify-between">
+                         <div className="space-y-1">
+                            <p className="text-xs font-bold text-muted-foreground">₹{item.price} • {item.isVeg ? 'Veg' : 'Non-Veg'}</p>
+                            <Badge className={item.isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                              {item.isAvailable ? "In Stock" : "Sold Out"}
+                            </Badge>
+                         </div>
+                         <Switch checked={item.isAvailable} onCheckedChange={() => toggleAvailability(item.id, item.isAvailable)} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="marketing" className="space-y-6 animate-in fade-in duration-500">
@@ -310,15 +421,15 @@ export const AdminSection = () => {
                       <div className="space-y-2">
                          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select Dish</Label>
                          <div className="grid grid-cols-2 gap-2">
-                           {MENU_ITEMS.slice(0, 4).map((item) => (
+                           {(dbMenu.length > 0 ? dbMenu : []).slice(0, 4).map((item: any) => (
                              <button
                                key={item.id}
                                onClick={() => setSelectedPromoDish(item)}
                                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                                 selectedPromoDish.id === item.id ? 'border-primary bg-primary/5' : 'border-transparent bg-muted/50'
+                                 selectedPromoDish?.id === item.id ? 'border-primary bg-primary/5' : 'border-transparent bg-muted/50'
                                }`}
                              >
-                               <span className="text-[10px] block font-black">{item.name}</span>
+                               <span className="text-[10px] block font-black truncate">{item.name}</span>
                              </button>
                            ))}
                          </div>
@@ -326,7 +437,7 @@ export const AdminSection = () => {
                       <Button 
                         className="w-full h-12 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20"
                         onClick={handleGeneratePromo}
-                        disabled={promoLoading}
+                        disabled={promoLoading || !selectedPromoDish}
                       >
                         {promoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Megaphone className="w-4 h-4" />}
                         Generate Special
@@ -348,7 +459,10 @@ export const AdminSection = () => {
                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Special Price</p>
                                  <p className="text-2xl font-black">₹{promoResult.finalPrice}</p>
                               </div>
-                              <Button variant="outline" className="rounded-xl border-primary text-primary font-bold text-xs h-9">
+                              <Button variant="outline" className="rounded-xl border-primary text-primary font-bold text-xs h-9" onClick={() => {
+                                navigator.clipboard.writeText(`${promoResult.promoTitle}\n${promoResult.promoDescription}\nOnly for ₹${promoResult.finalPrice}!`);
+                                toast({ title: "Copied to clipboard" });
+                              }}>
                                  Copy to Post
                               </Button>
                            </div>
@@ -359,48 +473,6 @@ export const AdminSection = () => {
                         <Sparkles className="w-12 h-12 mx-auto" />
                         <p className="font-bold">Select a dish to generate a promotion</p>
                      </div>
-                   )}
-                </Card>
-             </div>
-             
-             <div className="grid lg:grid-cols-3 gap-6">
-                <Card className="rounded-3xl border-none shadow-md">
-                   <CardHeader>
-                      <CardTitle className="text-lg">Customer Sentiment</CardTitle>
-                      <CardDescription>Synthesize reviews with Genkit AI.</CardDescription>
-                   </CardHeader>
-                   <CardContent className="space-y-4">
-                      {MENU_ITEMS.slice(0, 3).map(item => (
-                        <button
-                          key={item.id}
-                          onClick={() => setSelectedDish(item.id)}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
-                            selectedDish === item.id ? 'border-primary bg-primary/5' : 'border-transparent bg-muted/50'
-                          }`}
-                        >
-                           <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center font-bold text-xs">
-                             {item.rating}
-                           </div>
-                           <span className="font-bold text-sm">{item.name}</span>
-                        </button>
-                      ))}
-                      <Button className="w-full rounded-xl font-bold h-12" variant="outline" onClick={handleGenerateSummary} disabled={loadingFeedback}>
-                        {loadingFeedback ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageSquare className="w-4 h-4 mr-2" />}
-                        Analyze Feedback
-                      </Button>
-                   </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2 rounded-3xl border-none shadow-md flex items-center justify-center p-8">
-                   {summary ? (
-                     <div className="text-center space-y-4 animate-in fade-in duration-500">
-                        <p className="text-xl md:text-2xl font-medium leading-relaxed italic text-foreground/80">
-                           "{summary}"
-                        </p>
-                        <Badge className="bg-green-100 text-green-700 font-bold px-4 py-1">Actionable Insight</Badge>
-                     </div>
-                   ) : (
-                     <p className="text-muted-foreground/30 font-black uppercase text-sm">Select dish to analyze sentiment</p>
                    )}
                 </Card>
              </div>

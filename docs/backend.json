@@ -49,6 +49,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerName", "customerPhone", "address", "items", "total", "status", "createdAt"]
+    },
+    "FoodItem": {
+      "title": "Food Item",
+      "description": "A menu item available for purchase",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "image": { "type": "string" },
+        "isVeg": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "category", "image", "isVeg", "isAvailable"]
     }
   },
   "auth": {
@@ -62,6 +79,10 @@
     "/orders/{orderId}": {
       "schema": "#/entities/Order",
       "description": "Collection of customer orders"
+    },
+    "/menu/{itemId}": {
+      "schema": "#/entities/FoodItem",
+      "description": "Collection of dynamic menu items"
     }
   }
 }
