@@ -25,22 +25,22 @@ export const Navbar = () => {
   return (
     <nav className={cn(
       "fixed top-0 left-0 right-0 z-[100] transition-all duration-500",
-      scrolled ? "py-2" : "py-6"
+      scrolled ? "py-2" : "py-4 md:py-6"
     )}>
       <div className="container mx-auto px-4">
         <div className={cn(
-          "h-16 flex items-center justify-between px-6 transition-all duration-500",
+          "h-14 md:h-16 flex items-center justify-between px-4 md:px-6 transition-all duration-500",
           scrolled 
             ? "glass rounded-full shadow-2xl shadow-black/5" 
             : "bg-transparent"
         )}>
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center transform group-hover:rotate-12 transition-all shadow-lg shadow-primary/20">
-              <ShoppingBag className="w-5 h-5 text-primary-foreground" />
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-xl md:rounded-2xl flex items-center justify-center transform group-hover:rotate-12 transition-all shadow-lg shadow-primary/20">
+              <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
             </div>
             <span className={cn(
-              "text-2xl font-headline font-black tracking-tight transition-colors",
+              "text-lg md:text-2xl font-headline font-black tracking-tight transition-colors",
               !scrolled ? "text-white" : "text-foreground"
             )}>
               Ezzy<span className="text-primary">Bites</span>
@@ -93,16 +93,16 @@ export const Navbar = () => {
             </Button>
           </div>
 
-          {/* Mobile Menu Trigger */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile Actions */}
+          <div className="md:hidden flex items-center gap-1">
             <CartDrawer>
               <Button variant="ghost" size="icon" className={cn(
-                "relative rounded-full",
+                "relative rounded-full w-10 h-10",
                 !scrolled ? "text-white" : "text-foreground"
               )}>
-                <ShoppingBag className="w-6 h-6" />
+                <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 px-1.5 py-0 min-w-[1.2rem] h-[1.2rem] flex items-center justify-center rounded-full bg-primary text-white text-[10px] border-2 border-background">
+                  <Badge className="absolute top-1 right-1 px-1 py-0 min-w-[1rem] h-[1rem] flex items-center justify-center rounded-full bg-primary text-white text-[9px] border-2 border-background">
                     {cartCount}
                   </Badge>
                 )}
@@ -110,10 +110,10 @@ export const Navbar = () => {
             </CartDrawer>
             
             <Button variant="ghost" size="icon" className={cn(
-              "rounded-full transition-colors",
+              "rounded-full w-10 h-10 transition-colors",
               !scrolled ? "text-white" : "text-foreground"
             )} onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
         </div>
@@ -122,19 +122,19 @@ export const Navbar = () => {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full glass border-t border-white/10 animate-in slide-in-from-top duration-300">
-          <div className="flex flex-col p-6 gap-4">
-            <div className="relative">
+          <div className="flex flex-col p-6 gap-2">
+            <div className="relative mb-4">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input 
                 type="text" 
                 placeholder="Search food..." 
-                className="w-full bg-secondary h-12 pl-12 pr-4 rounded-2xl focus:outline-none"
+                className="w-full bg-secondary h-12 pl-12 pr-4 rounded-2xl focus:outline-none text-sm"
               />
             </div>
-            <Link href="/" className="px-4 py-3 font-black uppercase tracking-widest text-xs hover:text-primary transition-colors">Home</Link>
-            <Link href="/menu" className="px-4 py-3 font-black uppercase tracking-widest text-xs hover:text-primary transition-colors">Menu</Link>
-            <Link href="/favorites" className="px-4 py-3 font-black uppercase tracking-widest text-xs hover:text-primary transition-colors">Favorites</Link>
-            <Link href="/orders" className="px-4 py-3 font-black uppercase tracking-widest text-xs hover:text-primary transition-colors">My Orders</Link>
+            <Link href="/" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Home</Link>
+            <Link href="/menu" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Menu</Link>
+            <Link href="/favorites" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Favorites</Link>
+            <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">My Orders</Link>
           </div>
         </div>
       )}
