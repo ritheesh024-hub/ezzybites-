@@ -36,7 +36,7 @@ export default function CheckoutPage() {
   const db = useFirestore();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -45,6 +45,7 @@ export default function CheckoutPage() {
     paymentMethod: 'cod'
   });
 
+  // Generate ID on client mount to avoid hydration mismatch
   useEffect(() => {
     setOrderId(`EB-${Math.floor(Math.random() * 90000) + 10000}`);
   }, []);
@@ -57,6 +58,15 @@ export default function CheckoutPage() {
   const handleBack = () => setStep(step - 1);
 
   const handleSubmit = async () => {
+    if (!db) {
+      toast({ 
+        variant: "destructive", 
+        title: "Connection Error", 
+        description: "Firestore is not initialized. Please refresh." 
+      });
+      return;
+    }
+
     if (!formData.name || !formData.phone || !formData.address) {
       toast({ 
         variant: "destructive", 
@@ -69,38 +79,42 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
-    if (formData.paymentMethod === 'razorpay') {
-      toast({ title: "Opening Secure Gateway...", description: "Connecting to Razorpay" });
+    // Mock delay for payment processing
+    if (formData.paymentMethod !== 'cod') {
+      toast({ title: "Connecting...", description: "Secure payment gateway opening." });
       await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
+    const currentOrderId = orderId || `EB-${Date.now()}`;
+    
     const orderData = {
-      orderId: orderId,
+      orderId: currentOrderId,
       customerName: formData.name,
       customerPhone: formData.phone,
       address: formData.address,
-      instructions: formData.instructions,
+      instructions: formData.instructions || '',
       items: cart.map(item => ({
         id: item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity
       })),
-      subtotal,
-      deliveryFee,
-      total,
+      subtotal: Number(subtotal),
+      deliveryFee: Number(deliveryFee),
+      total: Number(total),
       status: 'Pending',
       paymentMethod: formData.paymentMethod,
       createdAt: serverTimestamp()
     };
 
-    const orderRef = doc(collection(db, 'orders'), orderId!);
+    const orderRef = doc(collection(db, 'orders'), currentOrderId);
     
     setDoc(orderRef, orderData)
       .then(() => {
         setLoading(false);
         clearCart();
         setStep(4);
+        toast({ title: "Order Success!", description: "Your meal is being prepared." });
       })
       .catch(async (error) => {
         setLoading(false);
