@@ -1,6 +1,6 @@
 
 "use client"
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -137,10 +137,10 @@ export const AdminSection = () => {
     }
 
     setSaveLoading(true);
+    // CRITICAL: Preserve the ID if editing, otherwise create a new one
     const itemId = editingItem ? editingItem.id : `ITEM-${Date.now()}`;
     const itemRef = doc(db, 'menu', itemId);
     
-    // Construct clean data object
     const finalData = {
       id: itemId,
       name: menuFormData.name.trim(),
@@ -157,14 +157,11 @@ export const AdminSection = () => {
     setDoc(itemRef, finalData, { merge: true })
       .then(() => {
         toast({ 
-          title: editingItem ? "Dish Updated" : "Dish Published! 🚀", 
-          description: `${finalData.name} is now visible to customers.` 
+          title: editingItem ? "Changes Applied" : "Dish Published! 🚀", 
+          description: `${finalData.name} is ${editingItem ? 'updated' : 'now visible to customers'}.` 
         });
         setIsMenuDialogOpen(false);
-        setEditingItem(null);
-        setMenuFormData({
-          name: '', description: '', price: 0, category: 'Veg Maggie', image: '', isVeg: true, isAvailable: true, rating: 4.5
-        });
+        resetForm();
       })
       .catch(async (error) => {
         console.error("Save Error:", error);
@@ -178,6 +175,28 @@ export const AdminSection = () => {
       .finally(() => {
         setSaveLoading(false);
       });
+  };
+
+  const resetForm = () => {
+    setEditingItem(null);
+    setMenuFormData({
+      name: '', description: '', price: 0, category: 'Veg Maggie', image: '', isVeg: true, isAvailable: true, rating: 4.5
+    });
+  };
+
+  const handleEditClick = (item: any) => {
+    setEditingItem(item);
+    setMenuFormData({
+      name: item.name || '',
+      description: item.description || '',
+      price: item.price || 0,
+      category: item.category || 'Veg Maggie',
+      image: item.image || '',
+      isVeg: item.isVeg !== undefined ? item.isVeg : true,
+      isAvailable: item.isAvailable !== undefined ? item.isAvailable : true,
+      rating: item.rating || 4.5
+    });
+    setIsMenuDialogOpen(true);
   };
 
   const toggleAvailability = (id: string, current: boolean) => {
@@ -194,6 +213,8 @@ export const AdminSection = () => {
 
   const handleDeleteItem = (id: string) => {
     if (!db) return;
+    if (!confirm("Are you sure you want to remove this item from the menu?")) return;
+    
     const itemRef = doc(db, 'menu', id);
     deleteDoc(itemRef)
       .then(() => toast({ title: "Removed from menu" }))
@@ -356,15 +377,10 @@ export const AdminSection = () => {
               </div>
               <Dialog open={isMenuDialogOpen} onOpenChange={(open) => {
                 setIsMenuDialogOpen(open);
-                if (!open) { 
-                  setEditingItem(null); 
-                  setMenuFormData({ 
-                    name: '', description: '', price: 0, category: 'Veg Maggie', image: '', isVeg: true, isAvailable: true, rating: 4.5 
-                  }); 
-                }
+                if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button className="rounded-2xl h-14 px-10 font-black uppercase tracking-widest gap-3 shadow-2xl shadow-primary/30 hover:scale-105 transition-all active:scale-95">
+                  <Button className="rounded-2xl h-14 px-10 font-black uppercase tracking-widest gap-3 shadow-2xl shadow-primary/30 hover:scale-105 transition-all active:scale-95" onClick={resetForm}>
                     <Plus className="w-6 h-6" /> Add New Dish
                   </Button>
                 </DialogTrigger>
@@ -502,11 +518,7 @@ export const AdminSection = () => {
                             <span className="text-white/70 text-[10px] uppercase font-black tracking-[0.3em]">{item.category}</span>
                           </div>
                           <div className="flex gap-2.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md hover:bg-white border-none text-white hover:text-primary shadow-2xl" onClick={() => {
-                              setEditingItem(item);
-                              setMenuFormData({...item});
-                              setIsMenuDialogOpen(true);
-                            }}>
+                            <Button size="icon" variant="secondary" className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md hover:bg-white border-none text-white hover:text-primary shadow-2xl" onClick={() => handleEditClick(item)}>
                               <Edit2 className="w-4 h-4" />
                             </Button>
                             <Button size="icon" variant="destructive" className="h-10 w-10 rounded-xl shadow-2xl" onClick={() => handleDeleteItem(item.id)}>
