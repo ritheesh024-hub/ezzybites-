@@ -23,15 +23,18 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart, removeFromCart } = useStore();
   const db = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState<string>('');
@@ -44,7 +47,6 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    // Generate a consistent ID for the session
     setOrderId(`EB-${Math.floor(Math.random() * 90000) + 10000}`);
   }, []);
 
@@ -88,15 +90,14 @@ export default function CheckoutPage() {
       total: Number(total),
       status: 'Pending',
       paymentMethod: formData.paymentMethod,
+      userId: user?.uid || 'guest',
       createdAt: serverTimestamp()
     };
 
     const orderRef = doc(db, 'orders', currentOrderId);
     
-    // Initiate write operation
     setDoc(orderRef, orderData)
       .catch(async (error) => {
-        // If it fails (e.g. security rules), emit the error context
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: orderRef.path,
           operation: 'create',
@@ -104,14 +105,13 @@ export default function CheckoutPage() {
         }));
       });
 
-    // Optimistic completion: Proceed immediately without awaiting the promise
-    // This prevents "infinite loading" while waiting for server confirmation
+    // Optimistic completion
     setTimeout(() => {
       setLoading(false);
       clearCart();
       setStep(4);
       toast({ title: "Order Placed Successfully! 🚀" });
-    }, 500);
+    }, 800);
   };
 
   const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent('upi://pay?pa=8639366800@ybl&pn=Ezzy%20Bites&cu=INR')}`;
@@ -165,7 +165,7 @@ export default function CheckoutPage() {
                     {cart.map((item) => (
                       <div key={item.id} className="p-4 md:p-6 flex gap-4 md:gap-6 items-center">
                         <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl md:rounded-2xl overflow-hidden bg-secondary shrink-0">
-                          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" unoptimized={item.imageUrl.startsWith('http')} />
+                          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" unoptimized />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-base md:text-lg truncate">{item.name}</h4>
@@ -261,7 +261,7 @@ export default function CheckoutPage() {
 
                 {formData.paymentMethod === 'upi' && (
                   <Card className="p-6 md:p-10 text-center animate-in zoom-in rounded-[32px] border-dashed border-2">
-                    <div className="w-48 h-48 md:w-56 md:h-56 mx-auto relative bg-white border rounded-2xl overflow-hidden mb-6 p-2">
+                    <div className="w-48 h-48 md:w-56 md:h-56 mx-auto relative bg-white border rounded-2xl overflow-hidden mb-6 p-2 shadow-inner">
                       <Image src={qrImage} alt="QR Code" fill className="object-contain p-2" priority unoptimized />
                     </div>
                     <div className="bg-secondary/50 rounded-xl p-3 inline-block">

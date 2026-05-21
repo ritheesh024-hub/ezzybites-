@@ -1,46 +1,84 @@
 
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useParams } from 'next/navigation';
-import { CheckCircle2, Clock, MapPin, Phone, MessageSquare, Truck, ChefHat, PackageCheck } from 'lucide-react';
+import { CheckCircle2, Clock, MapPin, Phone, MessageSquare, Truck, ChefHat, PackageCheck, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function OrderTrackingPage() {
   const params = useParams();
   const orderId = params.orderId as string;
-  const [status, setStatus] = useState(1); // 1: Placed, 2: Preparing, 3: Out for Delivery, 4: Delivered
+  const db = useFirestore();
 
-  useEffect(() => {
-    // Mock progression for demo purposes
-    const timer = setInterval(() => {
-      setStatus(prev => (prev < 4 ? prev + 1 : prev));
-    }, 15000);
-    return () => clearInterval(timer);
-  }, []);
+  const orderRef = useMemo(() => {
+    if (!db || !orderId) return null;
+    return doc(db, 'orders', orderId);
+  }, [db, orderId]);
+
+  const { data: order, loading, error } = useDoc<any>(orderRef);
+
+  const statusMap: Record<string, number> = {
+    'Pending': 1,
+    'Preparing': 2,
+    'Out for Delivery': 3,
+    'Delivered': 4,
+    'Cancelled': 0
+  };
+
+  const statusLevel = order ? statusMap[order.status] || 1 : 1;
 
   const steps = [
-    { id: 1, title: 'Order Placed', time: '12:01 PM', icon: PackageCheck, desc: 'We have received your order.' },
-    { id: 2, title: 'Preparing Food', time: '12:05 PM', icon: ChefHat, desc: 'Our chef is crafting your meal.' },
-    { id: 3, title: 'Out for Delivery', time: '12:20 PM', icon: Truck, desc: 'Our rider is on the way.' },
-    { id: 4, title: 'Delivered', time: '12:35 PM', icon: CheckCircle2, desc: 'Enjoy your delicious bites!' }
+    { id: 1, title: 'Order Placed', icon: PackageCheck, desc: 'We have received your order.' },
+    { id: 2, title: 'Preparing Food', icon: ChefHat, desc: 'Our chef is crafting your meal.' },
+    { id: 3, title: 'Out for Delivery', icon: Truck, desc: 'Our rider is on the way.' },
+    { id: 4, title: 'Delivered', icon: CheckCircle2, desc: 'Enjoy your delicious bites!' }
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          <p className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">Locating your order...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
+        <h2 className="text-2xl font-black mb-2">Order Not Found</h2>
+        <p className="text-muted-foreground mb-8">We couldn't find an order with ID: <span className="font-mono text-primary font-bold">{orderId}</span></p>
+        <Link href="/">
+          <Button className="rounded-full px-10 h-14 font-black">Go Home</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-secondary/10">
+    <div className="min-h-screen bg-secondary/10 pb-12">
       <Navbar />
       
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
+      <main className="container mx-auto px-4 py-12 max-w-4xl pt-24 md:pt-32">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
           <div>
             <Badge className="bg-primary/10 text-primary border-primary/20 mb-3 px-4 py-1.5 rounded-full font-black uppercase tracking-widest text-[10px]">
               Live Tracking
             </Badge>
-            <h1 className="text-4xl font-headline font-black">Order <span className="text-primary">{orderId || '#EB-XXXXX'}</span></h1>
-            <p className="text-muted-foreground font-medium mt-1">Est. Arrival: <span className="text-foreground font-bold">12:35 PM (25 mins)</span></p>
+            <h1 className="text-4xl font-headline font-black">Order <span className="text-primary">{order.orderId}</span></h1>
+            <p className="text-muted-foreground font-medium mt-1">Status: <span className={cn(
+              "font-bold",
+              order.status === 'Cancelled' ? 'text-destructive' : 'text-primary'
+            )}>{order.status}</span></p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="rounded-full h-12 px-6 gap-2 font-bold" onClick={() => window.open('https://wa.me/918639366800', '_blank')}>
@@ -54,35 +92,65 @@ export default function OrderTrackingPage() {
           <div className="lg:col-span-2 space-y-8">
             <Card className="rounded-[40px] border-none shadow-2xl overflow-hidden bg-card">
               <CardContent className="p-10">
-                <div className="relative space-y-12">
-                  <div className="absolute left-6 top-6 w-0.5 h-[calc(100%-48px)] bg-muted z-0" />
-                  
-                  {steps.map((step, idx) => {
-                    const Icon = step.icon;
-                    const isActive = status >= step.id;
-                    const isCurrent = status === step.id;
-
-                    return (
-                      <div key={idx} className={`relative z-10 flex gap-8 items-start transition-all duration-700 ${isActive ? 'opacity-100' : 'opacity-30'}`}>
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${isActive ? 'bg-primary text-white scale-110' : 'bg-muted text-muted-foreground'}`}>
-                          <Icon className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <h4 className={`text-xl font-black ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{step.title}</h4>
-                            <span className="text-xs font-bold text-muted-foreground">{step.time}</span>
-                          </div>
-                          <p className="text-sm font-medium text-muted-foreground">{step.desc}</p>
-                          {isCurrent && (
-                            <div className="mt-4 flex gap-2">
-                               <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                               <div className="text-[10px] font-black uppercase tracking-widest text-primary">Current Progress</div>
-                            </div>
-                          )}
-                        </div>
+                {order.status === 'Cancelled' ? (
+                   <div className="text-center py-10">
+                      <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="w-8 h-8" />
                       </div>
-                    );
-                  })}
+                      <h4 className="text-2xl font-black mb-2">Order Cancelled</h4>
+                      <p className="text-muted-foreground">This order has been cancelled. Please contact support for more details.</p>
+                   </div>
+                ) : (
+                  <div className="relative space-y-12">
+                    <div className="absolute left-6 top-6 w-0.5 h-[calc(100%-48px)] bg-muted z-0" />
+                    
+                    {steps.map((step, idx) => {
+                      const Icon = step.icon;
+                      const isActive = statusLevel >= step.id;
+                      const isCurrent = statusLevel === step.id;
+
+                      return (
+                        <div key={idx} className={`relative z-10 flex gap-8 items-start transition-all duration-700 ${isActive ? 'opacity-100' : 'opacity-30'}`}>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${isActive ? 'bg-primary text-white scale-110' : 'bg-muted text-muted-foreground'}`}>
+                            <Icon className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                              <h4 className={`text-xl font-black ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{step.title}</h4>
+                            </div>
+                            <p className="text-sm font-medium text-muted-foreground">{step.desc}</p>
+                            {isCurrent && (
+                              <div className="mt-4 flex gap-2 items-center">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                                <div className="text-[10px] font-black uppercase tracking-widest text-primary">Current Progress</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[32px] border-none shadow-xl">
+              <CardContent className="p-8">
+                <h4 className="font-black text-lg uppercase tracking-widest mb-6">Order Details</h4>
+                <div className="space-y-4">
+                  {order.items?.map((item: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="font-black text-primary">x{item.quantity}</span>
+                        <span className="font-bold">{item.name}</span>
+                      </div>
+                      <span className="font-bold">₹{item.price * item.quantity}</span>
+                    </div>
+                  ))}
+                  <div className="pt-4 border-t border-dashed mt-4 flex justify-between items-center">
+                    <span className="font-black text-lg">Total Paid</span>
+                    <span className="text-2xl font-black text-primary">₹{order.total}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -97,14 +165,14 @@ export default function OrderTrackingPage() {
                     <Truck className="w-8 h-8" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Delivery Hero</p>
-                    <h4 className="text-xl font-black">Rajesh Kumar</h4>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Customer Service</p>
+                    <h4 className="text-xl font-black">Ezzy Helper</h4>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-white text-primary hover:bg-white/90 rounded-2xl h-12 font-black gap-2">
+                  <Button className="flex-1 bg-white text-primary hover:bg-white/90 rounded-2xl h-12 font-black gap-2" onClick={() => window.open('tel:8639366800')}>
                     <Phone className="w-4 h-4" />
-                    Call Rider
+                    Call Help
                   </Button>
                 </div>
               </CardContent>
@@ -116,7 +184,7 @@ export default function OrderTrackingPage() {
                 <div className="flex gap-4 items-start">
                   <MapPin className="w-5 h-5 text-primary shrink-0" />
                   <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                    Anurag University Campus, Boys Hostel, Block A, Room 302, Pocharam.
+                    {order.address}
                   </p>
                 </div>
                 <div className="pt-6 border-t">
@@ -134,3 +202,6 @@ export default function OrderTrackingPage() {
     </div>
   );
 }
+
+import { cn } from '@/lib/utils';
+import Link from 'next/link';

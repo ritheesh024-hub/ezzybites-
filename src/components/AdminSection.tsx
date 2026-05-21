@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label';
 import { 
   IndianRupee, Sparkles, Loader2, 
   Package, Clock, CheckCircle2,
-  Megaphone, LayoutDashboard, Trash2, Plus, Edit2, Link as LinkIcon
+  Megaphone, LayoutDashboard, Trash2, Plus, Edit2, Link as LinkIcon,
+  ChevronRight, MapPin, Phone, ShoppingBag
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -57,6 +58,11 @@ export const AdminSection = () => {
     return { revenue, count: realOrders.length, delivered: delivered.length };
   }, [realOrders]);
 
+  const sortedOrders = useMemo(() => {
+    if (!realOrders) return [];
+    return [...realOrders].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }, [realOrders]);
+
   const handleUpdateStatus = (id: string, newStatus: string) => {
     if (!db) return;
     const orderRef = doc(db, 'orders', id);
@@ -65,10 +71,11 @@ export const AdminSection = () => {
         path: orderRef.path, operation: 'update', requestResourceData: { status: newStatus }
       }));
     });
+    toast({ title: `Order ${newStatus}` });
   };
 
   const handleDeleteOrder = (id: string) => {
-    if (!db || !window.confirm("Delete order?")) return;
+    if (!db || !window.confirm("Delete order record permanently?")) return;
     const orderRef = doc(db, 'orders', id);
     deleteDoc(orderRef).catch(async (e) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({ path: orderRef.path, operation: 'delete' }));
@@ -78,7 +85,6 @@ export const AdminSection = () => {
   const resetForm = () => {
     setEditingItem(null);
     setMenuFormData({ name: '', description: '', price: '', category: 'Veg Maggie', imageUrl: '', isVeg: true, isAvailable: true, rating: '4.5' });
-    setTimeout(() => firstInputRef.current?.focus(), 150);
   };
 
   const handleSaveMenuItem = () => {
@@ -108,9 +114,7 @@ export const AdminSection = () => {
       .then(() => {
         setSaveLoading(false);
         toast({ title: editingItem ? "Item Updated" : "Dish Added Permanently! 🚀" });
-        if (editingItem) {
-          setIsMenuDialogOpen(false);
-        }
+        setIsMenuDialogOpen(false);
         resetForm();
       })
       .catch(async (e) => {
@@ -135,7 +139,7 @@ export const AdminSection = () => {
         <Tabs defaultValue="overview" className="space-y-8">
           <TabsList className="bg-card p-1.5 rounded-2xl border w-full flex shadow-sm overflow-x-auto scrollbar-hide">
             <TabsTrigger value="overview" className="flex-1 py-3 font-black uppercase tracking-widest text-[10px] whitespace-nowrap px-6">Stats</TabsTrigger>
-            <TabsTrigger value="orders" className="flex-1 py-3 font-black uppercase tracking-widest text-[10px] whitespace-nowrap px-6">Orders</TabsTrigger>
+            <TabsTrigger value="orders" className="flex-1 py-3 font-black uppercase tracking-widest text-[10px] whitespace-nowrap px-6">Orders ({realOrders?.length || 0})</TabsTrigger>
             <TabsTrigger value="inventory" className="flex-1 py-3 font-black uppercase tracking-widest text-[10px] whitespace-nowrap px-6">Inventory</TabsTrigger>
             <TabsTrigger value="marketing" className="flex-1 py-3 font-black uppercase tracking-widest text-[10px] gap-2 flex items-center justify-center whitespace-nowrap px-6">
               <Sparkles className="w-4 h-4" /> AI Marketing
@@ -146,9 +150,9 @@ export const AdminSection = () => {
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                {[
                  { label: "Revenue", value: `₹${stats.revenue}`, icon: IndianRupee, color: "text-green-600", bg: "bg-green-50" },
-                 { label: "Orders", value: stats.count, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
+                 { label: "Total Orders", value: stats.count, icon: Package, color: "text-blue-600", bg: "bg-blue-50" },
                  { label: "Completed", value: stats.delivered, icon: CheckCircle2, color: "text-orange-600", bg: "bg-orange-50" },
-                 { label: "Rating", value: "4.8", icon: Sparkles, color: "text-yellow-600", bg: "bg-yellow-50" }
+                 { label: "Avg Rating", value: "4.8", icon: Sparkles, color: "text-yellow-600", bg: "bg-yellow-50" }
                ].map((s, i) => (
                  <Card key={i} className="rounded-3xl border-none shadow-lg">
                     <CardContent className="p-6">
@@ -162,48 +166,73 @@ export const AdminSection = () => {
           </TabsContent>
 
           <TabsContent value="orders">
-            <Card className="rounded-3xl shadow-xl border-none overflow-hidden bg-card">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="px-6 font-black uppercase text-[10px]">Order Details</TableHead>
-                      <TableHead className="px-6 font-black uppercase text-[10px]">Status</TableHead>
-                      <TableHead className="px-6 font-black uppercase text-[10px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ordersLoading ? (
-                      <TableRow><TableCell colSpan={3} className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : realOrders?.length === 0 ? (
-                      <TableRow><TableCell colSpan={3} className="py-20 text-center text-muted-foreground font-medium">No orders yet.</TableCell></TableRow>
-                    ) : realOrders?.map((order: any) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="px-6 font-bold">
-                          {order.customerName}
-                          <br/>
-                          <span className="text-[10px] opacity-50 font-medium">₹{order.total} • {order.paymentMethod}</span>
-                        </TableCell>
-                        <TableCell className="px-6">
-                          <Badge variant="secondary" className="rounded-full font-bold">{order.status}</Badge>
-                        </TableCell>
-                        <TableCell className="px-6 text-right space-x-2">
-                          <Button size="icon" variant="outline" className="rounded-xl" onClick={() => handleUpdateStatus(order.id, 'Preparing')}>
-                            <Clock className="w-4 h-4"/>
-                          </Button>
-                          <Button size="icon" variant="outline" className="rounded-xl" onClick={() => handleUpdateStatus(order.id, 'Delivered')}>
-                            <CheckCircle2 className="w-4 h-4"/>
-                          </Button>
-                          <Button size="icon" variant="ghost" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => handleDeleteOrder(order.id)}>
-                            <Trash2 className="w-4 h-4"/>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
+            <div className="space-y-6">
+              {ordersLoading ? (
+                <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
+              ) : sortedOrders.length === 0 ? (
+                <Card className="rounded-3xl p-20 text-center text-muted-foreground font-medium">No orders found.</Card>
+              ) : (
+                <div className="grid gap-6">
+                  {sortedOrders.map((order: any) => (
+                    <Card key={order.id} className="rounded-[32px] border-none shadow-xl bg-card overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="grid md:grid-cols-4">
+                          <div className="p-8 border-r bg-muted/5">
+                            <Badge className="mb-4 bg-primary/10 text-primary border-none text-[9px] uppercase font-black">
+                              {order.orderId}
+                            </Badge>
+                            <h4 className="text-xl font-black mb-1">{order.customerName}</h4>
+                            <p className="text-sm font-bold text-muted-foreground flex items-center gap-2">
+                              <Phone className="w-3 h-3" /> {order.customerPhone}
+                            </p>
+                            <div className="mt-4 flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                              <Clock className="w-3 h-3" /> {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleTimeString() : 'Recent'}
+                            </div>
+                          </div>
+                          
+                          <div className="p-8 md:col-span-2 space-y-4">
+                             <div className="flex items-start gap-3">
+                                <MapPin className="w-4 h-4 text-primary shrink-0 mt-1" />
+                                <p className="text-sm font-medium opacity-80 line-clamp-2">{order.address}</p>
+                             </div>
+                             <div className="space-y-2">
+                               {order.items?.map((item: any, i: number) => (
+                                 <div key={i} className="flex justify-between items-center bg-secondary/30 p-2 rounded-xl text-xs font-bold">
+                                   <span>{item.name} x{item.quantity}</span>
+                                   <span className="text-primary">₹{item.price * item.quantity}</span>
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
+
+                          <div className="p-8 bg-secondary/10 flex flex-col justify-between">
+                            <div className="text-right mb-6">
+                              <p className="text-[10px] font-black uppercase tracking-widest opacity-50">Total Amount</p>
+                              <p className="text-3xl font-headline font-black text-primary">₹{order.total}</p>
+                              <Badge variant="outline" className={cn(
+                                "mt-2 font-black text-[10px] uppercase",
+                                order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 
+                                order.status === 'Cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                              )}>
+                                {order.status}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                               <Button size="sm" variant="outline" className="rounded-xl font-black text-[9px] uppercase" onClick={() => handleUpdateStatus(order.id, 'Preparing')}>Prep</Button>
+                               <Button size="sm" variant="outline" className="rounded-xl font-black text-[9px] uppercase" onClick={() => handleUpdateStatus(order.id, 'Out for Delivery')}>Ride</Button>
+                               <Button size="sm" variant="default" className="rounded-xl font-black text-[9px] uppercase col-span-2" onClick={() => handleUpdateStatus(order.id, 'Delivered')}>Complete</Button>
+                               <Button size="sm" variant="ghost" className="rounded-xl text-destructive font-black text-[9px] uppercase" onClick={() => handleUpdateStatus(order.id, 'Cancelled')}>Cancel</Button>
+                               <Button size="icon" variant="ghost" className="rounded-xl text-muted-foreground" onClick={() => handleDeleteOrder(order.id)}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="inventory" className="space-y-8">
@@ -348,6 +377,7 @@ export const AdminSection = () => {
               ))}
             </div>
           </TabsContent>
+          
           <TabsContent value="marketing">
              <Card className="rounded-[40px] border-none shadow-xl bg-card p-6 md:p-12">
                 <div className="max-w-2xl">
@@ -368,6 +398,7 @@ export const AdminSection = () => {
                     size="lg" 
                     className="rounded-2xl h-16 px-10 font-black uppercase tracking-widest gap-3 shadow-xl shadow-primary/20 w-full sm:w-auto active:scale-95 transition-transform" 
                     onClick={async () => {
+                      if (!selectedPromoDish) return;
                       setPromoLoading(true);
                       try {
                         const res = await dailySpecialGenerator({ dishName: selectedPromoDish.name, basePrice: selectedPromoDish.price, discountPercent: 20 });
@@ -402,3 +433,5 @@ export const AdminSection = () => {
     </section>
   );
 };
+
+import { cn } from '@/lib/utils';
