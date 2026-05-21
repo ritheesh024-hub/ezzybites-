@@ -3,7 +3,7 @@
   "entities": {
     "AdminProfile": {
       "title": "Admin Profile",
-      "description": "Details for administrative users authorized to access the dashboard",
+      "description": "Details for administrative users authorized to access the Ezzy Bites dashboard",
       "type": "object",
       "properties": {
         "email": {
@@ -21,7 +21,7 @@
     },
     "Order": {
       "title": "Order",
-      "description": "A customer order for food items",
+      "description": "A customer order for Ezzy Bites food items",
       "type": "object",
       "properties": {
         "orderId": { "type": "string" },
@@ -52,7 +52,7 @@
     },
     "FoodItem": {
       "title": "Food Item",
-      "description": "A menu item available for purchase",
+      "description": "A menu item available for purchase at Ezzy Bites",
       "type": "object",
       "properties": {
         "name": { "type": "string" },

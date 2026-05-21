@@ -6,7 +6,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Easy Bites | Premium Fast Food Cafe',
+  title: 'Ezzy Bites | Premium Fast Food Cafe',
   description: 'Experience premium fast food redefined. Quality, speed, and taste unified in one perfect bite. Order now for 30-min delivery.',
   keywords: 'Fast Food, Biryani, Maggie, Momos, Ice Cream, Hyderabad, Pocharam, Anurag University',
 };

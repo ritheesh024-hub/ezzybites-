@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for providing personalized meal recommendations based on current weather, time of day, and user mood.
@@ -42,7 +43,7 @@ const mealRecommendationPrompt = ai.definePrompt({
   name: 'mealRecommendationPrompt',
   input: { schema: ContextualMealRecommendationsInputSchema },
   output: { schema: ContextualMealRecommendationsOutputSchema },
-  prompt: `You are an AI assistant for a cafe named "Easy Bites". Your task is to recommend meals based on the current context.
+  prompt: `You are an AI assistant for a cafe named "Ezzy Bites". Your task is to recommend meals based on the current context.
 
 Provide a list of personalized meal recommendations considering the following:
 - Current Weather: {{{weather}}}

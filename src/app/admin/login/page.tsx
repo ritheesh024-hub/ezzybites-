@@ -92,8 +92,9 @@ export default function AdminLoginPage() {
           <CardTitle className="text-3xl font-headline font-bold">
             {isLogin ? 'Admin Login' : 'Admin Register'}
           </CardTitle>
+          <CardTitle className="text-sm font-bold text-primary mt-1">Ezzy Bites Portal</CardTitle>
           <CardDescription>
-            {isLogin ? 'Enter your credentials to manage Easy Bites.' : 'Create your secure administrator account.'}
+            {isLogin ? 'Enter your credentials to manage Ezzy Bites.' : 'Create your secure administrator account.'}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAuth}>

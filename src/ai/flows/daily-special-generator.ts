@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for generating marketing copy for a daily special food item.
@@ -29,7 +30,7 @@ const promoPrompt = ai.definePrompt({
   name: 'dailySpecialPrompt',
   input: { schema: DailySpecialInputSchema },
   output: { schema: DailySpecialOutputSchema },
-  prompt: `You are a creative marketing expert for "Easy Bites", a premium fast food cafe.
+  prompt: `You are a creative marketing expert for "Ezzy Bites", a premium fast food cafe.
 Generate a punchy, exciting promotion for the dish: {{{dishName}}}.
 The base price is ₹{{{basePrice}}} and we are offering a {{{discountPercent}}}% discount.
 

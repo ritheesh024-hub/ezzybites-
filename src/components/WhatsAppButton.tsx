@@ -6,7 +6,7 @@ import { MessageCircle } from 'lucide-react';
 
 export const WhatsAppButton = () => {
   const handleWhatsApp = () => {
-    window.open('https://wa.me/918639366800?text=Hi! I want to order from Easy Bites.', '_blank');
+    window.open('https://wa.me/918639366800?text=Hi! I want to order from Ezzy Bites.', '_blank');
   };
 
   return (

@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -78,7 +79,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Categories Bar - Removed sticky behavior as requested */}
+        {/* Categories Bar */}
         <section className="py-12 bg-background border-b">
           <div className="container mx-auto px-4">
             <div className="flex overflow-x-auto gap-6 pb-2 scrollbar-hide items-center justify-center">
@@ -137,7 +138,7 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-8">
-                <h2 className="text-4xl font-headline font-black">Find Us at <span className="text-primary">Easy Bites</span></h2>
+                <h2 className="text-4xl font-headline font-black">Find Us at <span className="text-primary">Ezzy Bites</span></h2>
                 <div className="space-y-6">
                   <div className="flex gap-4 items-start">
                     <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0">
@@ -225,7 +226,7 @@ export default function Home() {
                   <ShoppingBag className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <span className="text-3xl font-headline font-black tracking-tight">
-                  Easy<span className="text-primary">Bites</span>
+                  Ezzy<span className="text-primary">Bites</span>
                 </span>
               </Link>
               <p className="text-muted-foreground leading-relaxed font-medium">
@@ -279,7 +280,7 @@ export default function Home() {
           
           <div className="border-t pt-12 flex flex-col md:flex-row items-center justify-between gap-6">
             <p className="text-sm text-muted-foreground font-medium">
-              © {currentYear || 2025} Easy Bites Cafe. All rights reserved.
+              © {currentYear || 2025} Ezzy Bites Cafe. All rights reserved.
             </p>
             <div className="flex items-center gap-8 grayscale opacity-50">
               <div className="text-[10px] font-black uppercase tracking-[0.3em]">Razorpay Secure</div>

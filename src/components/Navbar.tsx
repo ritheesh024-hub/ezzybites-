@@ -23,7 +23,7 @@ export const Navbar = () => {
             <ShoppingBag className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-headline font-bold text-foreground">
-            Easy<span className="text-primary">Bites</span>
+            Ezzy<span className="text-primary">Bites</span>
           </span>
         </Link>
 

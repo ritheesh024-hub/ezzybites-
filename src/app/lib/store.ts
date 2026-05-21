@@ -54,6 +54,6 @@ export const useStore = create<AppStore>()(
       clearCart: () => set({ cart: [] }),
       getTotal: () => get().cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
     }),
-    { name: 'easy-bites-storage' }
+    { name: 'ezzy-bites-storage' }
   )
 );

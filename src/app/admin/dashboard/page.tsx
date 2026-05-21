@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
               <ShoppingBag className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-headline font-bold">
-              Easy<span className="text-primary">Bites</span> <span className="text-muted-foreground font-normal text-sm ml-2 hidden sm:inline">Admin</span>
+              Ezzy<span className="text-primary">Bites</span> <span className="text-muted-foreground font-normal text-sm ml-2 hidden sm:inline">Admin</span>
             </span>
           </Link>
           <div className="flex items-center gap-4">
