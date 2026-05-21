@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function AdminLoginPage() {
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,41 +22,47 @@ export default function AdminLoginPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
 
-  // If already logged in, redirect to dashboard
+  const ADMIN_EMAIL = 'sunnyritheesh@gmail.com';
+
   useEffect(() => {
-    if (!userLoading && user && user.email === 'sunnyritheesh@gmail.com') {
+    if (!userLoading && user && user.email === ADMIN_EMAIL) {
       router.push('/admin/dashboard');
     }
   }, [user, userLoading, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
 
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      if (email === 'sunnyritheesh@gmail.com') {
-        toast({
-          title: "Access Granted",
-          description: "Welcome to the Admin Dashboard.",
-        });
-        router.push('/admin/dashboard');
-      } else {
-        // Not the designated admin
-        await auth.signOut();
-        toast({
-          variant: "destructive",
-          title: "Access Denied",
-          description: "This account is not registered as an administrator.",
-        });
-      }
-    } catch (error: any) {
+    if (email !== ADMIN_EMAIL) {
       toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        title: "Unauthorized Email",
+        description: "Only the designated admin email is allowed to register or login here.",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Welcome back, Admin" });
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast({ title: "Admin account created successfully" });
+      }
+      router.push('/admin/dashboard');
+    } catch (error: any) {
+      let message = error.message;
+      if (error.code === 'auth/user-not-found') message = "Account not found. Try signing up.";
+      if (error.code === 'auth/wrong-password') message = "Incorrect password.";
+      if (error.code === 'auth/email-already-in-use') message = "Account already exists. Try logging in.";
+      
+      toast({
+        variant: "destructive",
+        title: isLogin ? "Login Failed" : "Registration Failed",
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -71,10 +78,14 @@ export default function AdminLoginPage() {
               <ShoppingBag className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-headline font-bold">Admin Portal</CardTitle>
-          <CardDescription>Enter your credentials to manage Easy Bites.</CardDescription>
+          <CardTitle className="text-3xl font-headline font-bold">
+            {isLogin ? 'Admin Login' : 'Admin Register'}
+          </CardTitle>
+          <CardDescription>
+            {isLogin ? 'Enter your credentials to manage Easy Bites.' : 'Create your secure administrator account.'}
+          </CardDescription>
         </CardHeader>
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleAuth}>
           <CardContent className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email">Admin Email</Label>
@@ -83,18 +94,19 @@ export default function AdminLoginPage() {
                 <Input 
                   id="email" 
                   type="email" 
-                  placeholder="admin@easybites.com" 
+                  placeholder="sunnyritheesh@gmail.com" 
                   className="pl-10 rounded-xl h-12 focus:ring-primary/20"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
+              {!isLogin && email !== ADMIN_EMAIL && (
+                <p className="text-[10px] text-destructive font-medium">Note: Only {ADMIN_EMAIL} can register.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">Password</Label>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
@@ -113,15 +125,24 @@ export default function AdminLoginPage() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Signing In...</span>
+                  <span>{isLogin ? 'Verifying...' : 'Creating...'}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span>Sign In</span>
+                  <span>{isLogin ? 'Sign In' : 'Sign Up'}</span>
                   <ArrowRight className="w-5 h-5" />
                 </div>
               )}
             </Button>
+            
+            <button 
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-sm text-primary font-medium hover:underline"
+            >
+              {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+            </button>
+
             <Link href="/" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
               Back to Storefront
             </Link>
