@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import placeholderData from '@/app/lib/placeholder-images.json';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -115,7 +114,8 @@ export default function CheckoutPage() {
       });
   };
 
-  const qrImage = placeholderData.placeholderImages.find(img => img.id === 'qr-code')?.imageUrl || '';
+  // Direct QR URL for reliability
+  const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent('upi://pay?pa=8639366800@ybl&pn=Ezzy%20Bites&cu=INR')}`;
 
   if (cart.length === 0 && step < 4) {
     return (
@@ -197,7 +197,7 @@ export default function CheckoutPage() {
                   <CardContent className="p-6 md:p-10 space-y-6">
                     <div className="grid md:grid-cols-2 gap-4 md:gap-6">
                       <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest ml-1">Full Name</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Full Name</Label>
                         <Input 
                           value={formData.name} 
                           onChange={(e) => setFormData({...formData, name: e.target.value})} 
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest ml-1">Phone Number</Label>
+                        <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Phone Number</Label>
                         <Input 
                           value={formData.phone} 
                           onChange={(e) => setFormData({...formData, phone: e.target.value})} 
@@ -216,7 +216,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest ml-1">Delivery Address</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Delivery Address</Label>
                       <Textarea 
                         value={formData.address} 
                         onChange={(e) => setFormData({...formData, address: e.target.value})} 
@@ -263,8 +263,8 @@ export default function CheckoutPage() {
 
                 {formData.paymentMethod === 'upi' && (
                   <Card className="p-6 md:p-10 text-center animate-in zoom-in rounded-[32px] border-dashed border-2">
-                    <div className="w-40 h-40 md:w-56 md:h-56 mx-auto relative bg-white border rounded-2xl overflow-hidden mb-6 p-2">
-                      <Image src={qrImage} alt="QR Code" fill className="object-contain p-2" />
+                    <div className="w-48 h-48 md:w-56 md:h-56 mx-auto relative bg-white border rounded-2xl overflow-hidden mb-6 p-2">
+                      <Image src={qrImage} alt="QR Code" fill className="object-contain p-2" priority />
                     </div>
                     <div className="bg-secondary/50 rounded-xl p-3 inline-block">
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">UPI ID</p>

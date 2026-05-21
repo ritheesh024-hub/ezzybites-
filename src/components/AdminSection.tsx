@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -96,7 +97,7 @@ export const AdminSection = () => {
     setTimeout(() => firstInputRef.current?.focus(), 150);
   };
 
-  const handleSaveMenuItem = () => {
+  const handleSaveMenuItem = async () => {
     if (!db || !menuFormData.name || !menuFormData.image) {
       toast({ variant: "destructive", title: "Missing Data", description: "Name and Image are mandatory." });
       return;
@@ -119,19 +120,18 @@ export const AdminSection = () => {
       updatedAt: serverTimestamp()
     };
 
-    setDoc(itemRef, finalData, { merge: true })
-      .then(() => {
-        toast({ title: editingItem ? "Item Updated" : "Dish Added! 🚀" });
-        setSaveLoading(false);
-        if (editingItem) setIsMenuDialogOpen(false);
-        resetForm();
-      })
-      .catch(async () => {
-        setSaveLoading(false);
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ 
-          path: itemRef.path, operation: 'write', requestResourceData: finalData 
-        }));
-      });
+    try {
+      await setDoc(itemRef, finalData, { merge: true });
+      toast({ title: editingItem ? "Item Updated" : "Dish Added! 🚀" });
+      if (editingItem) setIsMenuDialogOpen(false);
+      resetForm();
+    } catch (e) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ 
+        path: itemRef.path, operation: 'write', requestResourceData: finalData 
+      }));
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   return (
@@ -213,27 +213,27 @@ export const AdminSection = () => {
                 <div className="bg-primary p-8 text-white"><DialogTitle className="text-2xl font-black font-headline uppercase">{editingItem ? 'Edit Dish' : 'Publish New Dish'}</DialogTitle></div>
                 <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Dish Name</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Dish Name</Label>
                     <Input ref={firstInputRef} value={menuFormData.name} onChange={e => setMenuFormData({...menuFormData, name: e.target.value})} placeholder="e.g. Schezwan Maggie" className="h-12 rounded-xl" />
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label>Price (₹)</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Price (₹)</Label>
                       <Input type="number" value={menuFormData.price} onChange={e => setMenuFormData({...menuFormData, price: e.target.value})} className="h-12 rounded-xl" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Category</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Category</Label>
                       <select value={menuFormData.category} onChange={e => setMenuFormData({...menuFormData, category: e.target.value})} className="w-full h-12 rounded-xl border bg-secondary/20 px-4 text-sm font-bold uppercase">
                         {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Dish Photo</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Dish Photo</Label>
                     <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed rounded-3xl p-10 text-center cursor-pointer hover:bg-muted/50 transition-all">
                       {menuFormData.image ? (
                         <div className="relative group">
-                          <img src={menuFormData.image} className="h-48 w-full object-cover rounded-2xl shadow-xl" />
+                          <img src={menuFormData.image} className="h-48 w-full object-cover rounded-2xl shadow-xl" alt="Preview" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all rounded-2xl"><RefreshCw className="text-white w-10 h-10" /></div>
                         </div>
                       ) : (
@@ -243,7 +243,7 @@ export const AdminSection = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Description</Label>
                     <Textarea value={menuFormData.description} onChange={e => setMenuFormData({...menuFormData, description: e.target.value})} placeholder="Taste description..." className="rounded-xl min-h-[100px]" />
                   </div>
                 </div>
