@@ -9,8 +9,8 @@ import { firebaseConfig } from './config';
  */
 export function initializeFirebase(): { app: FirebaseApp | null; db: Firestore | null; auth: Auth | null } {
   // Check if we have at least the basic config
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === '') {
-    console.warn('Firebase API Key is missing. Check your .env file.');
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === '' || firebaseConfig.apiKey === 'undefined') {
+    console.warn('Firebase API Key is missing or invalid. Please set NEXT_PUBLIC_FIREBASE_API_KEY in your .env file.');
     return { app: null, db: null, auth: null };
   }
 
@@ -21,7 +21,7 @@ export function initializeFirebase(): { app: FirebaseApp | null; db: Firestore |
 
     return { app, db, auth };
   } catch (error) {
-    console.error('Failed to initialize Firebase:', error);
+    console.error('Failed to initialize Firebase services:', error);
     return { app: null, db: null, auth: null };
   }
 }

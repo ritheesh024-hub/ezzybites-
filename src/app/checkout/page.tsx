@@ -19,7 +19,6 @@ import {
   Loader2, 
   Trash2,
   UserCheck,
-  MapPin,
   AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
@@ -30,12 +29,10 @@ import { doc, setDoc, getDoc, serverTimestamp, increment } from 'firebase/firest
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart, removeFromCart } = useStore();
   const db = useFirestore();
-  const router = useRouter();
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -98,7 +95,7 @@ export default function CheckoutPage() {
 
   const handleSubmit = async () => {
     if (!db) {
-      toast({ variant: "destructive", title: "System Error", description: "Database not connected. Check Firebase configuration." });
+      toast({ variant: "destructive", title: "System Offline", description: "Database is not available. Please try again later." });
       return;
     }
 
@@ -199,7 +196,7 @@ export default function CheckoutPage() {
             {!db && (
               <Card className="bg-destructive/10 border-destructive text-destructive p-4 rounded-2xl flex items-center gap-3">
                 <AlertCircle className="w-5 h-5 shrink-0" />
-                <p className="text-sm font-bold">Database connection lost. Please refresh or check Firebase settings.</p>
+                <p className="text-sm font-bold">Connecting to servers... Features may be limited.</p>
               </Card>
             )}
 
