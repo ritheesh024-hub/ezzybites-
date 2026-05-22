@@ -17,16 +17,24 @@ export function useSound() {
   const { isAdminMuted, toggleAdminMute } = useStore();
 
   const playSound = useCallback((type: SoundType) => {
+    // Prevent playback on server or if muted
     if (typeof window === 'undefined' || isAdminMuted) return;
 
     try {
       const audio = new Audio(SOUNDS[type]);
       audio.volume = 0.5;
-      audio.play().catch(() => {
-        // Handle blocked autoplay
-      });
+      
+      // Handle the Promise returned by play() to detect browser blocks
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // Auto-play was prevented. This usually means the user hasn't interacted with the page yet.
+          console.warn(`Sound playback for "${type}" was blocked or failed. Please interact with the page once to enable audio.`, error);
+        });
+      }
     } catch (e) {
-      console.warn('Audio initialization failed', e);
+      console.warn(`Failed to initialize audio for "${type}":`, e);
     }
   }, [isAdminMuted]);
 

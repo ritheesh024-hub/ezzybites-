@@ -47,7 +47,7 @@ export const useStore = create<AppStore>()(
   persist(
     (set, get) => ({
       cart: [],
-      isAdminMuted: false,
+      isAdminMuted: false, // Default to sounds enabled
       addToCart: (item, customization) => set((state) => {
         const cartId = customization 
           ? `${item.id}-${customization.size}-${customization.temp}-${customization.sugar}-${customization.addons.sort().join(',')}`

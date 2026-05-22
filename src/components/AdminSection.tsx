@@ -1,6 +1,6 @@
 
 "use client"
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,10 +53,12 @@ export const AdminSection = () => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const order = change.doc.data();
-          // Only ping for orders created in the last minute to avoid history pings on load
-          if (order.createdAt && (Date.now() - order.createdAt.toMillis() < 60000)) {
+          // Check for orders created within the last 2 minutes to account for slight clock drifts
+          const now = Date.now();
+          const orderTime = order.createdAt?.toMillis() || 0;
+          if (orderTime > 0 && (now - orderTime < 120000)) {
             playSound('ping');
-            toast({ title: "New Order Received!", description: `From ${order.customerName}` });
+            toast({ title: "New Order!", description: `From ${order.customerName || 'Guest'}` });
           }
         }
       });
@@ -81,7 +83,7 @@ export const AdminSection = () => {
     const orderRef = doc(db, 'orders', id);
     updateDoc(orderRef, { status: newStatus }).then(() => {
       playSound('success');
-      toast({ title: `Order set to ${newStatus}` });
+      toast({ title: `Status: ${newStatus}` });
     }).catch(async (e) => {
       playSound('warning');
       errorEmitter.emit('permission-error', new FirestorePermissionError({ 
@@ -106,10 +108,10 @@ export const AdminSection = () => {
       });
       await batch.commit();
       playSound('pop');
-      toast({ title: "Inventory Seeded Successfully" });
+      toast({ title: "Inventory Seeded" });
     } catch (error) {
       playSound('warning');
-      toast({ variant: "destructive", title: "Seeding Failed" });
+      toast({ variant: "destructive", title: "Sync Error" });
     } finally {
       setIsSeeding(false);
     }
@@ -118,7 +120,7 @@ export const AdminSection = () => {
   const handleSaveMenuItem = () => {
     if (!db || !menuFormData.name || !menuFormData.imageUrl) {
       playSound('warning');
-      toast({ variant: "destructive", title: "Incomplete Data" });
+      toast({ variant: "destructive", title: "Form Incomplete" });
       return;
     }
     
@@ -143,7 +145,7 @@ export const AdminSection = () => {
       .then(() => {
         setSaveLoading(false);
         playSound('pop');
-        toast({ title: "Inventory Updated" });
+        toast({ title: "Product Saved" });
         setIsMenuDialogOpen(false);
         resetForm();
       })
@@ -182,18 +184,21 @@ export const AdminSection = () => {
             </div>
             <div>
               <h1 className="text-3xl font-black font-headline">Ezzy<span className="text-primary italic">Console</span></h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">System Operations Engine</p>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Operations & Logistics</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Button 
-              variant="outline" 
+              variant={isAdminMuted ? "outline" : "default"}
               size="sm" 
-              className={cn("rounded-xl h-10 px-4 font-black uppercase text-[9px] tracking-widest gap-2", isAdminMuted ? "text-muted-foreground" : "text-primary border-primary")}
+              className={cn(
+                "rounded-xl h-10 px-4 font-black uppercase text-[9px] tracking-widest gap-2 shadow-sm transition-all",
+                !isAdminMuted && "bg-primary text-white"
+              )}
               onClick={toggleAdminMute}
             >
               {isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              {isAdminMuted ? "Sound Off" : "Sound On"}
+              {isAdminMuted ? "Sounds Muted" : "Sounds Active"}
             </Button>
             <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200 px-4 py-2 uppercase font-black text-[9px]">Live Data Uplink</Badge>
           </div>
