@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
 import { AdminSection } from '@/components/AdminSection';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, LogOut, Loader2, ShieldAlert } from 'lucide-react';
+import { ShoppingBag, LogOut, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -24,14 +24,18 @@ export default function AdminDashboardPage() {
         router.push('/admin/login');
       } else if (user.email !== ADMIN_EMAIL) {
         // Force logout if logged in with wrong account
-        auth.signOut().then(() => {
-          toast({
-            variant: "destructive",
-            title: "Unauthorized Access",
-            description: "This portal is restricted to authorized administrators only.",
+        if (auth) {
+          auth.signOut().then(() => {
+            toast({
+              variant: "destructive",
+              title: "Access Restricted",
+              description: `Only ${ADMIN_EMAIL} is authorized to access the operational console.`,
+            });
+            router.push('/admin/login');
           });
+        } else {
           router.push('/admin/login');
-        });
+        }
       } else {
         setIsAuthorized(true);
       }
@@ -41,17 +45,18 @@ export default function AdminDashboardPage() {
   const handleLogout = async () => {
     if (auth) {
       await auth.signOut();
+      toast({ title: "Logged out successfully" });
       router.push('/admin/login');
     }
   };
 
   if (userLoading || !isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Verifying authorization...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+        <div className="w-16 h-16 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-6">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">Establishing Secure Uplink...</p>
       </div>
     );
   }
@@ -61,19 +66,24 @@ export default function AdminDashboardPage() {
       <nav className="border-b bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-all">
               <ShoppingBag className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-headline font-bold">
-              Ezzy<span className="text-primary">Bites</span> <span className="text-muted-foreground font-normal text-sm ml-2 hidden sm:inline">Admin</span>
+            <span className="text-xl font-headline font-black">
+              Ezzy<span className="text-primary">Bites</span> <span className="text-muted-foreground font-black text-[10px] ml-2 tracking-widest uppercase">Admin</span>
             </span>
           </Link>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-xs font-bold text-foreground">Logged in as</span>
-              <span className="text-[10px] text-muted-foreground">{user?.email}</span>
+            <div className="hidden md:flex flex-col items-end mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50 leading-none mb-1">Authenticated As</span>
+              <span className="text-xs font-bold text-foreground">{user?.email}</span>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full gap-2 hover:bg-destructive hover:text-destructive-foreground transition-all" onClick={handleLogout}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl gap-2 font-black uppercase text-[10px] tracking-widest hover:bg-destructive hover:text-white hover:border-destructive transition-all" 
+              onClick={handleLogout}
+            >
               <LogOut className="w-4 h-4" />
               Sign Out
             </Button>
@@ -81,7 +91,7 @@ export default function AdminDashboardPage() {
         </div>
       </nav>
 
-      <main className="animate-in fade-in duration-700">
+      <main className="animate-in fade-in slide-in-from-bottom-2 duration-700">
         <AdminSection />
       </main>
     </div>
