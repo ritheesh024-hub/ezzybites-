@@ -5,10 +5,14 @@ import { useCallback, useRef } from 'react';
 import { useStore } from '@/app/lib/store';
 
 const SOUNDS = {
-  ping: 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3', // New order notification
-  success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Status updated
-  pop: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Menu/Inventory updated
-  warning: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3', // Action failed
+  // New order notification: Modern digital bell
+  ping: 'https://assets.mixkit.co/active_storage/sfx/1113/1113-preview.mp3', 
+  // Status updated: Clean high-pitched tick
+  success: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', 
+  // Menu/Inventory updated: Light interface pop
+  pop: 'https://assets.mixkit.co/active_storage/sfx/1111/1111-preview.mp3', 
+  // Action failed: Soft electronic alert
+  warning: 'https://assets.mixkit.co/active_storage/sfx/2511/2511-preview.mp3', 
 };
 
 export type SoundType = keyof typeof SOUNDS;
@@ -28,7 +32,7 @@ export function useSound() {
       }
 
       const audio = audioRefs.current[type];
-      audio.volume = 0.5;
+      audio.volume = 0.4; // Slightly lower volume for a more premium feel
       
       // Reset to start in case it's already playing
       audio.currentTime = 0;
