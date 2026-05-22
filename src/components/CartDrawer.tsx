@@ -4,7 +4,7 @@ import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/app/lib/store';
-import { ShoppingBag, Minus, Plus, X, ChevronRight, Truck, Coffee } from 'lucide-react';
+import { ShoppingBag, Minus, Plus, X, ChevronRight, Truck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Separator } from './ui/separator';
@@ -75,25 +75,22 @@ export const CartDrawer = ({ children }: { children: React.ReactNode }) => {
                         <span className="text-[8px] font-black uppercase tracking-widest bg-primary/5 text-primary px-2 py-0.5 rounded-full">{item.customization.temp}</span>
                         <span className="text-[8px] font-black uppercase tracking-widest bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">{item.customization.size}</span>
                         <span className="text-[8px] font-black uppercase tracking-widest bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">Sugar: {item.customization.sugar}</span>
-                        {item.customization.addons.map(a => (
-                          <span key={a} className="text-[8px] font-black uppercase tracking-widest bg-green-50 text-green-600 px-2 py-0.5 rounded-full">+{a}</span>
-                        ))}
                       </div>
                     )}
 
                     <div className="flex items-center justify-between mt-4">
                       <p className="text-xl font-black text-primary italic">₹{item.price}</p>
-                      <div className="flex items-center bg-secondary/80 rounded-xl px-2 h-10">
+                      <div className="flex items-center bg-secondary/80 rounded-xl px-2 h-10 gap-1">
                         <button 
                           onClick={() => updateQuantity(item.cartId, -1)}
-                          className="w-8 h-full flex items-center justify-center hover:bg-white/50 rounded-lg transition-colors"
+                          className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="w-8 text-center text-sm font-black">{item.quantity}</span>
+                        <span className="w-6 text-center text-sm font-black">{item.quantity}</span>
                         <button 
                           onClick={() => updateQuantity(item.cartId, 1)}
-                          className="w-8 h-full flex items-center justify-center hover:bg-white/50 rounded-lg transition-colors"
+                          className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-lg transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>

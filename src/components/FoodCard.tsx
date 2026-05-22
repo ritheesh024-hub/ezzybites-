@@ -1,7 +1,8 @@
+
 "use client"
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star, Heart, Plus, Minus, Clock, Coffee, Sparkles } from 'lucide-react';
+import { Star, Plus, Minus, Clock, Coffee } from 'lucide-react';
 import { FoodItem, useStore, BeverageOptions } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,7 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
   };
 
   const handleQtyChange = (delta: number) => {
+    // For non-beverages, there's usually only one entry per item ID
     const targetItem = cart.find(i => i.id === item.id);
     if (targetItem) {
       updateQuantity(targetItem.cartId, delta);
@@ -104,26 +106,33 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
               {item.isBeverage && <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mt-1">From ₹{item.price}</span>}
             </div>
 
-            <Button 
-              onClick={handleAddClick}
-              className={cn(
-                "rounded-2xl px-6 h-14 font-black uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl shadow-primary/20",
-                cartItemCount > 0 && !item.isBeverage ? "bg-primary text-white" : "bg-primary text-white"
-              )}
-            >
-              {cartItemCount > 0 && !item.isBeverage ? (
-                <div className="flex items-center gap-5">
-                  <Minus className="w-4 h-4" onClick={(e) => { e.stopPropagation(); handleQtyChange(-1); }} />
-                  <span className="text-xl">{cartItemCount}</span>
-                  <Plus className="w-4 h-4" onClick={(e) => { e.stopPropagation(); handleQtyChange(1); }} />
-                </div>
-              ) : (
+            {cartItemCount > 0 && !item.isBeverage ? (
+              <div className="flex items-center gap-4 bg-primary text-white rounded-2xl h-14 px-4 shadow-xl shadow-primary/20 animate-in zoom-in duration-300">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleQtyChange(-1); }}
+                  className="w-10 h-10 rounded-xl hover:bg-white/20 flex items-center justify-center transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-xl font-black w-6 text-center">{cartItemCount}</span>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleQtyChange(1); }}
+                  className="w-10 h-10 rounded-xl hover:bg-white/20 flex items-center justify-center transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Button 
+                onClick={handleAddClick}
+                className="rounded-2xl px-6 h-14 font-black uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl shadow-primary/20 bg-primary text-white"
+              >
                 <div className="flex items-center gap-2">
                   {cartItemCount > 0 ? `Added x${cartItemCount}` : 'Add to Tray'}
                   <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
                 </div>
-              )}
-            </Button>
+              </Button>
+            )}
           </div>
         </div>
       </div>

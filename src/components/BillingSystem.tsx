@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -12,7 +13,7 @@ import {
   Calculator, Receipt, History, 
   Search, Plus, Minus, Trash2, Printer, 
   ShoppingBag, Utensils, 
-  Package, Smartphone
+  Package
 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -138,13 +139,13 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
                           <p className="text-primary font-black text-xs mb-3">₹{p.price}</p>
                           <div className="mt-auto">
                             {cartItem ? (
-                              <div className="flex items-center justify-between w-full bg-primary text-white rounded-xl h-10 px-2">
-                                <button onClick={() => updateQuantity(p, -1)} className="p-1"><Minus className="w-3.5 h-3.5" /></button>
-                                <span className="font-black text-xs">{cartItem.quantity}</span>
-                                <button onClick={() => updateQuantity(p, 1)} className="p-1"><Plus className="w-3.5 h-3.5" /></button>
+                              <div className="flex items-center justify-between w-full bg-primary text-white rounded-xl h-10 px-2 gap-2">
+                                <button onClick={() => updateQuantity(p, -1)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Minus className="w-3.5 h-3.5" /></button>
+                                <span className="font-black text-xs w-4 text-center">{cartItem.quantity}</span>
+                                <button onClick={() => updateQuantity(p, 1)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Plus className="w-3.5 h-3.5" /></button>
                               </div>
                             ) : (
-                              <Button onClick={() => updateQuantity(p, 1)} variant="outline" className="w-full h-10 rounded-xl border-primary/30 text-primary font-black uppercase text-[9px]">
+                              <Button onClick={() => updateQuantity(p, 1)} variant="outline" className="w-full h-10 rounded-xl border-primary/30 text-primary font-black uppercase text-[9px] hover:bg-primary hover:text-white transition-all">
                                 <Plus className="w-3 h-3 mr-1" /> Add
                               </Button>
                             )}
@@ -189,11 +190,11 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
                             <p className="text-[9px] font-black text-primary">₹{item.price * item.quantity}</p>
                           </div>
                           <div className="flex items-center gap-2 bg-white rounded-lg p-1">
-                            <button onClick={() => updateQuantity(item, -1)} className="p-1"><Minus className="w-3 h-3" /></button>
+                            <button onClick={() => updateQuantity(item, -1)} className="p-1 hover:bg-secondary/20 rounded transition-colors"><Minus className="w-3 h-3" /></button>
                             <span className="text-[10px] font-black w-4 text-center">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item, 1)} className="p-1"><Plus className="w-3 h-3" /></button>
+                            <button onClick={() => updateQuantity(item, 1)} className="p-1 hover:bg-secondary/20 rounded transition-colors"><Plus className="w-3 h-3" /></button>
                           </div>
-                          <button onClick={() => removeFromBill(item.id)} className="ml-2 text-destructive/40"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => removeFromBill(item.id)} className="ml-2 text-destructive/40 hover:text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))
                     )}
