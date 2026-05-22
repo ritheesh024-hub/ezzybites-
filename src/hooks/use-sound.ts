@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useStore } from '@/app/lib/store';
 
 const SOUNDS = {
@@ -15,22 +15,30 @@ export type SoundType = keyof typeof SOUNDS;
 
 export function useSound() {
   const { isAdminMuted, toggleAdminMute } = useStore();
+  const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({});
 
   const playSound = useCallback((type: SoundType) => {
     // Prevent playback on server or if muted
     if (typeof window === 'undefined' || isAdminMuted) return;
 
     try {
-      const audio = new Audio(SOUNDS[type]);
+      // Lazy initialize audio elements
+      if (!audioRefs.current[type]) {
+        audioRefs.current[type] = new Audio(SOUNDS[type]);
+      }
+
+      const audio = audioRefs.current[type];
       audio.volume = 0.5;
       
-      // Handle the Promise returned by play() to detect browser blocks
+      // Reset to start in case it's already playing
+      audio.currentTime = 0;
+      
       const playPromise = audio.play();
       
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
-          // Auto-play was prevented. This usually means the user hasn't interacted with the page yet.
-          console.warn(`Sound playback for "${type}" was blocked or failed. Please interact with the page once to enable audio.`, error);
+          // Auto-play prevented. User interaction needed.
+          console.warn(`Sound playback for "${type}" was blocked. Click anywhere on the dashboard to enable audio.`, error);
         });
       }
     } catch (e) {

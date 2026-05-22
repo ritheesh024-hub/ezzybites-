@@ -1,6 +1,6 @@
 
 "use client"
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import {
   Megaphone, LayoutDashboard, Trash2, Plus, Edit2, Link as LinkIcon,
   MapPin, Phone, Database, Info, Coffee,
   Receipt, Calculator, History, Printer, Search,
-  Store, AlertCircle, Ban, Truck, ChefHat, Volume2, VolumeX
+  Store, AlertCircle, Ban, Truck, ChefHat, Volume2, VolumeX, BellRing
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CATEGORIES, MENU_ITEMS } from '@/app/lib/menu-data';
@@ -43,28 +43,36 @@ export const AdminSection = () => {
     if (!db) return null;
     return query(collection(db, 'products'));
   }, [db]);
-  const { data: dbMenu, loading: menuLoading } = useCollection<any>(menuQuery);
+  const { data: dbMenu, loading: menuLoading } = useCollection<any>(dbMenu);
 
-  // Sound logic for new orders
-  useEffect(() => {
-    if (!db) return;
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const order = change.doc.data();
-          // Check for orders created within the last 2 minutes to account for slight clock drifts
-          const now = Date.now();
-          const orderTime = order.createdAt?.toMillis() || 0;
-          if (orderTime > 0 && (now - orderTime < 120000)) {
-            playSound('ping');
-            toast({ title: "New Order!", description: `From ${order.customerName || 'Guest'}` });
-          }
-        }
-      });
+  const orderGroups = useMemo(() => {
+    const groups = {
+      pending: [] as any[],
+      preparing: [] as any[],
+      completed: [] as any[]
+    };
+    realOrders?.forEach(o => {
+      if (o.status === 'Pending') groups.pending.push(o);
+      else if (o.status === 'Preparing') groups.preparing.push(o);
+      else if (o.status === 'Delivered') groups.completed.push(o);
     });
-    return () => unsubscribe();
-  }, [db, playSound]);
+    return groups;
+  }, [realOrders]);
+
+  // PERSISTENT RINGING LOGIC
+  // Ring every 5 seconds if there are pending orders and not muted
+  useEffect(() => {
+    if (isAdminMuted || orderGroups.pending.length === 0) return;
+
+    const ringInterval = setInterval(() => {
+      playSound('ping');
+    }, 5000);
+
+    // Initial ping
+    playSound('ping');
+
+    return () => clearInterval(ringInterval);
+  }, [orderGroups.pending.length, isAdminMuted, playSound]);
 
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoResult, setPromoResult] = useState<any>(null);
@@ -158,20 +166,6 @@ export const AdminSection = () => {
       });
   };
 
-  const orderGroups = useMemo(() => {
-    const groups = {
-      pending: [] as any[],
-      preparing: [] as any[],
-      completed: [] as any[]
-    };
-    realOrders?.forEach(o => {
-      if (o.status === 'Pending') groups.pending.push(o);
-      else if (o.status === 'Preparing') groups.preparing.push(o);
-      else if (o.status === 'Delivered') groups.completed.push(o);
-    });
-    return groups;
-  }, [realOrders]);
-
   const hideVegOption = ['Tea', 'Coffee', 'Ice creams'].includes(menuFormData.category);
 
   return (
@@ -184,7 +178,14 @@ export const AdminSection = () => {
             </div>
             <div>
               <h1 className="text-3xl font-black font-headline">Ezzy<span className="text-primary italic">Console</span></h1>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Operations & Logistics</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Operations & Logistics</p>
+                {orderGroups.pending.length > 0 && (
+                  <Badge className="bg-primary animate-pulse text-[8px] font-black h-4 px-1.5 rounded-full flex items-center gap-1">
+                    <BellRing className="w-2.5 h-2.5" /> {orderGroups.pending.length} ATTENTION
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -208,7 +209,12 @@ export const AdminSection = () => {
           <TabsList className="bg-white p-1 rounded-3xl border w-full flex shadow-sm">
             <TabsTrigger value="overview" className="flex-1 py-4 font-black uppercase text-[10px] rounded-2xl">Analysis</TabsTrigger>
             <TabsTrigger value="billing" className="flex-1 py-4 font-black uppercase text-[10px] gap-2 rounded-2xl"><Receipt className="w-4 h-4" /> Billing</TabsTrigger>
-            <TabsTrigger value="orders" className="flex-1 py-4 font-black uppercase text-[10px] rounded-2xl">Live Orders</TabsTrigger>
+            <TabsTrigger value="orders" className="flex-1 py-4 font-black uppercase text-[10px] rounded-2xl relative">
+              Live Orders
+              {orderGroups.pending.length > 0 && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-ping" />
+              )}
+            </TabsTrigger>
             <TabsTrigger value="inventory" className="flex-1 py-4 font-black uppercase text-[10px] rounded-2xl">Inventory</TabsTrigger>
             <TabsTrigger value="marketing" className="flex-1 py-4 font-black uppercase text-[10px] rounded-2xl"><Sparkles className="w-4 h-4" /> AI Labs</TabsTrigger>
           </TabsList>
@@ -227,11 +233,19 @@ export const AdminSection = () => {
                 <div key={statusKey} className="space-y-6">
                   <div className="flex items-center justify-between px-4">
                     <h3 className="font-black uppercase tracking-widest text-xs opacity-50">{statusKey}</h3>
-                    <Badge className="bg-secondary text-foreground rounded-full h-6 w-6 flex items-center justify-center p-0">{orderGroups[statusKey as keyof typeof orderGroups].length}</Badge>
+                    <Badge className={cn(
+                      "rounded-full h-6 w-6 flex items-center justify-center p-0",
+                      statusKey === 'pending' && orderGroups.pending.length > 0 ? "bg-primary text-white animate-bounce" : "bg-secondary text-foreground"
+                    )}>
+                      {orderGroups[statusKey as keyof typeof orderGroups].length}
+                    </Badge>
                   </div>
                   <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2 scrollbar-hide">
                     {orderGroups[statusKey as keyof typeof orderGroups].map((order) => (
-                      <Card key={order.id} className="rounded-[2.5rem] border-none shadow-xl bg-white group hover:shadow-2xl transition-all">
+                      <Card key={order.id} className={cn(
+                        "rounded-[2.5rem] border-none shadow-xl bg-white group hover:shadow-2xl transition-all",
+                        statusKey === 'pending' && "border-2 border-primary/20 bg-primary/[0.02]"
+                      )}>
                         <CardContent className="p-6 md:p-8">
                           <div className="flex justify-between items-start mb-6">
                             <div>
