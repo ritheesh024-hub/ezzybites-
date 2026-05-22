@@ -1,6 +1,6 @@
 
 "use client"
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ import {
   MessageSquare,
   ShieldCheck,
   Lock,
-  ArrowRight,
   UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
@@ -99,7 +98,6 @@ export default function CheckoutPage() {
     if (!db) return;
     setOtpLoading(true);
     
-    // Check for existing user profile by phone
     try {
       const userRef = doc(db, 'users', phoneNumber);
       const userSnap = await getDoc(userRef);
@@ -164,11 +162,10 @@ export default function CheckoutPage() {
       total: Number(total),
       status: 'Pending',
       paymentMethod: formData.paymentMethod,
-      userId: phoneNumber, // Phone is the ID
+      userId: phoneNumber,
       createdAt: serverTimestamp()
     };
 
-    // 1. Create Order
     const orderRef = doc(db, 'orders', currentOrderId);
     setDoc(orderRef, orderData).catch(async (error) => {
       errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -178,7 +175,6 @@ export default function CheckoutPage() {
       }));
     });
 
-    // 2. Update/Create User Profile
     const userRef = doc(db, 'users', phoneNumber);
     setDoc(userRef, {
       phone: phoneNumber,
@@ -188,7 +184,6 @@ export default function CheckoutPage() {
       orderCount: increment(1)
     }, { merge: true });
 
-    // Optimistic completion
     setTimeout(() => {
       setLoading(false);
       clearCart();
@@ -215,7 +210,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/10 pb-12">
+    <div className="min-h-screen bg-secondary/10 pb-12 overflow-x-hidden">
       <Navbar />
       <main className="container mx-auto px-4 pt-24 md:pt-32">
         {/* Progress Tracker */}
@@ -241,8 +236,6 @@ export default function CheckoutPage() {
 
         <div className="max-w-5xl mx-auto grid lg:grid-cols-3 gap-6 md:gap-10">
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
-            
-            {/* Step 1: Review Items */}
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-left duration-500">
                 <h2 className="text-2xl md:text-4xl font-headline font-black">Review Order</h2>
@@ -254,11 +247,11 @@ export default function CheckoutPage() {
                           <Image src={item.imageUrl} alt={item.name} fill className="object-cover" unoptimized />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-base md:text-lg truncate">{item.name}</h4>
-                          <Badge variant="secondary" className="mt-1">Qty: {item.quantity}</Badge>
+                          <h4 className="font-bold text-sm md:text-lg truncate">{item.name}</h4>
+                          <Badge variant="secondary" className="mt-1 text-[10px]">Qty: {item.quantity}</Badge>
                         </div>
                         <div className="text-right">
-                          <p className="font-black text-lg md:text-xl text-primary">₹{item.price * item.quantity}</p>
+                          <p className="font-black text-base md:text-xl text-primary">₹{item.price * item.quantity}</p>
                           <button onClick={() => removeFromCart(item.id)} className="text-muted-foreground hover:text-destructive mt-2 transition-colors">
                             <Trash2 className="w-4 h-4 ml-auto" />
                           </button>
@@ -271,7 +264,6 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Step 2: WhatsApp Frictionless Auth */}
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-left duration-500 max-w-md mx-auto">
                 <div className="text-center space-y-2">
@@ -281,9 +273,8 @@ export default function CheckoutPage() {
                   <h2 className="text-2xl md:text-3xl font-black">Quick Verification</h2>
                   <p className="text-muted-foreground text-sm font-medium">Verify your number to track your delicious meal.</p>
                 </div>
-
                 <Card className="rounded-[32px] border-none shadow-xl bg-card overflow-hidden">
-                  <CardContent className="p-8 space-y-6">
+                  <CardContent className="p-6 md:p-8 space-y-6">
                     {!showOtp ? (
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -301,24 +292,18 @@ export default function CheckoutPage() {
                             />
                           </div>
                         </div>
-                        <Button 
-                          onClick={startPhoneAuth} 
-                          disabled={otpLoading} 
-                          className="w-full h-14 md:h-16 rounded-2xl font-black text-base md:text-lg gap-2 shadow-xl shadow-primary/20"
-                        >
+                        <Button onClick={startPhoneAuth} disabled={otpLoading} className="w-full h-14 md:h-16 rounded-2xl font-black text-base md:text-lg gap-2 shadow-xl shadow-primary/20">
                           {otpLoading ? <Loader2 className="animate-spin" /> : <>Send OTP <MessageSquare className="w-5 h-5" /></>}
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-8 text-center animate-in zoom-in duration-500">
-                        <div className="space-y-2">
+                      <div className="space-y-6 text-center animate-in zoom-in duration-500">
+                        <div className="space-y-1">
                           <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Enter 6-Digit Code</Label>
                           <p className="text-xs text-muted-foreground">Sent to <span className="text-primary font-bold">+91 {phoneNumber}</span></p>
                         </div>
-                        
                         <OTPInput onComplete={verifyOtp} disabled={otpLoading} />
-
-                        <div className="pt-4 space-y-4">
+                        <div className="pt-2 space-y-2">
                           <Button 
                             variant="link" 
                             disabled={resendTimer > 0} 
@@ -333,13 +318,9 @@ export default function CheckoutPage() {
                     )}
                   </CardContent>
                 </Card>
-                <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">
-                  <ShieldCheck className="w-3 h-3" /> Secure & Frictionless Auth
-                </div>
               </div>
             )}
 
-            {/* Step 3: Delivery Details */}
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-left duration-500">
                 <div className="flex justify-between items-end">
@@ -366,47 +347,36 @@ export default function CheckoutPage() {
                       <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Delivery Address</Label>
                       <Textarea value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="rounded-xl min-h-[100px] md:min-h-[140px] font-medium" placeholder="Complete address (Building, Street, Area)" />
                     </div>
-                    {isReturningUser && (
-                      <p className="text-[9px] font-black text-muted-foreground italic opacity-50">* We've auto-filled your details from your last order.</p>
-                    )}
                   </CardContent>
                 </Card>
-                <div className="flex gap-3 md:gap-4">
+                <div className="flex gap-3">
                   <Button variant="outline" onClick={handleBack} className="h-14 md:h-16 rounded-xl px-4 md:px-8 font-bold border-2"><ChevronLeft className="w-5 h-5" /></Button>
-                  <Button onClick={handleNext} className="flex-1 h-14 md:h-16 rounded-xl text-base md:text-lg font-bold shadow-xl shadow-primary/20">Select Payment</Button>
+                  <Button onClick={handleNext} className="flex-1 h-14 md:h-16 rounded-xl text-base md:text-lg font-bold shadow-xl">Select Payment</Button>
                 </div>
               </div>
             )}
 
-            {/* Step 4: Payment */}
             {step === 4 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-left duration-500">
                 <h2 className="text-2xl md:text-4xl font-headline font-black">Payment</h2>
-                <RadioGroup defaultValue={formData.paymentMethod} onValueChange={(v) => setFormData({...formData, paymentMethod: v})} className="space-y-3 md:space-y-4">
-                  <Label htmlFor="cod" className={cn(
-                    "flex items-center gap-4 p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all",
-                    formData.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'bg-card border-transparent'
-                  )}>
+                <RadioGroup defaultValue={formData.paymentMethod} onValueChange={(v) => setFormData({...formData, paymentMethod: v})} className="space-y-3">
+                  <Label htmlFor="cod" className={cn("flex items-center gap-4 p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all", formData.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'bg-card border-transparent')}>
                     <RadioGroupItem value="cod" id="cod" className="sr-only" />
-                    <Truck className={cn("w-6 h-6 md:w-8 md:h-8 transition-colors", formData.paymentMethod === 'cod' ? 'text-primary' : 'text-muted-foreground')} />
+                    <Truck className={cn("w-6 h-6 md:w-8 md:h-8", formData.paymentMethod === 'cod' ? 'text-primary' : 'text-muted-foreground')} />
                     <div className="flex-1">
                       <p className="font-bold text-sm md:text-base">Cash on Delivery</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground">Pay when you receive your meal</p>
                     </div>
                   </Label>
-                  <Label htmlFor="upi" className={cn(
-                    "flex items-center gap-4 p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all",
-                    formData.paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'bg-card border-transparent'
-                  )}>
+                  <Label htmlFor="upi" className={cn("flex items-center gap-4 p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all", formData.paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'bg-card border-transparent')}>
                     <RadioGroupItem value="upi" id="upi" className="sr-only" />
-                    <Smartphone className={cn("w-6 h-6 md:w-8 md:h-8 transition-colors", formData.paymentMethod === 'upi' ? 'text-primary' : 'text-muted-foreground')} />
+                    <Smartphone className={cn("w-6 h-6 md:w-8 md:h-8", formData.paymentMethod === 'upi' ? 'text-primary' : 'text-muted-foreground')} />
                     <div className="flex-1">
                       <p className="font-bold text-sm md:text-base">UPI / QR Scan</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground">Instant payment via any UPI app</p>
                     </div>
                   </Label>
                 </RadioGroup>
-
                 {formData.paymentMethod === 'upi' && (
                   <Card className="p-6 md:p-10 text-center animate-in zoom-in rounded-[32px] border-dashed border-2 bg-card">
                     <div className="w-48 h-48 md:w-56 md:h-56 mx-auto relative bg-white border rounded-2xl overflow-hidden mb-6 p-2 shadow-inner">
@@ -418,8 +388,7 @@ export default function CheckoutPage() {
                     </div>
                   </Card>
                 )}
-
-                <div className="flex gap-3 md:gap-4">
+                <div className="flex gap-3">
                   <Button variant="outline" onClick={handleBack} className="h-14 md:h-16 rounded-xl px-4 md:px-8 font-bold border-2"><ChevronLeft className="w-5 h-5" /></Button>
                   <Button onClick={handleSubmit} disabled={loading} className="flex-1 h-14 md:h-16 rounded-xl text-base md:text-lg font-bold shadow-2xl shadow-primary/20 bg-primary text-white">
                     {loading ? <Loader2 className="animate-spin" /> : 'Confirm Order'}
@@ -428,7 +397,6 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Step 5: Success */}
             {step === 5 && (
               <Card className="p-8 md:p-16 text-center space-y-8 rounded-[32px] md:rounded-[60px] shadow-2xl animate-in zoom-in border-none bg-card">
                 <div className="w-16 h-16 md:w-24 md:h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
@@ -442,7 +410,7 @@ export default function CheckoutPage() {
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Tracking ID</p>
                   <p className="font-mono text-xl md:text-2xl font-black text-primary">{orderId}</p>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
                   <Link href={`/orders/${orderId}`} className="w-full sm:w-auto">
                     <Button className="w-full sm:w-auto rounded-full px-10 h-14 font-black">Track Order</Button>
                   </Link>
@@ -454,27 +422,23 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {/* Sticky Summary */}
           {step < 5 && (
             <Card className="rounded-[24px] md:rounded-[40px] border-none shadow-xl h-fit sticky top-24 lg:top-28 bg-card">
-              <CardHeader className="p-6 md:p-8 border-b bg-muted/5">
+              <CardHeader className="p-6 border-b bg-muted/5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">Order Summary</p>
               </CardHeader>
-              <CardContent className="p-6 md:p-8 space-y-6">
-                <div className="flex justify-between text-sm md:text-base text-muted-foreground">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Subtotal</span>
                   <span className="font-bold text-foreground">₹{subtotal}</span>
                 </div>
-                <div className="flex justify-between text-sm md:text-base text-muted-foreground">
+                <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Delivery</span>
                   <span className="font-bold text-green-600">{deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}</span>
                 </div>
-                <div className="border-t border-dashed pt-6 flex justify-between items-center">
-                  <span className="text-sm md:text-lg font-black uppercase tracking-widest">Total</span>
-                  <span className="text-2xl md:text-4xl font-headline font-black text-primary">₹{total}</span>
-                </div>
-                <div className="pt-2 flex items-center gap-2 text-[8px] font-black uppercase text-muted-foreground opacity-50">
-                  <Lock className="w-3 h-3" /> SSL Secure Payment
+                <div className="border-t border-dashed pt-4 flex justify-between items-center">
+                  <span className="text-xs md:text-sm font-black uppercase tracking-widest">Total</span>
+                  <span className="text-2xl md:text-3xl font-headline font-black text-primary">₹{total}</span>
                 </div>
               </CardContent>
             </Card>
@@ -484,6 +448,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-import { cn } from '@/lib/utils';
-
