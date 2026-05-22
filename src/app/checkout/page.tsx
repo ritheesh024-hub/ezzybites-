@@ -21,7 +21,8 @@ import {
   Trash2,
   Lock,
   UserCheck,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -32,6 +33,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { sendSMSOTP, verifySMSOTP } from '@/app/actions/otp-actions';
 
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart, removeFromCart } = useStore();
@@ -83,13 +85,21 @@ export default function CheckoutPage() {
       return;
     }
     setOtpLoading(true);
-    // Standard SMS OTP Simulation
-    setTimeout(() => {
+    
+    try {
+      const result = await sendSMSOTP(phoneNumber);
+      if (result.success) {
+        setShowOtp(true);
+        setResendTimer(30);
+        toast({ title: "OTP Sent", description: "Check your mobile for the 4-digit code." });
+      } else {
+        toast({ variant: "destructive", title: "Failed to send OTP", description: result.message });
+      }
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: "Something went wrong. Please try again." });
+    } finally {
       setOtpLoading(false);
-      setShowOtp(true);
-      setResendTimer(30);
-      toast({ title: "Verification Sent", description: "A 4-digit code has been sent to your mobile." });
-    }, 1000);
+    }
   };
 
   const verifyOtp = async (otp: string) => {
@@ -97,6 +107,14 @@ export default function CheckoutPage() {
     setOtpLoading(true);
     
     try {
+      const result = await verifySMSOTP(phoneNumber, otp);
+      
+      if (!result.success) {
+        toast({ variant: "destructive", title: "Verification Failed", description: result.message });
+        setOtpLoading(false);
+        return;
+      }
+
       const userRef = doc(db, 'users', phoneNumber);
       const userSnap = await getDoc(userRef);
 
@@ -116,14 +134,11 @@ export default function CheckoutPage() {
         toast({ title: "Number Verified", description: "Complete your details to finish ordering." });
       }
 
-      setTimeout(() => {
-        setOtpLoading(false);
-        setStep(3); // Move to Details
-      }, 800);
+      setStep(3); // Move to Details
     } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Could not verify code." });
+    } finally {
       setOtpLoading(false);
-      setFormData(prev => ({ ...prev, phone: phoneNumber }));
-      setStep(3);
     }
   };
 
@@ -270,8 +285,8 @@ export default function CheckoutPage() {
                   <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-4">
                     <Smartphone className="w-8 h-8 text-primary" />
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-black">Quick Verification</h2>
-                  <p className="text-muted-foreground text-sm font-medium">Verify your mobile number to track your delicious meal.</p>
+                  <h2 className="text-2xl md:text-3xl font-black">Secure Login</h2>
+                  <p className="text-muted-foreground text-sm font-medium">Verification code will be sent to your mobile.</p>
                 </div>
                 <Card className="rounded-[32px] border-none shadow-xl bg-card overflow-hidden">
                   <CardContent className="p-6 md:p-8 space-y-6">
@@ -297,7 +312,7 @@ export default function CheckoutPage() {
                         </Button>
                         <div className="flex items-center gap-2 justify-center text-muted-foreground">
                           <ShieldCheck className="w-4 h-4" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Secure Verification</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Secure SMS Verification</span>
                         </div>
                       </div>
                     ) : (
