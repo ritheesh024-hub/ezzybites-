@@ -63,7 +63,7 @@ export const AdminSection = () => {
   // Persistent Ringing for Pending Orders
   useEffect(() => {
     if (isAdminMuted || orderGroups.pending.length === 0) return;
-    const ringInterval = setInterval(() => playSound('ping'), 5000);
+    const ringInterval = setInterval(() => playSound('ping'), 8000);
     playSound('ping');
     return () => clearInterval(ringInterval);
   }, [orderGroups.pending.length, isAdminMuted, playSound]);
@@ -86,7 +86,7 @@ export const AdminSection = () => {
       playSound('success');
       toast({ title: `Order ${newStatus}` });
       if (selectedOrderForView?.id === id) {
-        setSelectedOrderForView(null);
+        setSelectedOrderForView(prev => prev ? { ...prev, status: newStatus } : null);
       }
     });
   };
@@ -138,7 +138,11 @@ export const AdminSection = () => {
 
   return (
     <section className="bg-secondary/5 min-h-screen pb-20">
-      <NewOrderPopups pendingOrders={orderGroups.pending} />
+      <NewOrderPopups 
+        pendingOrders={orderGroups.pending} 
+        onViewDetails={(order) => setSelectedOrderForView(order)} 
+        onUpdateStatus={handleUpdateStatus}
+      />
       
       {/* ADMIN HEADER */}
       <div className="bg-white border-b sticky top-0 z-50">
@@ -156,7 +160,7 @@ export const AdminSection = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              className={cn("rounded-xl h-10 gap-2 font-black uppercase text-[10px] tracking-widest", !isAdminMuted && "bg-primary text-white border-none")}
+              className={cn("rounded-xl h-10 gap-2 font-black uppercase text-[10px] tracking-widest transition-all", !isAdminMuted && "bg-primary text-white border-none")}
               onClick={toggleAdminMute}
             >
               {isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -167,25 +171,38 @@ export const AdminSection = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pt-10">
-        <Tabs defaultValue="overview" className="space-y-10">
-          <TabsList className="bg-white p-1 rounded-full border w-full lg:w-fit flex shadow-sm mx-auto">
-            {[
-              { id: 'overview', label: 'Analysis', icon: Zap },
-              { id: 'billing', label: 'Billing POS', icon: Receipt },
-              { id: 'orders', label: 'Live Orders', icon: ShoppingBag },
-              { id: 'inventory', label: 'Inventory', icon: Database },
-              { id: 'marketing', label: 'AI Labs', icon: Sparkles },
-            ].map(tab => (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex-1 lg:flex-none px-8 py-3 font-black uppercase text-[10px] tracking-widest rounded-full gap-2 relative">
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
-                {tab.id === 'orders' && orderGroups.pending.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-ping" />
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <div className="container mx-auto px-4 pt-8">
+        <Tabs defaultValue="overview" className="space-y-8">
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+            <TabsList className="bg-white p-1 rounded-full border w-full lg:w-fit flex shadow-sm">
+              {[
+                { id: 'overview', label: 'Analysis', icon: Zap },
+                { id: 'billing', label: 'Billing POS', icon: Receipt },
+                { id: 'orders', label: 'Live Orders', icon: ShoppingBag },
+                { id: 'inventory', label: 'Inventory', icon: Database },
+                { id: 'marketing', label: 'AI Labs', icon: Sparkles },
+              ].map(tab => (
+                <TabsTrigger key={tab.id} value={tab.id} className="flex-1 lg:flex-none px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 relative">
+                  <tab.icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  {tab.id === 'orders' && orderGroups.pending.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse border-2 border-white" />
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <div className="flex items-center gap-3 w-full lg:w-auto">
+              <div className="flex -space-x-2">
+                {dbMenu?.slice(0, 3).map((m, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-secondary overflow-hidden">
+                    <img src={m.imageUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{dbMenu?.length || 0} Products Active</p>
+            </div>
+          </div>
 
           <TabsContent value="overview">
              <DashboardAnalysis orders={realOrders || []} products={dbMenu || []} />
@@ -196,100 +213,98 @@ export const AdminSection = () => {
           </TabsContent>
 
           <TabsContent value="orders">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {[
                 { id: 'pending', label: 'Incoming Orders', icon: BellRing, color: 'text-primary' },
                 { id: 'preparing', label: 'In the Kitchen', icon: ChefHat, color: 'text-orange-500' },
                 { id: 'completed', label: 'Archive', icon: Package, color: 'text-muted-foreground' }
               ].map((group) => (
-                <div key={group.id} className="space-y-6">
+                <div key={group.id} className="space-y-4">
                   <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center gap-3">
-                      <group.icon className={cn("w-5 h-5", group.color)} />
-                      <h3 className="font-black uppercase tracking-widest text-[11px] opacity-60">{group.label}</h3>
+                    <div className="flex items-center gap-2">
+                      <group.icon className={cn("w-4 h-4", group.color)} />
+                      <h3 className="font-black uppercase tracking-widest text-[10px] opacity-60">{group.label}</h3>
                     </div>
-                    <Badge className="bg-secondary text-foreground rounded-full px-2.5">{orderGroups[group.id as keyof typeof orderGroups].length}</Badge>
+                    <Badge variant="secondary" className="rounded-full px-2 font-black text-[9px]">{orderGroups[group.id as keyof typeof orderGroups].length}</Badge>
                   </div>
-                  <div className="space-y-4">
-                    {orderGroups[group.id as keyof typeof orderGroups].map((order) => (
-                      <Card 
-                        key={order.id} 
-                        className="rounded-[1.5rem] border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all cursor-pointer select-none"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedOrderForView(order);
-                        }}
-                      >
-                        <CardContent className="p-0">
+                  <div className="space-y-3">
+                    {orderGroups[group.id as keyof typeof orderGroups].length === 0 ? (
+                      <div className="bg-secondary/20 rounded-[1.5rem] p-8 text-center border-2 border-dashed border-muted/40">
+                        <Package className="w-8 h-8 mx-auto mb-2 opacity-10" />
+                        <p className="text-[9px] font-black uppercase opacity-30">No active orders</p>
+                      </div>
+                    ) : (
+                      orderGroups[group.id as keyof typeof orderGroups].map((order) => (
+                        <Card 
+                          key={order.id} 
+                          className="rounded-[1.2rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-lg transition-all cursor-pointer"
+                          onClick={() => setSelectedOrderForView(order)}
+                        >
                           <div className={cn(
                             "h-1.5 w-full", 
                             order.status === 'Pending' ? "bg-primary" : 
                             order.status === 'Preparing' ? "bg-orange-500" : 
                             order.status === 'Cancelled' ? "bg-red-500" : "bg-green-500"
                           )} />
-                          <div className="p-5 space-y-3">
+                          <div className="p-4 space-y-2">
                             <div className="flex justify-between items-start">
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-[9px] font-black uppercase text-primary">#{order.orderId}</span>
                                   {getTypeBadge(order)}
                                 </div>
-                                <h4 className="text-sm font-black truncate">{order.customerName}</h4>
+                                <h4 className="text-xs font-black truncate">{order.customerName}</h4>
                               </div>
-                              <p className="text-base font-black text-primary italic">₹{order.total}</p>
+                              <p className="text-sm font-black text-primary italic">₹{order.total}</p>
                             </div>
-                            
-                            <div className="bg-secondary/20 p-3 rounded-xl">
-                              <p className="text-[10px] font-bold text-muted-foreground line-clamp-1">
-                                {order.items?.map((i: any) => `${i.name} x${i.quantity}`).join(', ')}
-                              </p>
-                            </div>
-
-                            <div className="flex justify-between items-center pt-1">
+                            <div className="flex justify-between items-center pt-2 border-t border-dashed">
                               {getStatusBadge(order.status)}
-                              <span className="text-[9px] font-bold text-muted-foreground opacity-50 flex items-center gap-1">
+                              <span className="text-[8px] font-bold text-muted-foreground opacity-50 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                                {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                               </span>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </Card>
+                      ))
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           </TabsContent>
 
-          <TabsContent value="inventory" className="space-y-10">
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button onClick={() => { setEditingItem(null); setMenuFormData({ name: '', description: '', price: '', category: 'Veg Maggie', imageUrl: '', isVeg: true, isAvailable: true, rating: '4.5', isBeverage: false }); setIsMenuDialogOpen(true); }} className="rounded-2xl h-16 px-10 font-black uppercase tracking-widest text-[11px] gap-3 bg-primary shadow-xl shadow-primary/20">
-                <Plus className="w-6 h-6" /> Add Product
+          <TabsContent value="inventory" className="space-y-8">
+            <div className="flex justify-between items-center">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black font-headline uppercase tracking-tighter">Kitchen Inventory</h2>
+                <p className="text-[9px] font-black uppercase tracking-widest opacity-40">Manage your dynamic menu items</p>
+              </div>
+              <Button onClick={() => { setEditingItem(null); setMenuFormData({ name: '', description: '', price: '', category: 'Veg Maggie', imageUrl: '', isVeg: true, isAvailable: true, rating: '4.5', isBeverage: false }); setIsMenuDialogOpen(true); }} className="rounded-xl h-12 px-6 font-black uppercase tracking-widest text-[10px] gap-2 bg-primary">
+                <Plus className="w-5 h-5" /> Add New
               </Button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {dbMenu?.map((item: any) => (
-                <Card key={item.id} className="rounded-[2.5rem] border-none shadow-xl overflow-hidden bg-white hover:shadow-2xl transition-all">
-                  <div className="h-44 relative bg-secondary">
+                <Card key={item.id} className="rounded-[2rem] border-none shadow-xl overflow-hidden bg-white hover:scale-[1.02] transition-all">
+                  <div className="h-40 relative bg-secondary">
                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                    <Badge className="absolute top-4 left-4 bg-white/90 backdrop-blur text-foreground border-none text-[8px] uppercase font-black px-3 py-1 rounded-full">{item.category}</Badge>
+                    <Badge className="absolute top-3 left-3 bg-white/90 backdrop-blur text-foreground border-none text-[8px] uppercase font-black px-2 py-0.5 rounded-full">{item.category}</Badge>
                   </div>
-                  <CardContent className="p-6 space-y-4">
-                    <h4 className="font-black text-lg truncate">{item.name}</h4>
+                  <CardContent className="p-5 space-y-3">
+                    <h4 className="font-black text-sm truncate">{item.name}</h4>
                     <div className="flex justify-between items-center">
-                      <p className="text-2xl font-black text-primary italic">₹{item.price}</p>
-                      <Badge variant="outline" className={cn("text-[9px] uppercase font-black px-3 py-1 rounded-full", item.isAvailable ? "bg-green-50 text-green-600 border-green-200" : "bg-red-50 text-red-600 border-red-200")}>
-                        {item.isAvailable ? "Instock" : "Out"}
+                      <p className="text-xl font-black text-primary italic">₹{item.price}</p>
+                      <Badge variant="outline" className={cn("text-[8px] uppercase font-black px-2 py-0.5 rounded-full", item.isAvailable ? "bg-green-50 text-green-600 border-green-200" : "bg-red-50 text-red-600 border-red-200")}>
+                        {item.isAvailable ? "In Stock" : "Unavailable"}
                       </Badge>
                     </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="ghost" className="flex-1 rounded-xl h-10 font-black text-[9px] uppercase hover:bg-primary/10 hover:text-primary" onClick={() => { setEditingItem(item); setMenuFormData({ ...item, price: item.price.toString() }); setIsMenuDialogOpen(true); }}>
-                        <Edit2 className="w-4 h-4 mr-2" /> Edit
+                    <div className="flex gap-2 pt-1">
+                      <Button variant="ghost" className="flex-1 rounded-lg h-9 font-black text-[9px] uppercase bg-secondary/30" onClick={() => { setEditingItem(item); setMenuFormData({ ...item, price: item.price.toString() }); setIsMenuDialogOpen(true); }}>
+                        <Edit2 className="w-3.5 h-3.5 mr-2" /> Edit
                       </Button>
-                      <Button variant="ghost" className="h-10 w-10 text-destructive rounded-xl hover:bg-destructive/10" onClick={() => deleteDoc(doc(db!, 'products', item.id))}>
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" className="h-9 w-9 text-destructive rounded-lg bg-destructive/5 hover:bg-destructive/10" onClick={() => deleteDoc(doc(db!, 'products', item.id))}>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </CardContent>
@@ -299,41 +314,65 @@ export const AdminSection = () => {
           </TabsContent>
           
           <TabsContent value="marketing">
-             <Card className="rounded-[4rem] border-none shadow-3xl bg-white p-10 md:p-20 overflow-hidden relative">
-                <div className="max-w-4xl relative z-10 space-y-12">
-                  <h3 className="text-4xl md:text-7xl font-black uppercase tracking-tighter leading-none">AI Marketing <br /><span className="text-primary italic">Labs</span></h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+             <Card className="rounded-[3rem] border-none shadow-3xl bg-white p-8 md:p-16 overflow-hidden relative">
+                <div className="max-w-3xl relative z-10 space-y-10">
+                  <div className="space-y-4">
+                    <Badge className="bg-primary/10 text-primary border-none text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full">Marketing Engine</Badge>
+                    <h3 className="text-3xl md:text-6xl font-black uppercase tracking-tighter leading-none">AI Marketing <br /><span className="text-primary italic">Labs</span></h3>
+                    <p className="text-muted-foreground font-medium text-base">Select a dish to generate a high-impact social media promotion using Gemini AI.</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {dbMenu?.slice(0, 12).map((item: any) => (
-                      <button key={item.id} onClick={() => setSelectedPromoDish(item)} className={cn("p-4 rounded-2xl border-2 text-[10px] font-black uppercase transition-all truncate", selectedPromoDish?.id === item.id ? "border-primary bg-primary text-white" : "border-muted bg-white")}>
+                      <button 
+                        key={item.id} 
+                        onClick={() => setSelectedPromoDish(item)} 
+                        className={cn(
+                          "p-3 rounded-xl border-2 text-[9px] font-black uppercase transition-all truncate text-center", 
+                          selectedPromoDish?.id === item.id ? "border-primary bg-primary text-white shadow-lg" : "border-muted bg-white hover:border-primary/20"
+                        )}
+                      >
                         {item.name}
                       </button>
                     ))}
                   </div>
-                  <Button size="lg" className="rounded-full h-20 px-12 font-black uppercase text-[12px] gap-4 bg-primary" onClick={async () => {
+
+                  <Button 
+                    size="lg" 
+                    className="rounded-full h-16 px-10 font-black uppercase text-[11px] gap-3 bg-primary" 
+                    onClick={async () => {
                       if (!selectedPromoDish) return;
                       setPromoLoading(true);
                       try {
-                        const res = await dailySpecialGenerator({ dishName: selectedPromoDish.name, basePrice: selectedPromoDish.price, discountPercent: 15 });
+                        const res = await dailySpecialGenerator({ dishName: selectedPromoDish.name, basePrice: selectedPromoDish.price, discountPercent: 20 });
                         setPromoResult(res);
+                        playSound('success');
                       } finally { setPromoLoading(false); }
-                    }} disabled={promoLoading || !selectedPromoDish}>
-                    {promoLoading ? <Loader2 className="animate-spin w-8 h-8" /> : <Megaphone className="w-8 h-8" />} Generate Promotion
+                    }} 
+                    disabled={promoLoading || !selectedPromoDish}
+                  >
+                    {promoLoading ? <Loader2 className="animate-spin w-6 h-6" /> : <Sparkles className="w-6 h-6" />} Generate Promotion
                   </Button>
+
                   {promoResult && (
-                    <div className="mt-12 p-10 bg-primary/5 rounded-[3rem] border-2 border-primary/10 space-y-6 animate-in zoom-in">
-                      <h4 className="text-3xl font-black">{promoResult.promoTitle} {promoResult.emoji}</h4>
-                      <p className="text-xl font-medium italic opacity-80 leading-relaxed">{promoResult.promoDescription}</p>
+                    <div className="mt-8 p-8 bg-primary/5 rounded-[2.5rem] border-2 border-primary/10 space-y-4 animate-in zoom-in">
+                      <div className="flex justify-between items-start">
+                        <h4 className="text-2xl font-black">{promoResult.promoTitle} {promoResult.emoji}</h4>
+                        <Badge className="bg-primary text-white font-black text-[9px] uppercase px-4 py-1">₹{promoResult.finalPrice}</Badge>
+                      </div>
+                      <p className="text-base font-medium italic opacity-80 leading-relaxed">"{promoResult.promoDescription}"</p>
                     </div>
                   )}
                 </div>
+                <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
              </Card>
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Order Details Modal */}
+      {/* Standard Order Details Modal */}
       <Dialog open={!!selectedOrderForView} onOpenChange={(open) => !open && setSelectedOrderForView(null)}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl bg-white focus:outline-none">
+        <DialogContent className="max-w-2xl rounded-[2rem] p-0 overflow-hidden border-none shadow-3xl bg-white">
           <DialogTitle className="sr-only">Order Details for #{selectedOrderForView?.orderId}</DialogTitle>
           {selectedOrderForView && (
             <>
@@ -343,7 +382,7 @@ export const AdminSection = () => {
               )}>
                 <div className="flex justify-between items-center relative z-10">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">Order Management</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Operation ID</p>
                     <h2 className="text-3xl font-black font-headline tracking-tighter">#{selectedOrderForView.orderId}</h2>
                   </div>
                   <div className="text-right">
@@ -351,34 +390,28 @@ export const AdminSection = () => {
                     <p className="text-3xl font-black font-headline">₹{selectedOrderForView.total}</p>
                   </div>
                 </div>
-                <div className="mt-6 flex gap-3 relative z-10">
-                  {getStatusBadge(selectedOrderForView.status)}
-                  {getTypeBadge(selectedOrderForView)}
-                </div>
               </div>
 
-              <div className="p-8 grid md:grid-cols-2 gap-8 max-h-[60vh] overflow-y-auto scrollbar-hide">
+              <div className="p-8 grid md:grid-cols-2 gap-8 max-h-[60vh] overflow-y-auto">
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Order Items</h5>
+                    <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Order Items</h5>
                     <div className="space-y-2">
                       {selectedOrderForView.items?.map((item: any, i: number) => (
                         <div key={i} className="flex justify-between items-center p-3 bg-secondary/30 rounded-xl">
                           <div className="flex-1">
-                            <p className="font-bold text-sm">{item.name}</p>
-                            <p className="text-[10px] font-bold text-primary">₹{item.price} x {item.quantity}</p>
+                            <p className="font-bold text-xs">{item.name}</p>
+                            <p className="text-[9px] font-black text-primary">₹{item.price} x {item.quantity}</p>
                           </div>
-                          <span className="font-black text-primary">₹{item.price * item.quantity}</span>
+                          <span className="font-black text-primary text-sm">₹{item.price * item.quantity}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-
                   {selectedOrderForView.instructions && (
                     <div className="space-y-2">
-                      <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Kitchen Instructions</h5>
-                      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl flex gap-3 items-start text-orange-800 italic text-xs font-medium">
-                        <FileText className="w-4 h-4 shrink-0 mt-0.5" />
+                      <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Special Notes</h5>
+                      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl text-xs font-medium italic text-orange-800">
                         {selectedOrderForView.instructions}
                       </div>
                     </div>
@@ -387,46 +420,20 @@ export const AdminSection = () => {
 
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Customer Details</h5>
-                    <div className="space-y-3">
+                    <h5 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Logistics</h5>
+                    <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                        </div>
+                        <User className="w-4 h-4 text-muted-foreground" />
                         <div>
-                          <p className="text-[10px] font-black uppercase opacity-40">Name</p>
-                          <p className="text-xs font-bold">{selectedOrderForView.customerName}</p>
+                          <p className="text-[9px] font-black uppercase opacity-40">Client</p>
+                          <p className="text-xs font-bold">{selectedOrderForView.customerName} ({selectedOrderForView.customerPhone})</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                          <BellRing className="w-4 h-4 text-muted-foreground" />
-                        </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-[10px] font-black uppercase opacity-40">Phone</p>
-                          <p className="text-xs font-bold">{selectedOrderForView.customerPhone}</p>
-                        </div>
-                      </div>
-                      {selectedOrderForView.address && (
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black uppercase opacity-40">Delivery Location</p>
-                            <p className="text-[11px] font-bold leading-relaxed">{selectedOrderForView.address}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase opacity-40">Placed At</p>
-                          <p className="text-xs font-bold">
-                            {selectedOrderForView.createdAt?.toDate ? selectedOrderForView.createdAt.toDate().toLocaleString() : 'N/A'}
-                          </p>
+                          <p className="text-[9px] font-black uppercase opacity-40">Destination</p>
+                          <p className="text-xs font-bold leading-relaxed">{selectedOrderForView.address || 'Dine-in / Pickup'}</p>
                         </div>
                       </div>
                     </div>
@@ -434,38 +441,29 @@ export const AdminSection = () => {
                 </div>
               </div>
 
-              <DialogFooter className="p-8 bg-secondary/30 flex flex-wrap gap-3 sm:justify-center">
+              <DialogFooter className="p-6 bg-secondary/30 flex flex-wrap gap-3 sm:justify-center">
                 {selectedOrderForView.status === 'Pending' && (
                   <Button 
-                    className="flex-1 min-w-[140px] rounded-xl h-14 bg-primary font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
+                    className="flex-1 min-w-[140px] rounded-xl h-14 bg-primary font-black uppercase text-[10px] tracking-widest"
                     onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Preparing')}
                   >
-                    Accept & Start Cooking
+                    Accept & Cook
                   </Button>
                 )}
                 {selectedOrderForView.status === 'Preparing' && (
                   <Button 
-                    className="flex-1 min-w-[140px] rounded-xl h-14 bg-orange-500 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-orange-500/20"
+                    className="flex-1 min-w-[140px] rounded-xl h-14 bg-orange-500 font-black uppercase text-[10px] tracking-widest"
                     onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Delivered')}
                   >
-                    Mark as Delivered
-                  </Button>
-                )}
-                {['Pending', 'Preparing'].includes(selectedOrderForView.status) && (
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 min-w-[140px] rounded-xl h-14 border-2 border-destructive text-destructive font-black uppercase text-[10px] tracking-widest hover:bg-destructive hover:text-white"
-                    onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Cancelled')}
-                  >
-                    Deny Order
+                    Mark Fulfilled
                   </Button>
                 )}
                 <Button 
-                  variant="ghost" 
-                  className="w-full h-12 rounded-xl font-black uppercase text-[10px] opacity-50"
+                  variant="outline" 
+                  className="flex-1 min-w-[140px] rounded-xl h-14 border-2 font-black uppercase text-[10px] tracking-widest"
                   onClick={() => setSelectedOrderForView(null)}
                 >
-                  Close Details
+                  Close
                 </Button>
               </DialogFooter>
             </>
@@ -474,48 +472,48 @@ export const AdminSection = () => {
       </Dialog>
 
       <Dialog open={isMenuDialogOpen} onOpenChange={setIsMenuDialogOpen}>
-        <DialogContent className="max-w-2xl rounded-[3rem] p-10 bg-white border-none shadow-3xl">
+        <DialogContent className="max-w-2xl rounded-[2.5rem] p-8 bg-white border-none">
           <DialogHeader>
-            <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter">{editingItem ? 'Update Product' : 'Create Product'}</DialogTitle>
+            <DialogTitle className="text-3xl font-black font-headline uppercase tracking-tighter">{editingItem ? 'Update Product' : 'Add New Item'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 mt-10">
+          <div className="space-y-6 mt-8">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-60 ml-2">Product Name</Label>
-                <Input value={menuFormData.name} onChange={e => setMenuFormData({...menuFormData, name: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
+                <Label className="text-[9px] font-black uppercase opacity-60 ml-2">Name</Label>
+                <Input value={menuFormData.name} onChange={e => setMenuFormData({...menuFormData, name: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-60 ml-2">Base Price (₹)</Label>
-                <Input type="number" value={menuFormData.price} onChange={e => setMenuFormData({...menuFormData, price: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
+                <Label className="text-[9px] font-black uppercase opacity-60 ml-2">Price (₹)</Label>
+                <Input type="number" value={menuFormData.price} onChange={e => setMenuFormData({...menuFormData, price: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-60 ml-2">Category</Label>
-                <select value={menuFormData.category} onChange={e => setMenuFormData({...menuFormData, category: e.target.value})} className="w-full h-14 rounded-2xl bg-secondary/30 border-none px-6 text-[11px] font-black uppercase outline-none appearance-none">
+                <Label className="text-[9px] font-black uppercase opacity-60 ml-2">Category</Label>
+                <select value={menuFormData.category} onChange={e => setMenuFormData({...menuFormData, category: e.target.value})} className="w-full h-12 rounded-xl bg-secondary/30 border-none px-4 text-[10px] font-black uppercase outline-none">
                   {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-60 ml-2">Display Image URL</Label>
-                <Input value={menuFormData.imageUrl} onChange={e => setMenuFormData({...menuFormData, imageUrl: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 border-none font-bold" />
+                <Label className="text-[9px] font-black uppercase opacity-60 ml-2">Image Link</Label>
+                <Input value={menuFormData.imageUrl} onChange={e => setMenuFormData({...menuFormData, imageUrl: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
               </div>
             </div>
-            <div className="flex items-center justify-between p-8 bg-secondary/40 rounded-[2rem]">
+            <div className="flex items-center justify-between p-6 bg-secondary/30 rounded-2xl">
               <div className="flex items-center gap-4">
                 <Switch checked={menuFormData.isAvailable} onCheckedChange={(checked) => setMenuFormData({...menuFormData, isAvailable: checked})} />
-                <span className="text-xs font-black uppercase tracking-widest">Active Instock</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">Active Stock</span>
               </div>
               <div className="flex items-center gap-4">
                 <Switch checked={menuFormData.isVeg} onCheckedChange={(checked) => setMenuFormData({...menuFormData, isVeg: checked})} />
-                <span className="text-xs font-black uppercase tracking-widest">Vegetarian</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">Veg Item</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-4 mt-12">
-            <Button variant="outline" className="flex-1 h-16 rounded-2xl font-black uppercase text-[11px] border-2" onClick={() => setIsMenuDialogOpen(false)}>Discard</Button>
-            <Button className="flex-1 h-16 rounded-2xl font-black uppercase text-[11px] bg-primary" onClick={handleSaveMenuItem} disabled={saveLoading}>
-              {saveLoading ? <Loader2 className="animate-spin" /> : 'Confirm Product'}
+          <div className="flex gap-4 mt-8">
+            <Button variant="outline" className="flex-1 h-14 rounded-xl font-black uppercase text-[10px]" onClick={() => setIsMenuDialogOpen(false)}>Discard</Button>
+            <Button className="flex-1 h-14 rounded-xl font-black uppercase text-[10px] bg-primary" onClick={handleSaveMenuItem} disabled={saveLoading}>
+              {saveLoading ? <Loader2 className="animate-spin" /> : 'Save Changes'}
             </Button>
           </div>
         </DialogContent>
