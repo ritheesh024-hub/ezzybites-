@@ -2,20 +2,18 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, ShoppingBag, Menu, X, User, Heart, Volume2, VolumeX } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, User, Heart } from 'lucide-react';
 import { useStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CartDrawer } from './CartDrawer';
 import { cn } from '@/lib/utils';
-import { useSound } from '@/hooks/use-sound';
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const cart = useStore((state) => state.cart);
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const { isMuted, toggleMute, playSound } = useSound();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,10 +22,6 @@ export const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleNavClick = () => {
-    playSound('click');
-  };
 
   return (
     <nav className={cn(
@@ -42,7 +36,7 @@ export const Navbar = () => {
             : "bg-transparent"
         )}>
           {/* Logo */}
-          <Link href="/" onClick={handleNavClick} className="flex items-center gap-2 group shrink-0">
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
             <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-xl md:rounded-2xl flex items-center justify-center transform group-hover:rotate-12 transition-all shadow-lg shadow-primary/20">
               <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
             </div>
@@ -76,19 +70,7 @@ export const Navbar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => { toggleMute(); if (isMuted) playSound('click'); }}
-              className={cn(
-                "rounded-full transition-colors",
-                !scrolled ? "text-white hover:bg-white/10" : "text-foreground"
-              )}
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </Button>
-
-            <Link href="/favorites" onClick={handleNavClick}>
+            <Link href="/orders">
               <Button variant="ghost" size="icon" className={cn(
                 "rounded-full transition-colors",
                 !scrolled ? "text-white hover:bg-white/10" : "text-foreground"
@@ -98,13 +80,13 @@ export const Navbar = () => {
             </Link>
             
             <CartDrawer>
-              <Button variant="default" className="rounded-full gap-2 px-6 h-11 shadow-lg shadow-primary/20" onClick={() => playSound('click')}>
+              <Button variant="default" className="rounded-full gap-2 px-6 h-11 shadow-lg shadow-primary/20">
                 <ShoppingBag className="w-4 h-4" />
                 <span className="font-black">{cartCount}</span>
               </Button>
             </CartDrawer>
 
-            <Link href="/orders" onClick={handleNavClick}>
+            <Link href="/orders">
               <Button variant="ghost" size="icon" className={cn(
                 "rounded-full border transition-all",
                 !scrolled ? "text-white border-white/20 hover:bg-white/10" : "text-foreground border-border"
@@ -116,23 +98,11 @@ export const Navbar = () => {
 
           {/* Mobile Actions */}
           <div className="md:hidden flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleMute}
-              className={cn(
-                "rounded-full w-10 h-10",
-                !scrolled ? "text-white" : "text-foreground"
-              )}
-            >
-              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </Button>
-
             <CartDrawer>
               <Button variant="ghost" size="icon" className={cn(
                 "relative rounded-full w-10 h-10",
                 !scrolled ? "text-white" : "text-foreground"
-              )} onClick={() => playSound('click')}>
+              )}>
                 <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
                   <Badge className="absolute top-1 right-1 px-1 py-0 min-w-[1rem] h-[1rem] flex items-center justify-center rounded-full bg-primary text-white text-[9px] border-2 border-background">
@@ -145,7 +115,7 @@ export const Navbar = () => {
             <Button variant="ghost" size="icon" className={cn(
               "rounded-full w-10 h-10 transition-colors",
               !scrolled ? "text-white" : "text-foreground"
-            )} onClick={() => { setIsMenuOpen(!isMenuOpen); playSound('click'); }}>
+            )} onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
@@ -156,9 +126,9 @@ export const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden absolute top-full left-0 w-full glass border-t border-white/10 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col p-6 gap-2">
-            <Link href="/" onClick={() => { setIsMenuOpen(false); handleNavClick(); }} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Home</Link>
-            <Link href="/menu" onClick={() => { setIsMenuOpen(false); handleNavClick(); }} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Menu</Link>
-            <Link href="/orders" onClick={() => { setIsMenuOpen(false); handleNavClick(); }} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">My Orders</Link>
+            <Link href="/" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Home</Link>
+            <Link href="/menu" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Menu</Link>
+            <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">My Orders</Link>
           </div>
         </div>
       )}

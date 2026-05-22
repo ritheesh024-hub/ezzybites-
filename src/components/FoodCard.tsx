@@ -9,23 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { BeverageCustomizer } from './BeverageCustomizer';
-import { useSound } from '@/hooks/use-sound';
 
 export const FoodCard = ({ item }: { item: FoodItem }) => {
   const { cart, addToCart, updateQuantity } = useStore();
   const [isCustomizing, setIsCustomizing] = useState(false);
-  const { playSound } = useSound();
   
   const hideVegIndicator = ['Tea', 'Coffee', 'Ice creams'].includes(item.category);
   const cartItemCount = cart.filter(i => i.id === item.id).reduce((acc, i) => acc + i.quantity, 0);
 
   const handleAddClick = () => {
     if (item.isBeverage) {
-      playSound('click');
       setIsCustomizing(true);
     } else {
       addToCart(item);
-      playSound('pop');
       toast({
         title: "Added to cart",
         description: `${item.name} is ready for checkout.`,
@@ -35,7 +31,6 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
 
   const handleCustomizationConfirm = (options: BeverageOptions) => {
     addToCart(item, options);
-    playSound('pop');
     setIsCustomizing(false);
     toast({
       title: "Beverage Added",
@@ -47,7 +42,6 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
     const targetItem = cart.find(i => i.id === item.id);
     if (targetItem) {
       updateQuantity(targetItem.cartId, delta);
-      playSound('update');
     }
   };
 
@@ -87,10 +81,7 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
             </div>
           )}
           
-          <button 
-            onClick={() => playSound('click')}
-            className="absolute bottom-4 right-4 w-10 h-10 rounded-2xl bg-white/90 backdrop-blur flex items-center justify-center text-muted-foreground hover:text-primary hover:scale-110 active:scale-95 transition-all z-10 shadow-lg shadow-black/5"
-          >
+          <button className="absolute bottom-4 right-4 w-10 h-10 rounded-2xl bg-white/90 backdrop-blur flex items-center justify-center text-muted-foreground hover:text-primary hover:scale-110 active:scale-95 transition-all z-10 shadow-lg shadow-black/5">
             <Heart className="w-5 h-5" />
           </button>
 

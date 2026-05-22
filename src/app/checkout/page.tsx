@@ -29,12 +29,10 @@ import { doc, setDoc, getDoc, serverTimestamp, increment } from 'firebase/firest
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
-import { useSound } from '@/hooks/use-sound';
 
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart, removeFromCart } = useStore();
   const db = useFirestore();
-  const { playSound } = useSound();
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -58,15 +56,12 @@ export default function CheckoutPage() {
   const total = subtotal + deliveryFee;
 
   const handleNext = () => {
-    playSound('click');
     if (step === 2) {
       if (!formData.name || !formData.phone || !formData.address) {
-        playSound('error');
         toast({ variant: "destructive", title: "Details Required", description: "Please fill in all delivery info." });
         return;
       }
       if (formData.phone.length < 10) {
-        playSound('error');
         toast({ variant: "destructive", title: "Invalid Phone", description: "Please enter a valid 10-digit number." });
         return;
       }
@@ -75,7 +70,6 @@ export default function CheckoutPage() {
   };
 
   const handleBack = () => {
-    playSound('click');
     setStep(step - 1);
   };
 
@@ -92,7 +86,6 @@ export default function CheckoutPage() {
             address: prev.address || userData.address || ''
           }));
           setIsReturningUser(true);
-          playSound('success');
         } else {
           setIsReturningUser(false);
         }
@@ -104,13 +97,11 @@ export default function CheckoutPage() {
 
   const handleSubmit = async () => {
     if (!db) {
-      playSound('error');
       toast({ variant: "destructive", title: "System Offline" });
       return;
     }
 
     setLoading(true);
-    playSound('click');
 
     const currentOrderId = orderId || `EB-${Date.now()}`;
     const orderData = {
@@ -148,14 +139,12 @@ export default function CheckoutPage() {
         }, { merge: true });
 
         setLoading(false);
-        playSound('success');
         clearCart();
         setStep(4);
         toast({ title: "Order Placed Successfully! 🚀" });
       })
       .catch(async (error) => {
         setLoading(false);
-        playSound('error');
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: orderRef.path,
           operation: 'create',
@@ -226,7 +215,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-black text-base md:text-xl text-primary">₹{item.price * item.quantity}</p>
-                          <button onClick={() => { removeFromCart(item.cartId); playSound('click'); }} className="text-muted-foreground hover:text-destructive mt-2 transition-colors">
+                          <button onClick={() => removeFromCart(item.cartId)} className="text-muted-foreground hover:text-destructive mt-2 transition-colors">
                             <Trash2 className="w-4 h-4 ml-auto" />
                           </button>
                         </div>
@@ -310,7 +299,7 @@ export default function CheckoutPage() {
             {step === 3 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-left duration-500">
                 <h2 className="text-2xl md:text-4xl font-headline font-black">Payment</h2>
-                <RadioGroup value={formData.paymentMethod} onValueChange={(v) => { setFormData({...formData, paymentMethod: v}); playSound('click'); }} className="space-y-3">
+                <RadioGroup value={formData.paymentMethod} onValueChange={(v) => setFormData({...formData, paymentMethod: v})} className="space-y-3">
                   <Label htmlFor="cod" className={cn("flex items-center gap-4 p-4 md:p-6 rounded-2xl border-2 cursor-pointer transition-all", formData.paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'bg-card border-transparent')}>
                     <RadioGroupItem value="cod" id="cod" className="sr-only" />
                     <Truck className={cn("w-6 h-6 md:w-8 md:h-8", formData.paymentMethod === 'cod' ? 'text-primary' : 'text-muted-foreground')} />
@@ -362,10 +351,10 @@ export default function CheckoutPage() {
                   <p className="font-mono text-xl md:text-2xl font-black text-primary">{orderId}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
-                  <Link href={`/orders/${orderId}`} onClick={() => playSound('click')} className="w-full sm:w-auto">
+                  <Link href={`/orders/${orderId}`} className="w-full sm:w-auto">
                     <Button className="w-full sm:w-auto rounded-full px-10 h-14 font-black">Track Order</Button>
                   </Link>
-                  <Link href="/" onClick={() => playSound('click')} className="w-full sm:w-auto">
+                  <Link href="/" className="w-full sm:w-auto">
                     <Button variant="outline" className="w-full sm:w-auto rounded-full px-10 h-14 font-black border-2">Go Home</Button>
                   </Link>
                 </div>

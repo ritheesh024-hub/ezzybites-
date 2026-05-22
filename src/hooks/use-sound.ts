@@ -4,34 +4,31 @@
 import { useCallback } from 'react';
 import { useStore } from '@/app/lib/store';
 
-// Premium, lightweight UI sound URLs
 const SOUNDS = {
-  pop: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Add to cart
-  success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Order success
-  click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3', // Button tap
-  error: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3', // Error/Warning
-  update: 'https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3', // Quantity update
+  ping: 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3', // New order notification
+  success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3', // Status updated
+  pop: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Menu/Inventory updated
+  warning: 'https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3', // Action failed
 };
 
 export type SoundType = keyof typeof SOUNDS;
 
 export function useSound() {
-  const { isMuted, toggleMute } = useStore();
+  const { isAdminMuted, toggleAdminMute } = useStore();
 
   const playSound = useCallback((type: SoundType) => {
-    if (typeof window === 'undefined' || isMuted) return;
+    if (typeof window === 'undefined' || isAdminMuted) return;
 
     try {
       const audio = new Audio(SOUNDS[type]);
-      audio.volume = 0.4; // Soft premium volume
-      audio.play().catch((err) => {
-        // Log error only in dev mode if needed
-        // console.warn('Audio playback blocked by browser policies', err);
+      audio.volume = 0.5;
+      audio.play().catch(() => {
+        // Handle blocked autoplay
       });
     } catch (e) {
       console.warn('Audio initialization failed', e);
     }
-  }, [isMuted]);
+  }, [isAdminMuted]);
 
-  return { playSound, isMuted, toggleMute };
+  return { playSound, isAdminMuted, toggleAdminMute };
 }

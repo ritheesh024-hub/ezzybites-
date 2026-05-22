@@ -34,20 +34,20 @@ export interface CartItem extends FoodItem {
 
 interface AppStore {
   cart: CartItem[];
-  isMuted: boolean;
+  isAdminMuted: boolean;
   addToCart: (item: FoodItem, customization?: BeverageOptions) => void;
   removeFromCart: (cartId: string) => void;
   updateQuantity: (cartId: string, delta: number) => void;
   clearCart: () => void;
   getTotal: () => number;
-  toggleMute: () => void;
+  toggleAdminMute: () => void;
 }
 
 export const useStore = create<AppStore>()(
   persist(
     (set, get) => ({
       cart: [],
-      isMuted: false,
+      isAdminMuted: false,
       addToCart: (item, customization) => set((state) => {
         const cartId = customization 
           ? `${item.id}-${customization.size}-${customization.temp}-${customization.sugar}-${customization.addons.sort().join(',')}`
@@ -63,12 +63,11 @@ export const useStore = create<AppStore>()(
           };
         }
 
-        // Price modifier for sizes
         let finalPrice = item.price;
         if (customization) {
           if (customization.size === 'Medium') finalPrice += 20;
           if (customization.size === 'Large') finalPrice += 40;
-          finalPrice += customization.addons.length * 15; // 15 per addon
+          finalPrice += customization.addons.length * 15;
         }
 
         return { 
@@ -85,8 +84,8 @@ export const useStore = create<AppStore>()(
       })),
       clearCart: () => set({ cart: [] }),
       getTotal: () => get().cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
-      toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+      toggleAdminMute: () => set((state) => ({ isAdminMuted: !state.isAdminMuted })),
     }),
-    { name: 'ezzy-bites-beverage-storage' }
+    { name: 'ezzy-bites-operational-storage' }
   )
 );

@@ -1,11 +1,11 @@
+
 "use client"
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { 
@@ -14,23 +14,24 @@ import {
   Megaphone, LayoutDashboard, Trash2, Plus, Edit2, Link as LinkIcon,
   MapPin, Phone, Database, Info, Coffee,
   Receipt, Calculator, History, Printer, Search,
-  Store, AlertCircle, Ban, Truck, ChefHat
+  Store, AlertCircle, Ban, Truck, ChefHat, Volume2, VolumeX
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CATEGORIES, MENU_ITEMS } from '@/app/lib/menu-data';
 import { dailySpecialGenerator } from '@/ai/flows/daily-special-generator';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, limit, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, writeBatch, orderBy, onSnapshot } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { DashboardAnalysis } from './DashboardAnalysis';
 import { BillingSystem } from './BillingSystem';
 import { cn } from '@/lib/utils';
+import { useSound } from '@/hooks/use-sound';
 
 export const AdminSection = () => {
   const db = useFirestore();
-  const firstInputRef = useRef<HTMLInputElement>(null);
+  const { playSound, isAdminMuted, toggleAdminMute } = useSound();
   
   const ordersQuery = useMemo(() => {
     if (!db) return null;
@@ -43,6 +44,25 @@ export const AdminSection = () => {
     return query(collection(db, 'products'));
   }, [db]);
   const { data: dbMenu, loading: menuLoading } = useCollection<any>(menuQuery);
+
+  // Sound logic for new orders
+  useEffect(() => {
+    if (!db) return;
+    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(1));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const order = change.doc.data();
+          // Only ping for orders created in the last minute to avoid history pings on load
+          if (order.createdAt && (Date.now() - order.createdAt.toMillis() < 60000)) {
+            playSound('ping');
+            toast({ title: "New Order Received!", description: `From ${order.customerName}` });
+          }
+        }
+      });
+    });
+    return () => unsubscribe();
+  }, [db, playSound]);
 
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoResult, setPromoResult] = useState<any>(null);
@@ -59,12 +79,15 @@ export const AdminSection = () => {
   const handleUpdateStatus = (id: string, newStatus: string) => {
     if (!db) return;
     const orderRef = doc(db, 'orders', id);
-    updateDoc(orderRef, { status: newStatus }).catch(async (e) => {
+    updateDoc(orderRef, { status: newStatus }).then(() => {
+      playSound('success');
+      toast({ title: `Order set to ${newStatus}` });
+    }).catch(async (e) => {
+      playSound('warning');
       errorEmitter.emit('permission-error', new FirestorePermissionError({ 
         path: orderRef.path, operation: 'update', requestResourceData: { status: newStatus }
       }));
     });
-    toast({ title: `Order set to ${newStatus}` });
   };
 
   const resetForm = () => {
@@ -82,8 +105,10 @@ export const AdminSection = () => {
         batch.set(itemRef, { ...item, createdAt: serverTimestamp() }, { merge: true });
       });
       await batch.commit();
+      playSound('pop');
       toast({ title: "Inventory Seeded Successfully" });
     } catch (error) {
+      playSound('warning');
       toast({ variant: "destructive", title: "Seeding Failed" });
     } finally {
       setIsSeeding(false);
@@ -92,6 +117,7 @@ export const AdminSection = () => {
 
   const handleSaveMenuItem = () => {
     if (!db || !menuFormData.name || !menuFormData.imageUrl) {
+      playSound('warning');
       toast({ variant: "destructive", title: "Incomplete Data" });
       return;
     }
@@ -116,12 +142,14 @@ export const AdminSection = () => {
     setDoc(itemRef, finalData, { merge: true })
       .then(() => {
         setSaveLoading(false);
+        playSound('pop');
         toast({ title: "Inventory Updated" });
         setIsMenuDialogOpen(false);
         resetForm();
       })
       .catch(async (e) => {
         setSaveLoading(false);
+        playSound('warning');
         errorEmitter.emit('permission-error', new FirestorePermissionError({ 
           path: itemRef.path, operation: 'write', requestResourceData: finalData 
         }));
@@ -157,7 +185,18 @@ export const AdminSection = () => {
               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">System Operations Engine</p>
             </div>
           </div>
-          <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200 px-4 py-2 uppercase font-black text-[9px]">Live Data Uplink</Badge>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn("rounded-xl h-10 px-4 font-black uppercase text-[9px] tracking-widest gap-2", isAdminMuted ? "text-muted-foreground" : "text-primary border-primary")}
+              onClick={toggleAdminMute}
+            >
+              {isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {isAdminMuted ? "Sound Off" : "Sound On"}
+            </Button>
+            <Badge variant="outline" className="text-green-700 bg-green-50 border-green-200 px-4 py-2 uppercase font-black text-[9px]">Live Data Uplink</Badge>
+          </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-10">
@@ -290,6 +329,7 @@ export const AdminSection = () => {
                       try {
                         const res = await dailySpecialGenerator({ dishName: selectedPromoDish.name, basePrice: selectedPromoDish.price, discountPercent: 15 });
                         setPromoResult(res);
+                        playSound('pop');
                       } finally { setPromoLoading(false); }
                     }} disabled={promoLoading || !selectedPromoDish}>
                     {promoLoading ? <Loader2 className="animate-spin w-8 h-8" /> : <Megaphone className="w-8 h-8" />} Generate Viral Copy
