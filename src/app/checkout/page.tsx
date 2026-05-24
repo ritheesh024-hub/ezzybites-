@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -63,7 +62,7 @@ export default function CheckoutPage() {
 
   const handleApplyCoupon = () => {
     const code = couponInput.trim().toUpperCase();
-    if (code === 'STUDENTPOWER') {
+    if (code === 'STUDENT10') {
       if (subtotal < 200) {
         toast({ 
           variant: "destructive", 

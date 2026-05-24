@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -184,7 +183,7 @@ export default function Home() {
           <Accordion type="single" collapsible className="w-full space-y-4">
             {[
               { q: "What is your delivery range?", a: "We currently serve a 3km radius around Pocharam and the Anurag University campus to ensure every order arrives piping hot." },
-              { q: "Is there a student special?", a: "Yes! Students with a valid AU ID get a 10% discount on all orders above ₹200. Use code STUDENTPOWER at checkout." },
+              { q: "Is there a student special?", a: "Yes! Students with a valid AU ID get a 10% discount on all orders above ₹200. Use code STUDENT10 at checkout." },
               { q: "How do you handle bulk orders?", a: "For event catering or bulk campus orders, please contact our hotline directly for customized options." }
             ].map((faq, i) => (
               <AccordionItem key={i} value={`item-${i}`} className="border-none bg-secondary/20 rounded-[2rem] px-6 transition-all hover:bg-secondary/40">
