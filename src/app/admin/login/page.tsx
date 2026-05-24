@@ -98,7 +98,8 @@ export default function AdminLoginPage() {
             role = 'admin';
           }
         } catch (e) {
-          // If we can't check, assume not the first user for security
+          // If we can't check (e.g. permission denied), assume not the first user for security
+          // The admin can then manually approve this user from their own dashboard
           role = 'cashier';
         }
 

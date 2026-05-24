@@ -12,7 +12,8 @@ import {
   ArrowRight,
   Timer,
   Package,
-  Utensils
+  Utensils,
+  BellRing
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
