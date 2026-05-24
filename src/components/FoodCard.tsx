@@ -10,9 +10,17 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { BeverageCustomizer } from './BeverageCustomizer';
 
-export const FoodCard = ({ item }: { item: FoodItem }) => {
-  const { cart, addToCart, updateQuantity, menuViewMode } = useStore();
+interface FoodCardProps {
+  item: FoodItem;
+  forceViewMode?: 'small' | 'big';
+}
+
+export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
+  const { cart, addToCart, updateQuantity, menuViewMode: storeViewMode } = useStore();
   const [isCustomizing, setIsCustomizing] = useState(false);
+  
+  // Use the forced view mode if provided, otherwise fallback to the global store setting
+  const menuViewMode = forceViewMode || storeViewMode;
   
   const hideVegIndicator = ['Tea', 'Coffee', 'Ice creams'].includes(item.category);
   const cartItemCount = cart.filter(i => i.id === item.id).reduce((acc, i) => acc + i.quantity, 0);

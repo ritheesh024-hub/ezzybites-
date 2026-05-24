@@ -125,10 +125,10 @@ export default function Home() {
               </div>
             ) : trendingItems && trendingItems.length > 0 ? (
               <Carousel opts={{ align: "start", loop: true }} className="w-full">
-                <CarouselContent className="-ml-6">
+                <CarouselContent className="-ml-4">
                   {trendingItems.map((item) => (
-                    <CarouselItem key={item.id} className="pl-6 basis-[85%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                      <FoodCard item={item} />
+                    <CarouselItem key={item.id} className="pl-4 basis-[48%] sm:basis-1/3 lg:basis-1/4 xl:basis-1/6">
+                      <FoodCard item={item} forceViewMode="small" />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
