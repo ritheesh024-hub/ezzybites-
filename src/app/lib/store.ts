@@ -35,19 +35,22 @@ export interface CartItem extends FoodItem {
 interface AppStore {
   cart: CartItem[];
   isAdminMuted: boolean;
+  menuViewMode: 'small' | 'big';
   addToCart: (item: FoodItem, customization?: BeverageOptions) => void;
   removeFromCart: (cartId: string) => void;
   updateQuantity: (cartId: string, delta: number) => void;
   clearCart: () => void;
   getTotal: () => number;
   toggleAdminMute: () => void;
+  setMenuViewMode: (mode: 'small' | 'big') => void;
 }
 
 export const useStore = create<AppStore>()(
   persist(
     (set, get) => ({
       cart: [],
-      isAdminMuted: false, // Default to sounds enabled
+      isAdminMuted: false,
+      menuViewMode: 'big', // Default to detailed view
       addToCart: (item, customization) => set((state) => {
         const cartId = customization 
           ? `${item.id}-${customization.size}-${customization.temp}-${customization.sugar}-${customization.addons.sort().join(',')}`
@@ -85,6 +88,7 @@ export const useStore = create<AppStore>()(
       clearCart: () => set({ cart: [] }),
       getTotal: () => get().cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
       toggleAdminMute: () => set((state) => ({ isAdminMuted: !state.isAdminMuted })),
+      setMenuViewMode: (mode) => set({ menuViewMode: mode }),
     }),
     { name: 'ezzy-bites-operational-storage' }
   )

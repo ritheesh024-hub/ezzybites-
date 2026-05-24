@@ -1,21 +1,23 @@
+
 "use client"
 import React, { useState, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { FoodCard } from '@/components/FoodCard';
 import { CATEGORIES } from '@/app/lib/menu-data';
-import { Search, Loader2, PackageX, AlertCircle, Filter } from 'lucide-react';
+import { Search, Loader2, PackageX, AlertCircle, Filter, LayoutGrid, Square, Grid3X3, StretchHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import { FoodItem } from '@/app/lib/store';
+import { FoodItem, useStore } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function MenuPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const db = useFirestore();
+  const { menuViewMode, setMenuViewMode } = useStore();
 
   const productsQuery = useMemo(() => {
     if (!db) return null;
@@ -38,12 +40,38 @@ export default function MenuPage() {
       <Navbar />
       
       <main className="container mx-auto px-4 py-12 pt-28 md:pt-40">
-        <div className="mb-16 space-y-4">
-          <Badge variant="outline" className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-primary border-primary/20">The Selection</Badge>
-          <h1 className="text-5xl md:text-8xl font-headline font-black leading-none">Fresh <span className="text-primary">Bites</span> Only.</h1>
-          <p className="text-muted-foreground max-w-2xl text-lg font-medium">
-            From our legendary Maggie variations to premium Hydrabadi specialties, explore our chef-curated menu.
-          </p>
+        <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-4">
+            <Badge variant="outline" className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-primary border-primary/20">The Selection</Badge>
+            <h1 className="text-5xl md:text-8xl font-headline font-black leading-none">Fresh <span className="text-primary">Bites</span> Only.</h1>
+            <p className="text-muted-foreground max-w-2xl text-lg font-medium">
+              Explore our chef-curated menu, from legendary Maggie variations to premium Hydrabadi specialties.
+            </p>
+          </div>
+          
+          {/* VIEW MODE TOGGLE */}
+          <div className="flex bg-secondary/50 p-1.5 rounded-2xl border items-center shadow-sm w-fit self-start md:self-auto">
+            <button 
+              onClick={() => setMenuViewMode('small')}
+              className={cn(
+                "p-3 rounded-xl transition-all flex items-center gap-2",
+                menuViewMode === 'small' ? "bg-white text-primary shadow-lg" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Grid3X3 className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Compact</span>
+            </button>
+            <button 
+              onClick={() => setMenuViewMode('big')}
+              className={cn(
+                "p-3 rounded-xl transition-all flex items-center gap-2",
+                menuViewMode === 'big' ? "bg-white text-primary shadow-lg" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <StretchHorizontal className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Detailed</span>
+            </button>
+          </div>
         </div>
 
         {/* SEARCH & FILTER BAR */}
@@ -60,17 +88,18 @@ export default function MenuPage() {
             </div>
             <div className="flex overflow-x-auto gap-3 pb-2 w-full lg:w-auto scrollbar-hide">
               {CATEGORIES.map((cat) => (
-                <Button
+                <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  variant={selectedCategory === cat ? "default" : "outline"}
                   className={cn(
-                    "rounded-full px-8 h-14 font-black uppercase text-[10px] tracking-widest transition-all",
-                    selectedCategory === cat ? "shadow-xl shadow-primary/20" : "bg-transparent border-muted hover:border-primary hover:text-primary"
+                    "rounded-full px-8 h-14 font-black uppercase text-[10px] tracking-widest transition-all shrink-0 border",
+                    selectedCategory === cat 
+                      ? "bg-primary text-white shadow-xl shadow-primary/20 border-primary" 
+                      : "bg-white/50 border-muted hover:border-primary/40 hover:text-primary backdrop-blur"
                   )}
                 >
                   {cat}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
@@ -90,9 +119,14 @@ export default function MenuPage() {
              <p className="text-sm text-muted-foreground mt-2 font-medium">Check your connection or refresh the page.</p>
            </div>
         ) : filteredItems.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+          <div className={cn(
+            "grid gap-6 md:gap-10 transition-all duration-500",
+            menuViewMode === 'small' 
+              ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6" 
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          )}>
             {filteredItems.map((item) => (
-              <div key={item.id} className="animate-in fade-in slide-in-from-bottom duration-700">
+              <div key={item.id} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <FoodCard item={item} />
               </div>
             ))}

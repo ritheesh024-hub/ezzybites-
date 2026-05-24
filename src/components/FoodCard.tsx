@@ -2,7 +2,7 @@
 "use client"
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star, Plus, Minus, Clock, Coffee } from 'lucide-react';
+import { Star, Plus, Minus, Clock, Coffee, LayoutGrid, Maximize2 } from 'lucide-react';
 import { FoodItem, useStore, BeverageOptions } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { BeverageCustomizer } from './BeverageCustomizer';
 
 export const FoodCard = ({ item }: { item: FoodItem }) => {
-  const { cart, addToCart, updateQuantity } = useStore();
+  const { cart, addToCart, updateQuantity, menuViewMode } = useStore();
   const [isCustomizing, setIsCustomizing] = useState(false);
   
   const hideVegIndicator = ['Tea', 'Coffee', 'Ice creams'].includes(item.category);
@@ -39,12 +39,72 @@ export const FoodCard = ({ item }: { item: FoodItem }) => {
   };
 
   const handleQtyChange = (delta: number) => {
-    // For non-beverages, there's usually only one entry per item ID
     const targetItem = cart.find(i => i.id === item.id);
     if (targetItem) {
       updateQuantity(targetItem.cartId, delta);
     }
   };
+
+  if (menuViewMode === 'small') {
+    return (
+      <>
+        <div className="group bg-card rounded-[1.5rem] border border-border/40 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full relative">
+          <div className="relative aspect-square overflow-hidden bg-secondary">
+            <Image 
+              src={item.imageUrl} 
+              alt={item.name} 
+              fill 
+              className="object-cover group-hover:scale-110 transition-transform duration-500"
+              unoptimized={item.imageUrl.startsWith('http')}
+            />
+            {!hideVegIndicator && (
+              <div className="absolute top-2 right-2 z-10">
+                <div className={cn(
+                  "w-4 h-4 bg-white/90 backdrop-blur rounded-sm border flex items-center justify-center",
+                  item.isVeg ? "border-green-500" : "border-red-500"
+                )}>
+                  <div className={cn("w-1.5 h-1.5 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="p-3 flex flex-col flex-1">
+            <h4 className="font-bold text-xs truncate mb-1">{item.name}</h4>
+            <div className="mt-auto flex items-center justify-between gap-2">
+              <span className="text-sm font-black text-primary">₹{item.price}</span>
+              {cartItemCount > 0 && !item.isBeverage ? (
+                <div className="flex items-center gap-1 bg-primary text-white rounded-lg h-7 px-1">
+                  <button onClick={() => handleQtyChange(-1)} className="w-5 h-5 flex items-center justify-center hover:bg-white/20 rounded">
+                    <Minus className="w-2.5 h-2.5" />
+                  </button>
+                  <span className="text-[10px] font-black w-3 text-center">{cartItemCount}</span>
+                  <button onClick={() => handleQtyChange(1)} className="w-5 h-5 flex items-center justify-center hover:bg-white/20 rounded">
+                    <Plus className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ) : (
+                <Button 
+                  size="icon" 
+                  onClick={handleAddClick} 
+                  className="w-7 h-7 rounded-lg bg-primary text-white shadow-md hover:scale-105"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+        {item.isBeverage && (
+          <BeverageCustomizer 
+            item={item} 
+            isOpen={isCustomizing} 
+            onClose={() => setIsCustomizing(false)} 
+            onConfirm={handleCustomizationConfirm} 
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
