@@ -9,7 +9,7 @@ import {
   ShoppingBag, ArrowRight, Star, 
   Loader2, ChefHat, Truck, Award, 
   HelpCircle, Instagram, Twitter, Facebook,
-  Zap, TicketPercent, GraduationCap
+  Zap, TicketPercent, GraduationCap, Smartphone, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -144,6 +144,65 @@ export default function Home() {
                 </div>
               </Carousel>
             ) : null}
+          </div>
+        </section>
+
+        {/* APP INSTALL SECTION */}
+        <section className="py-20 bg-primary/5 border-y border-primary/10">
+          <div className="container mx-auto px-4">
+            <div className="max-w-5xl mx-auto bg-card rounded-[3rem] p-8 md:p-16 flex flex-col md:flex-row items-center gap-12 shadow-2xl border">
+              <div className="md:w-1/2 relative">
+                <div className="w-full aspect-[9/16] max-w-[280px] mx-auto bg-zinc-900 rounded-[3rem] border-[8px] border-zinc-800 shadow-2xl overflow-hidden relative">
+                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-800 rounded-b-3xl z-20" />
+                   <Image 
+                     src={getImg('hero-bg')} 
+                     alt="Mobile App View" 
+                     fill 
+                     className="object-cover opacity-50"
+                   />
+                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
+                     <div className="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center shadow-2xl animate-bounce">
+                       <ShoppingBag className="w-10 h-10 text-white" />
+                     </div>
+                     <h4 className="text-white font-black text-xl leading-tight">Ezzy Bites <br />on your screen</h4>
+                   </div>
+                </div>
+                <div className="absolute -bottom-6 -right-6 md:-bottom-10 md:-right-10 w-24 h-24 md:w-40 md:h-40 bg-primary/20 rounded-full blur-3xl" />
+              </div>
+              
+              <div className="md:w-1/2 space-y-8">
+                <div className="space-y-4">
+                  <Badge className="bg-primary/10 text-primary border-none px-4 py-1.5 rounded-full font-black uppercase text-[10px] tracking-widest">
+                    No Store Required
+                  </Badge>
+                  <h2 className="text-4xl md:text-6xl font-headline font-black leading-none">Get the <span className="text-primary italic">Full Experience.</span></h2>
+                  <p className="text-muted-foreground font-medium text-lg leading-relaxed">
+                    Install Ezzy Bites as an app on your mobile device for faster ordering, offline tracking, and a premium full-screen interface.
+                  </p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 font-black">1</div>
+                    <p className="text-sm font-bold pt-2">Open this site in Chrome or Safari on your phone.</p>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center shrink-0 font-black">2</div>
+                    <p className="text-sm font-bold pt-2">Tap <span className="text-primary">"Add to Home Screen"</span> in your browser menu.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-4">
+                   <div className="flex items-center gap-3 bg-secondary/50 px-6 py-4 rounded-2xl border">
+                      <Smartphone className="w-6 h-6 text-primary" />
+                      <div className="text-left">
+                        <p className="text-[10px] font-black uppercase opacity-50">Available for</p>
+                        <p className="text-sm font-black uppercase">iOS & Android</p>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

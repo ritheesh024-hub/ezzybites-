@@ -1,5 +1,4 @@
-
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -9,6 +8,20 @@ export const metadata: Metadata = {
   title: 'Ezzy Bites | Premium Fast Food Cafe',
   description: 'Experience premium fast food redefined. Quality, speed, and taste unified in one perfect bite. Order now for 30-min delivery.',
   keywords: 'Fast Food, Biryani, Maggie, Momos, Ice Cream, Hyderabad, Pocharam, Anurag University',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Ezzy Bites',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#ef4444',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
