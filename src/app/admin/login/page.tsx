@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -10,8 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { ShoppingBag, Lock, Mail, Loader2, ArrowRight, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import Link from 'next/link';
+import { doc, setDoc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AdminLoginPage() {
@@ -24,13 +24,18 @@ export default function AdminLoginPage() {
   const { user, loading: userLoading } = useUser();
   const router = useRouter();
 
-  const ADMIN_EMAIL = 'sunnyritheesh@gmail.com';
-
   useEffect(() => {
-    if (!userLoading && user && user.email === ADMIN_EMAIL) {
-      router.push('/admin/dashboard');
+    async function checkExistingAuth() {
+      if (!userLoading && user && db) {
+        const adminRef = doc(db, 'admins', user.uid);
+        const adminSnap = await getDoc(adminRef);
+        if (adminSnap.exists()) {
+          router.push('/admin/dashboard');
+        }
+      }
     }
-  }, [user, userLoading, router]);
+    checkExistingAuth();
+  }, [user, userLoading, router, db]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,16 +44,7 @@ export default function AdminLoginPage() {
       toast({
         variant: "destructive",
         title: "Connection Error",
-        description: "Firebase services are not initialized. Check your .env file configuration.",
-      });
-      return;
-    }
-
-    if (email !== ADMIN_EMAIL) {
-      toast({
-        variant: "destructive",
-        title: "Unauthorized Email",
-        description: `Access is restricted to ${ADMIN_EMAIL} only.`,
+        description: "Firebase services are not initialized. Please ensure your configuration is correct.",
       });
       return;
     }
@@ -58,16 +54,39 @@ export default function AdminLoginPage() {
       if (isLogin) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const adminRef = doc(db, 'admins', userCredential.user.uid);
-        const adminDoc = await getDoc(adminRef);
-        if (!adminDoc.exists()) {
-          await setDoc(adminRef, { email: email, role: 'admin' });
+        const adminSnap = await getDoc(adminRef);
+        
+        if (!adminSnap.exists()) {
+          // Fallback: If auth exists but no record, check if this is the first user
+          const adminsColl = collection(db, 'admins');
+          const adminsSnap = await getDocs(query(adminsColl, limit(1)));
+          
+          if (adminsSnap.empty) {
+            await setDoc(adminRef, { email: email, role: 'admin', createdAt: new Date() });
+          } else {
+            throw new Error("This account is not authorized as a staff member.");
+          }
         }
-        toast({ title: "Welcome back, Admin" });
+        toast({ title: "Authorized", description: "Welcome to the operational console." });
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const adminRef = doc(db, 'admins', userCredential.user.uid);
-        await setDoc(adminRef, { email: email, role: 'admin' });
-        toast({ title: "Admin account registered" });
+        
+        // Check if this is the first admin ever
+        const adminsColl = collection(db, 'admins');
+        const adminsSnap = await getDocs(query(adminsColl, limit(1)));
+        const role = adminsSnap.empty ? 'admin' : 'cashier'; // First user is admin, others are cashier by default
+
+        await setDoc(adminRef, { 
+          email: email, 
+          role: role,
+          createdAt: new Date() 
+        });
+        
+        toast({ 
+          title: "Account Created", 
+          description: `You have been registered as ${role}.` 
+        });
       }
       router.push('/admin/dashboard');
     } catch (error: any) {
@@ -76,11 +95,11 @@ export default function AdminLoginPage() {
       if (error.code === 'auth/user-not-found') message = "Account not found.";
       if (error.code === 'auth/wrong-password') message = "Incorrect password.";
       if (error.code === 'auth/invalid-credential') message = "Invalid credentials provided.";
-      if (error.code === 'auth/operation-not-allowed') message = "Email/Password is disabled in Firebase Console.";
+      if (error.code === 'auth/email-already-in-use') message = "This email is already registered.";
       
       toast({
         variant: "destructive",
-        title: "Authentication Failed",
+        title: "Access Denied",
         description: message,
       });
     } finally {
@@ -97,7 +116,7 @@ export default function AdminLoginPage() {
               <ShoppingBag className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-headline font-black">Admin Access</CardTitle>
+          <CardTitle className="text-3xl font-headline font-black">Staff Portal</CardTitle>
           <CardDescription className="font-bold text-xs uppercase tracking-widest opacity-60">
             Ezzy Bites Operational Console
           </CardDescription>
@@ -109,7 +128,7 @@ export default function AdminLoginPage() {
               <AlertTriangle className="h-6 w-6 mb-2" />
               <AlertTitle className="font-black uppercase text-xs tracking-widest mb-2">Connection Missing</AlertTitle>
               <AlertDescription className="text-[10px] font-medium leading-relaxed opacity-80">
-                The application cannot connect to Firebase. Please ensure you have added your API keys to the <strong>.env</strong> file in the project root.
+                The application cannot connect to the authentication service. Please check your network connection.
               </AlertDescription>
             </Alert>
           </div>
@@ -122,7 +141,7 @@ export default function AdminLoginPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
                     type="email" 
-                    placeholder="sunnyritheesh@gmail.com" 
+                    placeholder="name@restaurant.com" 
                     className="h-14 pl-12 rounded-xl font-bold border-muted bg-secondary/20"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -131,7 +150,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Admin Password</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
@@ -145,7 +164,7 @@ export default function AdminLoginPage() {
               </div>
               <div className="flex items-center gap-2 px-1">
                 <ShieldCheck className="w-4 h-4 text-primary" />
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Authorized Email Required</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Authorized Access Only</p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4 pb-12 pt-6 px-8">
@@ -169,7 +188,7 @@ export default function AdminLoginPage() {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-[10px] text-muted-foreground font-black uppercase tracking-widest hover:text-primary transition-colors"
               >
-                {isLogin ? "Switch to Registration" : "Back to Login"}
+                {isLogin ? "Need a staff account? Register" : "Already have an account? Login"}
               </button>
             </CardFooter>
           </form>

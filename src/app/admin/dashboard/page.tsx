@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useFirestore } from '@/firebase';
 import { AdminSection } from '@/components/AdminSection';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt, Users } from 'lucide-react';
+import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt, ArrowLeft } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
@@ -52,11 +52,11 @@ export default function AdminDashboardPage() {
               setActiveView(role);
               setCheckingRole(false);
             } else {
-              // Not an authorized staff member
+              // Not an authorized staff member in Firestore
               toast({
                 variant: "destructive",
-                title: "Access Denied",
-                description: "You are not registered as an authorized staff member.",
+                title: "Unauthorized",
+                description: "Your account is not registered in our staff directory.",
               });
               await auth?.signOut();
               router.push('/admin/login');
@@ -75,18 +75,18 @@ export default function AdminDashboardPage() {
   const handleLogout = async () => {
     if (auth) {
       await auth.signOut();
-      toast({ title: "Logged out successfully" });
+      toast({ title: "Logged out", description: "Operational session ended." });
       router.push('/admin/login');
     }
   };
 
   const switchView = (role: StaffRole) => {
     if (assignedRole !== 'admin') {
-      toast({ variant: "destructive", title: "Restricted", description: "Only Admins can switch views." });
+      toast({ variant: "destructive", title: "Restricted", description: "Only Admins can override views." });
       return;
     }
     setActiveView(role);
-    toast({ title: `Switched to ${role.toUpperCase()} View` });
+    toast({ title: `Operational View: ${role.toUpperCase()}` });
   };
 
   if (userLoading || checkingRole || !activeView) {
@@ -131,6 +131,12 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="hidden md:flex rounded-xl gap-2 font-black uppercase text-[9px] tracking-widest">
+                <ArrowLeft className="w-3.5 h-3.5" /> Site Home
+              </Button>
+            </Link>
+
             {assignedRole === 'admin' && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -140,7 +146,7 @@ export default function AdminDashboardPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2">
-                  <DropdownMenuLabel className="text-[9px] font-black uppercase opacity-40 px-2 py-1.5">Administrative Overrides</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-[9px] font-black uppercase opacity-40 px-2 py-1.5">Operational Overrides</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => switchView('admin')} className="rounded-xl gap-3 py-3 font-bold">
                     <ShieldCheck className="w-4 h-4 text-primary" /> Admin View
                   </DropdownMenuItem>
