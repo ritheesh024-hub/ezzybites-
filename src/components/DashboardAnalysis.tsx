@@ -79,9 +79,35 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
     const completed = filteredOrders.filter(o => o.status === 'Delivered');
     const revenue = completed.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
     const pending = filteredOrders.filter(o => ['Pending', 'Preparing'].includes(o.status)).length;
-    const itemsSold = completed.reduce((acc, curr) => acc + (curr.items?.length || 0), 0);
+    
+    // Item Stats calculation
+    const itemMap: Record<string, { name: string, quantity: number, revenue: number }> = {};
+    let totalItemsCount = 0;
 
-    return { total: filteredOrders.length, revenue, pending, completed: completed.length, itemsSold };
+    completed.forEach(order => {
+      order.items?.forEach((item: any) => {
+        const id = item.id || item.name;
+        if (!itemMap[id]) {
+          itemMap[id] = { name: item.name, quantity: 0, revenue: 0 };
+        }
+        const qty = Number(item.quantity) || 1;
+        const price = Number(item.price) || 0;
+        itemMap[id].quantity += qty;
+        itemMap[id].revenue += (qty * price);
+        totalItemsCount += qty;
+      });
+    });
+
+    const itemStats = Object.values(itemMap).sort((a, b) => b.quantity - a.quantity);
+
+    return { 
+      total: filteredOrders.length, 
+      revenue, 
+      pending, 
+      completed: completed.length, 
+      itemsSold: totalItemsCount,
+      itemStats 
+    };
   }, [filteredOrders]);
 
   const chartData = useMemo(() => {
@@ -223,25 +249,64 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
           <div className="mt-8 grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="p-6 bg-secondary/30 dark:bg-zinc-800 rounded-2xl">
-                <p className="text-[10px] font-black uppercase opacity-40 mb-2">Total {activeMetricView}</p>
+                <p className="text-[10px] font-black uppercase opacity-40 mb-2">Total {activeMetricView === 'items' ? 'Items Sold' : activeMetricView}</p>
                 <h3 className="text-4xl font-black text-primary italic">
                   {activeMetricView === 'revenue' ? `₹${metrics.revenue}` : 
                    activeMetricView === 'orders' ? metrics.total : 
                    activeMetricView === 'load' ? metrics.pending : metrics.itemsSold}
                 </h3>
               </div>
-              <div className="space-y-4">
-                <h5 className="text-[10px] font-black uppercase tracking-widest opacity-60">Key Observations</h5>
-                <ul className="space-y-3 text-sm font-medium">
-                  <li className="flex gap-2 items-start"><ArrowUpRight className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> Growth is stable across local sectors.</li>
-                  <li className="flex gap-2 items-start"><ArrowUpRight className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> High velocity observed during peak cafe hours.</li>
-                </ul>
-              </div>
+
+              {activeMetricView === 'items' ? (
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-black uppercase tracking-widest opacity-60">Itemized Breakdown</h5>
+                  <div className="max-h-[350px] overflow-y-auto pr-2 space-y-3 scrollbar-hide">
+                    {metrics.itemStats.length === 0 ? (
+                      <div className="py-10 text-center opacity-30">
+                        <Package className="w-10 h-10 mx-auto mb-2" />
+                        <p className="text-[9px] font-black uppercase">No items sold yet</p>
+                      </div>
+                    ) : (
+                      metrics.itemStats.map((item, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-secondary/10 dark:bg-zinc-800 rounded-2xl border border-muted/20 transition-all hover:border-primary/20 shadow-sm">
+                          <div className="flex-1">
+                            <p className="font-black text-xs uppercase tracking-tight truncate max-w-[200px]">{item.name}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <ShoppingBag className="w-3 h-3" /> Quantity: {item.quantity}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-sm text-primary italic">₹{item.revenue}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h5 className="text-[10px] font-black uppercase tracking-widest opacity-60">Key Observations</h5>
+                  <ul className="space-y-3 text-sm font-medium">
+                    <li className="flex gap-2 items-start">
+                      <ArrowUpRight className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> 
+                      Performance is stable within the selected interval.
+                    </li>
+                    <li className="flex gap-2 items-start">
+                      <ArrowUpRight className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> 
+                      High velocity observed during peak operational hours.
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
             <div className="bg-secondary/20 dark:bg-zinc-800 rounded-[2rem] p-6 flex flex-col items-center justify-center text-center">
               <Star className="w-12 h-12 text-primary/20 mb-4" />
-              <h4 className="font-black text-lg">Predictive Analysis</h4>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">Based on current trends, we expect a 15% increase in {activeMetricView} for the next cycle.</p>
+              <h4 className="font-black text-lg">Analysis Vibe</h4>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                {activeMetricView === 'items' 
+                  ? "Popular items are driving significant volume. Consider promoting high-margin dishes." 
+                  : "Based on current trends, we expect a steady increase in the next cycle."}
+              </p>
             </div>
           </div>
         </DialogContent>
