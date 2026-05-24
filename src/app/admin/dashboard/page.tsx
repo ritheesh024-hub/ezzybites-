@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -56,6 +55,7 @@ export default function AdminDashboardPage() {
           setActiveView(role);
           setCheckingRole(false);
         } else {
+          // If no profile exists for this UID, sign out and go to login
           toast({
             variant: "destructive",
             title: "Access Restricted",

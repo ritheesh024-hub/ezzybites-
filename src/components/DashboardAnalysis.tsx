@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -95,21 +94,22 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
   }, [metrics]);
 
   if (!isMounted) return (
-    <div className="h-[400px] flex items-center justify-center">
+    <div className="h-[400px] flex flex-col items-center justify-center gap-4">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Loading Intelligence...</p>
     </div>
   );
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white dark:bg-zinc-900 p-3 rounded-[2rem] shadow-sm border">
-        <div className="flex bg-secondary/30 dark:bg-zinc-800 p-1 rounded-full w-full lg:w-auto">
+        <div className="flex bg-secondary/30 dark:bg-zinc-800 p-1 rounded-full w-full lg:w-auto overflow-x-auto scrollbar-hide">
           {['today', 'yesterday'].map((type) => (
             <button
               key={type}
               onClick={() => setFilterType(type as FilterType)}
               className={cn(
-                "px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
+                "px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shrink-0",
                 filterType === type ? "bg-white dark:bg-zinc-700 text-primary shadow-sm" : "text-muted-foreground hover:bg-white/40"
               )}
             >
@@ -119,7 +119,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn(
-                "px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5",
+                "px-6 py-2 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0",
                 (filterType.includes('Month')) ? "bg-white dark:bg-zinc-700 text-primary shadow-sm" : "text-muted-foreground"
               )}>
                 History <ChevronDown className="w-3 h-3" />
@@ -144,7 +144,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-6">
+        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-6 overflow-hidden">
           <CardHeader className="px-0 pb-8 flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Sales Velocity</CardTitle>
             <Badge variant="outline" className="text-[8px] font-black uppercase bg-primary/5 border-primary/20 text-primary">Live Data</Badge>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -126,6 +125,7 @@ export default function AdminLoginPage() {
         const oldDoc = emailQuerySnap.docs[0];
         const oldData = oldDoc.data();
         
+        // Migrate old record to use new UID
         await setDoc(adminRef, {
           ...oldData,
           id: uid,
@@ -133,6 +133,7 @@ export default function AdminLoginPage() {
           onlineStatus: 'online'
         });
 
+        // Delete old ghost record if it has a different ID
         if (oldDoc.id !== uid) {
           await deleteDoc(oldDoc.ref);
         }
