@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +14,7 @@ import {
   Database, Receipt, ShoppingBag, 
   Volume2, VolumeX, BellRing,
   MapPin, User, Settings, CheckCircle2,
-  Users, UserPlus
+  Users, UserPlus, Globe, Utensils, Truck
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
@@ -81,7 +82,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
     const orderRef = doc(db, 'orders', id);
     updateDoc(orderRef, { status: newStatus })
       .then(() => {
-        // Increment stats for the staff member who performed the update
         if (user) {
           const staffRef = doc(db, 'admins', user.uid);
           updateDoc(staffRef, {
@@ -153,6 +153,19 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
       case 'Preparing': return <Badge className="bg-orange-100 text-orange-700 border-none px-3 font-black text-[9px] uppercase">Cooking</Badge>;
       case 'Out for Delivery': return <Badge className="bg-purple-100 text-purple-700 border-none px-3 font-black text-[9px] uppercase">Transit</Badge>;
       default: return <Badge variant="outline" className="px-3 font-black text-[9px] uppercase">{status}</Badge>;
+    }
+  }
+
+  const getOrderTypeBadge = (type: string) => {
+    switch (type) {
+      case 'Online': 
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Globe className="w-2 h-2" /> Online</Badge>;
+      case 'Dine-In': 
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Utensils className="w-2 h-2" /> Dine-In</Badge>;
+      case 'Take Away': 
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Package className="w-2 h-2" /> Take Away</Badge>;
+      default: 
+        return <Badge variant="outline" className="text-[7px] font-black uppercase px-1.5 py-0">{type || 'Order'}</Badge>;
     }
   }
 
@@ -267,10 +280,13 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                           order.status === 'Preparing' ? "bg-orange-500" : 
                           order.status === 'Cancelled' ? "bg-red-500" : "bg-green-500"
                         )} />
-                        <div className="p-4 space-y-2">
+                        <div className="p-4 space-y-3">
                           <div className="flex justify-between items-start">
                             <div>
-                              <p className="text-[9px] font-black uppercase text-primary">#{order.orderId}</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="text-[9px] font-black uppercase text-primary">#{order.orderId}</p>
+                                {getOrderTypeBadge(order.orderType)}
+                              </div>
                               <h4 className="text-xs font-black truncate">{order.customerName}</h4>
                             </div>
                             <p className="text-sm font-black text-primary">₹{order.total}</p>
@@ -348,7 +364,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               <div className="p-8 bg-primary text-white">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-[10px] font-black uppercase opacity-70">Order Number</p>
+                    <div className="flex items-center gap-2 mb-2">
+                       <p className="text-[10px] font-black uppercase opacity-70">Order Number</p>
+                       {getOrderTypeBadge(selectedOrderForView.orderType)}
+                    </div>
                     <h2 className="text-3xl font-black font-headline">#{selectedOrderForView.orderId}</h2>
                   </div>
                   <div className="text-right">
@@ -375,7 +394,8 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                     <h5 className="text-[10px] font-black uppercase opacity-40">Client Info</h5>
                     <div className="space-y-2">
                       <p className="text-xs font-bold"><User className="inline w-3 h-3 mr-1" /> {selectedOrderForView.customerName}</p>
-                      <p className="text-xs font-medium opacity-60"><MapPin className="inline w-3 h-3 mr-1" /> {selectedOrderForView.address || 'In-Store'}</p>
+                      <p className="text-xs font-medium opacity-60"><MapPin className="inline w-3 h-3 mr-1" /> {selectedOrderForView.address || (selectedOrderForView.orderType === 'Dine-In' ? 'Table Service' : 'In-Store Pickup')}</p>
+                      <p className="text-xs font-bold text-primary"><ShoppingBag className="inline w-3 h-3 mr-1" /> Source: {selectedOrderForView.orderType || 'Online'}</p>
                     </div>
                   </div>
                 </div>
