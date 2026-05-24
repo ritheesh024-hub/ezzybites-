@@ -101,15 +101,14 @@ export const StaffManagement = () => {
 
     setSubmitting(true);
     try {
-      // For the prototype, we create the Firestore record. 
-      // The actual user will "Register" with this email on the login page to link their Auth account.
+      // Use email as key or a unique string prefix to avoid UID collisions
       const newStaffId = `staff-${Date.now()}`;
       const staffRef = doc(db, 'admins', newStaffId);
       
       await setDoc(staffRef, {
         id: newStaffId,
         name: formData.name,
-        email: formData.email,
+        email: formData.email.toLowerCase(),
         phone: formData.phone || '',
         role: formData.role,
         status: 'active',
@@ -124,7 +123,7 @@ export const StaffManagement = () => {
         }
       });
 
-      toast({ title: "Staff Member Added", description: `${formData.name} has been added to the directory.` });
+      toast({ title: "Staff Member Added", description: `${formData.name} has been added to the directory. They can now sign up using this email.` });
       setIsAddDialogOpen(false);
       resetForm();
     } catch (error: any) {

@@ -15,7 +15,7 @@ import {
   ChevronLeft, Fingerprint, UserCircle 
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { doc, setDoc, getDoc, collection, getDocs, limit, query, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, limit, query, updateDoc, serverTimestamp, where, deleteDoc } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -71,71 +71,100 @@ export default function AdminLoginPage() {
 
     setLoading(true);
     try {
+      let userCredential;
       if (isLogin) {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const adminRef = doc(db, 'admins', userCredential.user.uid);
-        const adminSnap = await getDoc(adminRef);
-        
-        if (!adminSnap.exists()) {
-          // Check if directory is empty to assign first admin
-          const adminsColl = collection(db, 'admins');
-          const adminsSnap = await getDocs(query(adminsColl, limit(1)));
-          
-          if (adminsSnap.empty) {
-            await setDoc(adminRef, { 
-              email: email, 
-              name: email.split('@')[0],
-              role: 'admin',
-              status: 'active',
-              onlineStatus: 'online',
-              createdAt: serverTimestamp(),
-              lastLoginAt: serverTimestamp(),
-              stats: { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
-            });
-          } else {
-            throw new Error("This account is not authorized as a staff member.");
-          }
-        } else {
-          // Check if account is disabled
-          const data = adminSnap.data();
-          if (data.status === 'disabled') {
-            await auth.signOut();
-            throw new Error("This account has been disabled by the administrator.");
-          }
-          
-          // Update last login
-          await updateDoc(adminRef, { 
-            lastLoginAt: serverTimestamp(),
-            onlineStatus: 'online'
-          });
-        }
-        toast({ title: "Authorized", description: "Welcome back to the operational console." });
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const adminRef = doc(db, 'admins', userCredential.user.uid);
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      }
+
+      const uid = userCredential.user.uid;
+      const adminRef = doc(db, 'admins', uid);
+      const adminSnap = await getDoc(adminRef);
+
+      // 1. If profile already exists under this UID
+      if (adminSnap.exists()) {
+        const data = adminSnap.data();
+        if (data.status === 'disabled') {
+          await auth.signOut();
+          throw new Error("This account has been disabled by the administrator.");
+        }
         
-        // Determine role: First user is admin, others are the selected role (or default to cashier)
-        let role = selectedRole || 'cashier';
-        const adminsColl = collection(db, 'admins');
-        const adminsSnap = await getDocs(query(adminsColl, limit(1)));
-        if (adminsSnap.empty) {
-          role = 'admin';
+        await updateDoc(adminRef, { 
+          lastLoginAt: serverTimestamp(),
+          onlineStatus: 'online'
+        });
+        toast({ title: "Authorized", description: `Logged in as ${data.role.toUpperCase()}.` });
+        router.push('/admin/dashboard');
+        return;
+      }
+
+      // 2. If profile doesn't exist for UID, check by Email (migration fallback)
+      const q = query(collection(db, 'admins'), where('email', '==', email.toLowerCase()), limit(1));
+      const emailQuerySnap = await getDocs(q);
+
+      if (!emailQuerySnap.empty) {
+        // Migrate temporary record (e.g. staff-123) to the actual UID
+        const oldDoc = emailQuerySnap.docs[0];
+        const oldData = oldDoc.data();
+        
+        await setDoc(adminRef, {
+          ...oldData,
+          id: uid,
+          lastLoginAt: serverTimestamp(),
+          onlineStatus: 'online'
+        });
+
+        // Delete old temporary document if ID was different
+        if (oldDoc.id !== uid) {
+          await deleteDoc(oldDoc.ref);
         }
 
+        toast({ title: "Profile Linked", description: "Your staff account is now activated." });
+        router.push('/admin/dashboard');
+        return;
+      }
+
+      // 3. If no record exists at all, check if this is the very first user
+      const adminsColl = collection(db, 'admins');
+      const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
+      
+      if (allAdminsSnap.empty) {
+        // PROVISION FIRST ADMIN
         await setDoc(adminRef, { 
-          email: email, 
+          email: email.toLowerCase(), 
           name: email.split('@')[0],
-          role: role,
+          role: 'admin',
           status: 'active',
           onlineStatus: 'online',
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
           stats: { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
         });
-        
-        toast({ title: "Account Created", description: `Registered as ${role.toUpperCase()}.` });
+        toast({ title: "First Admin Created", description: "You have full control of the platform." });
+        router.push('/admin/dashboard');
+      } else {
+        // Not authorized and not the first user
+        if (isLogin) {
+          await auth.signOut();
+          throw new Error("This account is not authorized as a staff member.");
+        } else {
+          // For registration, we can default to a role if we want to allow self-signup, 
+          // but usually we want Admin to add them. Let's allow registration but require Admin approval (status: disabled)
+          await setDoc(adminRef, { 
+            email: email.toLowerCase(), 
+            name: email.split('@')[0],
+            role: selectedRole || 'cashier',
+            status: 'disabled', // Requires admin to enable
+            onlineStatus: 'offline',
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+            stats: { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
+          });
+          await auth.signOut();
+          throw new Error("Registration submitted. Please wait for an Admin to enable your account.");
+        }
       }
-      router.push('/admin/dashboard');
     } catch (error: any) {
       console.error('Auth error:', error);
       toast({
