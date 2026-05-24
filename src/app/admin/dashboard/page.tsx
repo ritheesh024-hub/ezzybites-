@@ -34,38 +34,46 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function checkRole() {
-      if (!userLoading) {
-        if (!user) {
+      if (userLoading) return;
+
+      if (!user) {
+        router.push('/admin/login');
+        return;
+      }
+
+      if (!db || !auth) {
+        // Services not ready yet
+        return;
+      }
+
+      try {
+        const adminRef = doc(db, 'admins', user.uid);
+        const adminSnap = await getDoc(adminRef);
+
+        if (adminSnap.exists()) {
+          const data = adminSnap.data();
+          const role = (data.role as StaffRole) || 'cashier';
+          setAssignedRole(role);
+          setActiveView(role);
+          setCheckingRole(false);
+        } else {
+          // Not an authorized staff member in Firestore
+          toast({
+            variant: "destructive",
+            title: "Access Restricted",
+            description: "Your account is not registered in our staff directory.",
+          });
+          await auth.signOut();
           router.push('/admin/login');
-          return;
         }
-
-        if (db) {
-          try {
-            const adminRef = doc(db, 'admins', user.uid);
-            const adminSnap = await getDoc(adminRef);
-
-            if (adminSnap.exists()) {
-              const data = adminSnap.data();
-              const role = (data.role as StaffRole) || 'cashier';
-              setAssignedRole(role);
-              setActiveView(role);
-              setCheckingRole(false);
-            } else {
-              // Not an authorized staff member in Firestore
-              toast({
-                variant: "destructive",
-                title: "Unauthorized",
-                description: "Your account is not registered in our staff directory.",
-              });
-              await auth?.signOut();
-              router.push('/admin/login');
-            }
-          } catch (e) {
-            console.error("Error checking role:", e);
-            setCheckingRole(false);
-          }
+      } catch (e: any) {
+        console.error("Error checking role:", e);
+        // If it's a permission error, we should probably sign out
+        if (e.code === 'permission-denied') {
+          await auth.signOut();
+          router.push('/admin/login');
         }
+        setCheckingRole(false);
       }
     }
 
@@ -91,11 +99,14 @@ export default function AdminDashboardPage() {
 
   if (userLoading || checkingRole || !activeView) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
         <div className="w-20 h-20 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mb-8">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Establishing Secure Session...</p>
+        <div className="space-y-2">
+          <h2 className="text-xl font-black uppercase tracking-tight">Authenticating</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Establishing Secure Session...</p>
+        </div>
       </div>
     );
   }

@@ -27,10 +27,14 @@ export default function AdminLoginPage() {
   useEffect(() => {
     async function checkExistingAuth() {
       if (!userLoading && user && db) {
-        const adminRef = doc(db, 'admins', user.uid);
-        const adminSnap = await getDoc(adminRef);
-        if (adminSnap.exists()) {
-          router.push('/admin/dashboard');
+        try {
+          const adminRef = doc(db, 'admins', user.uid);
+          const adminSnap = await getDoc(adminRef);
+          if (adminSnap.exists()) {
+            router.push('/admin/dashboard');
+          }
+        } catch (e) {
+          console.error("Error checking existing auth record:", e);
         }
       }
     }
@@ -57,14 +61,27 @@ export default function AdminLoginPage() {
         const adminSnap = await getDoc(adminRef);
         
         if (!adminSnap.exists()) {
-          // Fallback: If auth exists but no record, check if this is the first user
-          const adminsColl = collection(db, 'admins');
-          const adminsSnap = await getDocs(query(adminsColl, limit(1)));
-          
-          if (adminsSnap.empty) {
-            await setDoc(adminRef, { email: email, role: 'admin', createdAt: new Date() });
-          } else {
-            throw new Error("This account is not authorized as a staff member.");
+          // If login is successful but no Firestore record exists, check if this is the first user ever
+          try {
+            const adminsColl = collection(db, 'admins');
+            const adminsSnap = await getDocs(query(adminsColl, limit(1)));
+            
+            if (adminsSnap.empty) {
+              // Create first admin record
+              await setDoc(adminRef, { 
+                email: email, 
+                role: 'admin', 
+                createdAt: new Date() 
+              });
+              toast({ title: "Authorized", description: "First admin account initialized." });
+              router.push('/admin/dashboard');
+              return;
+            } else {
+              throw new Error("This account is not authorized as a staff member.");
+            }
+          } catch (listError) {
+            // If getDocs fails due to permissions but record doesn't exist, it's likely not authorized
+            throw new Error("This account is not registered in our staff directory.");
           }
         }
         toast({ title: "Authorized", description: "Welcome to the operational console." });
@@ -72,10 +89,18 @@ export default function AdminLoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const adminRef = doc(db, 'admins', userCredential.user.uid);
         
-        // Check if this is the first admin ever
-        const adminsColl = collection(db, 'admins');
-        const adminsSnap = await getDocs(query(adminsColl, limit(1)));
-        const role = adminsSnap.empty ? 'admin' : 'cashier'; // First user is admin, others are cashier by default
+        // Determine role: First user is admin, others are cashier by default
+        let role = 'cashier';
+        try {
+          const adminsColl = collection(db, 'admins');
+          const adminsSnap = await getDocs(query(adminsColl, limit(1)));
+          if (adminsSnap.empty) {
+            role = 'admin';
+          }
+        } catch (e) {
+          // If we can't check, assume not the first user for security
+          role = 'cashier';
+        }
 
         await setDoc(adminRef, { 
           email: email, 
@@ -85,7 +110,7 @@ export default function AdminLoginPage() {
         
         toast({ 
           title: "Account Created", 
-          description: `You have been registered as ${role}.` 
+          description: `Registered as ${role.toUpperCase()}.` 
         });
       }
       router.push('/admin/dashboard');
