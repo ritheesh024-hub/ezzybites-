@@ -25,7 +25,9 @@ import {
   CheckCircle2,
   AlertCircle,
   History,
-  Timer
+  Timer,
+  Globe,
+  Utensils
 } from 'lucide-react';
 import {
   XAxis,
@@ -135,6 +137,19 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
     }
   };
 
+  const getOrderTypeBadge = (type: string) => {
+    switch (type) {
+      case 'Online': 
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Globe className="w-2 h-2" /> Online</Badge>;
+      case 'Dine-In': 
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Utensils className="w-2 h-2" /> Dine-In</Badge>;
+      case 'Take Away': 
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Package className="w-2 h-2" /> Take Away</Badge>;
+      default: 
+        return <Badge variant="outline" className="text-[7px] font-black uppercase px-1.5 py-0">{type || 'Order'}</Badge>;
+    }
+  };
+
   if (!isMounted) return (
     <div className="h-[400px] flex flex-col items-center justify-center gap-4">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -195,7 +210,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorSales" x1="0" x2="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
@@ -315,7 +330,10 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
                     ) : metrics.completedOrders.map((order, i) => (
                       <div key={i} className="flex items-center justify-between p-4 bg-secondary/10 dark:bg-zinc-800 rounded-2xl border border-muted/20 hover:border-primary/20 transition-all shadow-sm">
                         <div>
-                          <p className="font-black text-xs uppercase tracking-tight">#{order.orderId}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-black text-xs uppercase tracking-tight">#{order.orderId}</p>
+                            {getOrderTypeBadge(order.orderType)}
+                          </div>
                           <p className="text-[9px] font-bold text-muted-foreground opacity-60">{order.customerName}</p>
                         </div>
                         <p className="font-black text-sm text-primary italic">₹{order.total}</p>
@@ -331,6 +349,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
                         <div>
                           <div className="flex items-center gap-2">
                              <p className="font-black text-xs uppercase">#{order.orderId}</p>
+                             {getOrderTypeBadge(order.orderType)}
                              {getStatusBadge(order.status)}
                           </div>
                           <p className="text-[9px] font-bold text-muted-foreground opacity-60 mt-1">
@@ -350,6 +369,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
                         <div>
                           <div className="flex items-center gap-2">
                              <p className="font-black text-xs uppercase">#{order.orderId}</p>
+                             {getOrderTypeBadge(order.orderType)}
                              <Badge variant="outline" className="text-[8px] uppercase font-black px-2 py-0.5">{order.status}</Badge>
                           </div>
                           <p className="text-[9px] font-bold text-muted-foreground opacity-60 mt-1">{order.items?.length} items in preparation</p>
@@ -366,7 +386,7 @@ export const DashboardAnalysis = ({ orders, products }: DashboardAnalysisProps) 
               <div className="w-16 h-16 bg-white dark:bg-zinc-700 rounded-3xl flex items-center justify-center shadow-xl mb-6">
                 {activeMetricView === 'revenue' && <TrendingUp className="w-8 h-8 text-primary" />}
                 {activeMetricView === 'orders' && <History className="w-8 h-8 text-blue-500" />}
-                {activeMetricView === 'load' && <Zap className="w-8 h-8 text-orange-500" />}
+                {activeMetricView === 'load' && <Clock className="w-8 h-8 text-orange-500" />}
                 {activeMetricView === 'items' && <Star className="w-8 h-8 text-green-500" />}
               </div>
               <h4 className="font-black text-lg">Quick Summary</h4>
