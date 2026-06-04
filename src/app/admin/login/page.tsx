@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -44,8 +43,11 @@ export default function AdminLoginPage() {
         const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
         if (allAdminsSnap.empty) {
           setIsFirstSetup(true);
-          // If first setup, default to Registration
+          // If first setup, force Registration mode
           setIsLogin(false);
+        } else {
+          setIsFirstSetup(false);
+          setIsLogin(true);
         }
       } catch (e) {
         console.error("System check failed", e);
@@ -61,7 +63,10 @@ export default function AdminLoginPage() {
           const adminRef = doc(db, 'admins', user.uid);
           const adminSnap = await getDoc(adminRef);
           if (adminSnap.exists()) {
-            router.push('/admin/dashboard');
+            const data = adminSnap.data();
+            if (data.status === 'active') {
+              router.push('/admin/dashboard');
+            }
           }
         } catch (e) {
           console.error("Error checking existing auth record:", e);
@@ -88,6 +93,15 @@ export default function AdminLoginPage() {
       return;
     }
 
+    if (password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Weak Password",
+        description: "Password must be at least 6 characters.",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       let userCredential;
@@ -101,12 +115,35 @@ export default function AdminLoginPage() {
       const adminRef = doc(db, 'admins', uid);
       const adminSnap = await getDoc(adminRef);
 
-      // 1. If profile already exists under this UID
+      // 1. Check if first user ever (Provisioning)
+      const adminsColl = collection(db, 'admins');
+      const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
+      
+      if (allAdminsSnap.empty || (adminSnap.exists() && adminSnap.data().role === 'admin' && allAdminsSnap.size === 1)) {
+        // PROVISION FIRST ADMIN (or re-sync if session died)
+        await setDoc(adminRef, { 
+          id: uid,
+          email: email.toLowerCase(), 
+          name: email.split('@')[0],
+          role: 'admin',
+          status: 'active',
+          onlineStatus: 'online',
+          createdAt: adminSnap.exists() ? adminSnap.data().createdAt : serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+          stats: adminSnap.exists() ? adminSnap.data().stats : { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
+        }, { merge: true });
+        
+        toast({ title: "Welcome, Admin", description: "First administrative profile created." });
+        router.push('/admin/dashboard');
+        return;
+      }
+
+      // 2. If profile already exists under this UID
       if (adminSnap.exists()) {
         const data = adminSnap.data();
         if (data.status === 'disabled') {
           await auth.signOut();
-          throw new Error("This account has been disabled by the administrator.");
+          throw new Error("Account Disabled. Please contact your administrator.");
         }
         
         await updateDoc(adminRef, { 
@@ -118,82 +155,45 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // 2. If profile doesn't exist for UID, check by Email (migration fallback)
-      const q = query(collection(db, 'admins'), where('email', '==', email.toLowerCase()), limit(1));
-      const emailQuerySnap = await getDocs(q);
-
-      if (!emailQuerySnap.empty) {
-        const oldDoc = emailQuerySnap.docs[0];
-        const oldData = oldDoc.data();
-        
-        // Migrate old record to use new UID
-        await setDoc(adminRef, {
-          ...oldData,
-          id: uid,
-          lastLoginAt: serverTimestamp(),
-          onlineStatus: 'online'
-        });
-
-        // Delete old ghost record if it has a different ID
-        if (oldDoc.id !== uid) {
-          await deleteDoc(oldDoc.ref);
-        }
-
-        toast({ title: "Profile Linked", description: "Your staff account is now activated." });
-        router.push('/admin/dashboard');
-        return;
-      }
-
-      // 3. If no record exists at all, check if this is the very first user
-      const adminsColl = collection(db, 'admins');
-      const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
-      
-      if (allAdminsSnap.empty) {
-        // PROVISION FIRST ADMIN
+      // 3. New registration for non-first user
+      if (!isLogin) {
         await setDoc(adminRef, { 
           id: uid,
           email: email.toLowerCase(), 
           name: email.split('@')[0],
-          role: 'admin',
-          status: 'active',
-          onlineStatus: 'online',
+          role: selectedRole || 'cashier',
+          status: 'disabled', // Requires approval
+          onlineStatus: 'offline',
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
           stats: { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
         });
-        toast({ title: "Welcome, Admin", description: "First administrative profile created." });
-        router.push('/admin/dashboard');
+        await auth.signOut();
+        toast({
+          title: "Registration Submitted",
+          description: "Please ask an Admin to enable your account access.",
+        });
+        setStep('selection');
       } else {
-        if (isLogin) {
-          await auth.signOut();
-          throw new Error("This account is not authorized as a staff member.");
-        } else {
-          // New registration for non-first user
-          await setDoc(adminRef, { 
-            id: uid,
-            email: email.toLowerCase(), 
-            name: email.split('@')[0],
-            role: selectedRole || 'cashier',
-            status: 'disabled', 
-            onlineStatus: 'offline',
-            createdAt: serverTimestamp(),
-            lastLoginAt: serverTimestamp(),
-            stats: { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
-          });
-          await auth.signOut();
-          throw new Error("Registration submitted. Please ask an Admin to enable your account.");
-        }
+        // They tried to login but no staff record exists for this UID
+        await auth.signOut();
+        throw new Error("Account not found in staff directory. Please register first.");
       }
+
     } catch (error: any) {
       console.error('Auth error:', error);
       let errorMessage = error.message || "Failed to authenticate.";
       
       if (error.code === 'auth/invalid-credential') {
-        errorMessage = "Incorrect email or password. If you haven't registered yet, please click 'Register' below.";
+        errorMessage = isLogin 
+          ? "Incorrect credentials. If you haven't registered as staff yet, please click 'Register' below." 
+          : "Authentication failed. Please check your email and password requirements.";
       } else if (error.code === 'auth/email-already-in-use') {
         errorMessage = "This email is already registered. Try signing in instead.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. Minimum 6 characters required.";
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = "Staff record not found. Please register first.";
       }
 
       toast({
@@ -218,7 +218,7 @@ export default function AdminLoginPage() {
         </div>
 
         {isFirstSetup && (
-          <Alert className="max-w-xl mb-8 bg-primary/10 border-primary/20 rounded-2xl">
+          <Alert className="max-w-xl mb-8 bg-primary/10 border-primary/20 rounded-2xl animate-pulse">
             <ShieldCheck className="h-4 w-4 text-primary" />
             <AlertTitle className="text-primary font-black uppercase text-[10px] tracking-widest">Initial System Setup</AlertTitle>
             <AlertDescription className="text-xs font-medium">
@@ -286,10 +286,10 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-black font-headline uppercase tracking-tighter">
-            {selectedRole} {isLogin ? 'Sign In' : 'Registration'}
+            {isFirstSetup ? 'Admin Provisioning' : `${selectedRole} ${isLogin ? 'Sign In' : 'Register'}`}
           </CardTitle>
           <CardDescription className="font-bold text-[10px] uppercase tracking-widest opacity-60">
-            {isFirstSetup ? 'Provisioning First Admin Account' : 'Ezzy Bites Operational Console'}
+            {isFirstSetup ? 'Create the master staff account' : 'Ezzy Bites Operational Console'}
           </CardDescription>
         </CardHeader>
 
@@ -322,6 +322,7 @@ export default function AdminLoginPage() {
                   min={6}
                 />
               </div>
+              <p className="text-[9px] font-medium opacity-40 ml-1">Minimum 6 characters</p>
             </div>
           </CardContent>
           
@@ -345,13 +346,15 @@ export default function AdminLoginPage() {
               )}
             </Button>
             
-            <button 
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-[10px] text-muted-foreground font-black uppercase tracking-widest hover:text-primary transition-colors"
-            >
-              {isLogin ? "New to staff? Register Account" : "Existing account? Sign In"}
-            </button>
+            {!isFirstSetup && (
+              <button 
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-[10px] text-muted-foreground font-black uppercase tracking-widest hover:text-primary transition-colors"
+              >
+                {isLogin ? "Need a staff account? Register" : "Already have access? Sign In"}
+              </button>
+            )}
           </CardFooter>
         </form>
       </Card>
