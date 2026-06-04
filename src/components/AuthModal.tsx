@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -80,7 +79,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       let errorMessage = "Something went wrong with Google Sign-In.";
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "This domain is not authorized. Please add this URL to 'Authorized Domains' in Firebase Console Settings.";
+        errorMessage = "This domain is not authorized. Please ensure your development URL is added to 'Authorized Domains' in Firebase Console.";
       } else if (error.code === 'auth/popup-blocked') {
         errorMessage = "Sign-in popup was blocked by your browser. Please allow popups for this site.";
       }
@@ -135,7 +134,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           
           <div className="flex items-center gap-2 justify-center p-3 bg-secondary/30 rounded-xl">
             <AlertCircle className="w-3.5 h-3.5 text-muted-foreground" />
-            <p className="text-[9px] font-bold text-muted-foreground uppercase">Please enable popups to sign in</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase">Popups must be enabled</p>
           </div>
           
           <p className="text-[9px] text-center text-muted-foreground font-bold uppercase tracking-widest opacity-50 px-8">

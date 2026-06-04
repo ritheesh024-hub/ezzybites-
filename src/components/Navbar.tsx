@@ -1,8 +1,8 @@
+'use client';
 
-"use client"
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, ShoppingBag, Menu, X, User, Heart, LogOut } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, User, Heart, LogOut, History, Settings } from 'lucide-react';
 import { useStore } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -100,7 +100,7 @@ export const Navbar = () => {
                 "rounded-full transition-colors",
                 !scrolled ? "text-white hover:bg-white/10" : "text-foreground"
               )}>
-                <Heart className="w-5 h-5" />
+                <History className="w-5 h-5" />
               </Button>
             </Link>
             
@@ -115,7 +115,7 @@ export const Navbar = () => {
               user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="outline-none focus:ring-2 focus:ring-primary/20 rounded-full">
+                    <button className="outline-none focus:ring-2 focus:ring-primary/20 rounded-full transition-transform active:scale-95">
                       <Avatar className="h-10 w-10 border-2 border-background shadow-md">
                         <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
                         <AvatarFallback className="bg-primary text-white font-black text-xs">
@@ -124,7 +124,7 @@ export const Navbar = () => {
                       </Avatar>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border-none shadow-3xl">
+                  <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border-none shadow-3xl bg-white dark:bg-zinc-900">
                     <DropdownMenuLabel className="px-3 py-2">
                       <p className="text-xs font-black uppercase tracking-tight truncate">{user.displayName}</p>
                       <p className="text-[10px] font-medium opacity-50 truncate">{user.email}</p>
@@ -132,7 +132,7 @@ export const Navbar = () => {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild className="rounded-xl py-2.5 font-bold cursor-pointer">
                       <Link href="/orders" className="flex items-center gap-3">
-                        <ShoppingBag className="w-4 h-4" /> My Orders
+                        <History className="w-4 h-4 text-primary" /> My History
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="rounded-xl py-2.5 font-bold text-destructive cursor-pointer flex items-center gap-3">
@@ -146,11 +146,11 @@ export const Navbar = () => {
                   variant="ghost" 
                   size="sm"
                   className={cn(
-                    "rounded-full px-5 h-11 font-black uppercase text-[10px] tracking-widest transition-all",
+                    "rounded-full px-6 h-11 font-black uppercase text-[10px] tracking-widest transition-all",
                     !scrolled ? "text-white border-white/20 hover:bg-white/10" : "text-foreground border"
                   )}
                 >
-                  Sign In
+                  <User className="w-3.5 h-3.5 mr-2" /> Sign In
                 </Button>
               )
             )}
@@ -189,14 +189,21 @@ export const Navbar = () => {
         <div className="md:hidden absolute top-full left-0 w-full glass border-t border-white/10 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col p-6 gap-2">
             <Link href="/" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Home</Link>
-            <Link href="/menu" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Menu</Link>
-            <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">My Orders</Link>
-            {!user && (
+            <Link href="/menu" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Digital Menu</Link>
+            <Link href="/orders" onClick={() => setIsMenuOpen(false)} className="px-4 py-3 font-black uppercase tracking-widest text-[10px] hover:text-primary transition-colors">Order History</Link>
+            {!user ? (
               <button 
                 onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }} 
                 className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-primary text-left"
               >
-                Sign In
+                Sign In / Join
+              </button>
+            ) : (
+              <button 
+                onClick={() => { handleLogout(); setIsMenuOpen(false); }} 
+                className="px-4 py-3 font-black uppercase tracking-widest text-[10px] text-destructive text-left"
+              >
+                Sign Out
               </button>
             )}
           </div>
