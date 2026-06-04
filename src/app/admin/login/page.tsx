@@ -51,7 +51,6 @@ export default function AdminLoginPage() {
         setSystemChecked(true);
       } catch (e) {
         console.error("System check failed", e);
-        // If we can't check, assume we need a setup to be safe
         setIsFirstSetup(true);
         setSystemChecked(true);
       }
@@ -80,7 +79,6 @@ export default function AdminLoginPage() {
   const handleRoleSelect = (role: SelectedRole) => {
     setSelectedRole(role);
     setStep('auth');
-    // Pre-fill email if it's the primary admin
     if (role === 'admin' && !email) {
       setEmail(PRIMARY_ADMIN_EMAIL);
     }
@@ -99,18 +97,14 @@ export default function AdminLoginPage() {
       let userCredential;
       const normalizedEmail = email.trim().toLowerCase();
 
-      // Step 1: Firebase Auth
       try {
-        // Try sign-in first
         userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } catch (signInError: any) {
-        // If user doesn't exist, try creating account if it's the primary email or first setup
         if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
             toast({ title: "Account Created", description: "Your login credentials have been initialized." });
           } catch (createError: any) {
-            // If they already exist in Auth but can't sign in, it's a real credential error
             if (createError.code === 'auth/email-already-in-use') {
               throw new Error("Incorrect password for this staff email.");
             }
@@ -125,15 +119,44 @@ export default function AdminLoginPage() {
       const adminRef = doc(db, 'admins', uid);
       let adminSnap = await getDoc(adminRef);
 
-      // Step 2: Ensure Firestore Record exists (Self-Healing)
+      // --- SELF-HEALING & MIGRATION LOGIC ---
       if (!adminSnap.exists()) {
-        // Logic: If it's the primary email, or if no other admins exist, automatically provision
         const adminsColl = collection(db, 'admins');
-        const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
         
+        // Check for duplicate "pre-authorized" records by email
+        const emailQuery = query(adminsColl, where('email', '==', normalizedEmail), limit(1));
+        const emailSnap = await getDocs(emailQuery);
+        
+        if (!emailSnap.empty) {
+          const oldRecord = emailSnap.docs[0];
+          const oldData = oldRecord.data();
+          const oldId = oldRecord.id;
+
+          // Only migrate if it's a different ID (like staff-...)
+          if (oldId !== uid) {
+            const migratedData = {
+              ...oldData,
+              id: uid,
+              uid: uid,
+              lastLoginAt: serverTimestamp(),
+              onlineStatus: 'online'
+            };
+            
+            await setDoc(adminRef, migratedData);
+            await deleteDoc(doc(db, 'admins', oldId));
+            
+            toast({ title: "Account Migrated", description: "Linked your identity to pre-authorized permissions." });
+            router.push('/admin/dashboard');
+            return;
+          }
+        }
+
+        // Check if it's the primary admin or first setup
+        const allAdminsSnap = await getDocs(query(adminsColl, limit(1)));
         if (allAdminsSnap.empty || normalizedEmail === PRIMARY_ADMIN_EMAIL) {
           const firstAdminData = { 
             id: uid,
+            uid: uid,
             email: normalizedEmail, 
             name: normalizedEmail.split('@')[0],
             role: 'admin',
@@ -148,13 +171,13 @@ export default function AdminLoginPage() {
           router.push('/admin/dashboard');
           return;
         } else {
-          // It's a new staff member (not the primary)
           const newRequestData = { 
             id: uid,
+            uid: uid,
             email: normalizedEmail, 
             name: normalizedEmail.split('@')[0],
             role: selectedRole || 'cashier',
-            status: 'disabled', // Requires approval
+            status: 'disabled',
             onlineStatus: 'offline',
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp(),
@@ -170,7 +193,6 @@ export default function AdminLoginPage() {
         }
       }
 
-      // Step 3: Final Access Control
       const data = adminSnap.data();
       if (data.status === 'disabled') {
         await auth.signOut();
