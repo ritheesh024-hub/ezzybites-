@@ -1,7 +1,9 @@
+
 'use client';
 
 /**
  * @fileOverview Firebase configuration using the project credentials.
+ * The authDomain is used for OAuth operations like Google Sign-In.
  */
 
 export const firebaseConfig = {
