@@ -78,8 +78,9 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       }
 
       let errorMessage = "Something went wrong with Google Sign-In.";
+      
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "This domain is not authorized for Google Sign-In. Please contact support.";
+        errorMessage = "This domain is not authorized. Please add this URL to 'Authorized Domains' in Firebase Console Settings.";
       } else if (error.code === 'auth/popup-blocked') {
         errorMessage = "Sign-in popup was blocked by your browser. Please allow popups for this site.";
       }
