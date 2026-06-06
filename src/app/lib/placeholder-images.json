@@ -1,8 +1,10 @@
+
 {
   "placeholderImages": [
     { "id": "hero-burger", "description": "Exploding 3D Burger with Ingredients", "imageUrl": "https://picsum.photos/seed/burger-explosion-3d/800/600", "imageHint": "3D burger explosion" },
     { "id": "hero-fries", "description": "3D Fries splash", "imageUrl": "https://picsum.photos/seed/crispy-fries/600/600", "imageHint": "french fries" },
     { "id": "hero-drink", "description": "Iced cola splash", "imageUrl": "https://picsum.photos/seed/ice-drink/600/600", "imageHint": "soft drink" },
+    { "id": "hero-bg-main", "description": "Premium gourmet food background", "imageUrl": "https://picsum.photos/seed/ezzybites-hero/1920/1080", "imageHint": "food background" },
     { "id": "cat-burger", "description": "Category Burger", "imageUrl": "https://picsum.photos/seed/cat-burger/200/200", "imageHint": "burger icon" },
     { "id": "cat-pizza", "description": "Category Pizza", "imageUrl": "https://picsum.photos/seed/cat-pizza/200/200", "imageHint": "pizza slice" },
     { "id": "cat-biryani", "description": "Category Biryani", "imageUrl": "https://picsum.photos/seed/cat-biryani/200/200", "imageHint": "biryani bowl" },
