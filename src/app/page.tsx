@@ -33,7 +33,7 @@ export default function Home() {
     return query(
       collection(db, 'products'),
       where('isAvailable', '==', true),
-      limit(4)
+      limit(6)
     );
   }, [db]);
 
@@ -46,7 +46,7 @@ export default function Home() {
       <Navbar />
       <main className="flex-1 relative">
         {/* HERO SECTION */}
-        <section className="relative h-[80vh] md:h-[90vh] flex items-center overflow-hidden">
+        <section className="relative h-[70vh] md:h-[80vh] flex items-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <Image 
               src={getImg('hero-bg')} 
@@ -84,18 +84,13 @@ export default function Home() {
           </div>
         </section>
 
-        {/* PROMO OFFERS - Cleanly separated */}
-        <section className="relative z-30 -mt-20 md:-mt-32 pb-12">
-          <PromoBanner />
-        </section>
-
-        {/* SIGNATURE HIGHLIGHTS */}
-        <section className="py-16 md:py-20 bg-zinc-50 dark:bg-zinc-950">
+        {/* SIGNATURE HIGHLIGHTS - Using Compact Cards */}
+        <section className="py-12 md:py-16 bg-zinc-50 dark:bg-zinc-950">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
                <div className="space-y-3">
                  <Badge variant="outline" className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-primary border-primary/20">The Favorites</Badge>
-                 <h2 className="text-4xl md:text-6xl font-headline font-black">Signature <span className="text-primary italic">Highlights.</span></h2>
+                 <h2 className="text-3xl md:text-5xl font-headline font-black">Signature <span className="text-primary italic">Highlights.</span></h2>
                </div>
                <Link href="/menu">
                  <Button variant="link" className="font-black uppercase text-[11px] tracking-widest gap-2 text-primary">
@@ -110,9 +105,9 @@ export default function Home() {
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing live kitchen...</p>
               </div>
             ) : menuItems && menuItems.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
                 {menuItems.map((item) => (
-                  <FoodCard key={item.id} item={item} />
+                  <FoodCard key={item.id} item={item} forceViewMode="small" />
                 ))}
               </div>
             ) : (
@@ -124,13 +119,18 @@ export default function Home() {
           </div>
         </section>
 
+        {/* PROMO OFFERS - Positioned after menu for better flow */}
+        <section className="py-12 bg-background relative z-10">
+          <PromoBanner />
+        </section>
+
         {/* SAVOR TOOL AI SECTION */}
-        <section className="py-16 md:py-24 container mx-auto px-4">
+        <section className="py-12 md:py-16 container mx-auto px-4">
           <SavorTool />
         </section>
 
         {/* FEATURES SECTION */}
-        <section className="py-20 bg-background">
+        <section className="py-16 bg-zinc-50 dark:bg-zinc-950">
           <div className="container mx-auto px-4">
             <div className="grid lg:grid-cols-4 gap-12">
               <div className="lg:col-span-1 space-y-4">
@@ -157,7 +157,7 @@ export default function Home() {
         </section>
 
         {/* FAQ SECTION */}
-        <section className="py-20 container mx-auto px-4 max-w-4xl">
+        <section className="py-16 container mx-auto px-4 max-w-4xl">
           <div className="text-center mb-12">
             <HelpCircle className="w-12 h-12 text-primary mx-auto mb-4" />
             <h2 className="text-4xl md:text-5xl font-headline font-black">Got Questions? <br /><span className="text-primary italic">We have answers.</span></h2>
