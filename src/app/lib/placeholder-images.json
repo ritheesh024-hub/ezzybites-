@@ -1,19 +1,14 @@
-
 {
   "placeholderImages": [
-    { "id": "hero-bg", "description": "Premium restaurant atmosphere", "imageUrl": "https://picsum.photos/seed/restaurant-ambience/1920/1080", "imageHint": "restaurant interior" },
-    { "id": "tea-masala", "description": "Masala Tea in clay cup", "imageUrl": "https://picsum.photos/seed/masala-tea/600/400", "imageHint": "masala tea" },
-    { "id": "tea-ginger", "description": "Ginger Tea", "imageUrl": "https://picsum.photos/seed/ginger-tea/600/400", "imageHint": "ginger tea" },
-    { "id": "tea-green", "description": "Green Tea", "imageUrl": "https://picsum.photos/seed/green-tea/600/400", "imageHint": "green tea" },
-    { "id": "tea-lemon", "description": "Lemon Tea", "imageUrl": "https://picsum.photos/seed/lemon-tea/600/400", "imageHint": "lemon tea" },
-    { "id": "tea-ice", "description": "Ice Tea", "imageUrl": "https://picsum.photos/seed/ice-tea/600/400", "imageHint": "ice tea" },
-    { "id": "coffee-classic", "description": "Classic Coffee", "imageUrl": "https://picsum.photos/seed/coffee-cup/600/400", "imageHint": "coffee cup" },
-    { "id": "coffee-filter", "description": "South Indian Filter Coffee", "imageUrl": "https://picsum.photos/seed/filter-coffee/600/400", "imageHint": "filter coffee" },
-    { "id": "coffee-cold", "description": "Cold Coffee", "imageUrl": "https://picsum.photos/seed/cold-coffee/600/400", "imageHint": "cold coffee" },
-    { "id": "coffee-cappuccino", "description": "Cappuccino", "imageUrl": "https://picsum.photos/seed/cappuccino-art/600/400", "imageHint": "cappuccino" },
-    { "id": "coffee-mocha", "description": "Mocha", "imageUrl": "https://picsum.photos/seed/mocha-coffee/600/400", "imageHint": "mocha coffee" },
-    { "id": "food-maggie-1", "description": "Classic Veg Maggie", "imageUrl": "https://picsum.photos/seed/veg-maggie/600/400", "imageHint": "vegetable noodles" },
-    { "id": "food-maggie-2", "description": "Egg Maggie", "imageUrl": "https://picsum.photos/seed/egg-noodles/600/400", "imageHint": "egg noodles" },
-    { "id": "food-biryani-1", "description": "Chicken Biryani", "imageUrl": "https://picsum.photos/seed/spicy-biryani/600/400", "imageHint": "biryani plate" }
+    { "id": "hero-burger", "description": "High-end 3D Burger", "imageUrl": "https://picsum.photos/seed/premium-burger/800/800", "imageHint": "gourmet burger" },
+    { "id": "hero-fries", "description": "3D Fries splash", "imageUrl": "https://picsum.photos/seed/crispy-fries/600/600", "imageHint": "french fries" },
+    { "id": "hero-drink", "description": "Iced cola splash", "imageUrl": "https://picsum.photos/seed/ice-drink/600/600", "imageHint": "soft drink" },
+    { "id": "cat-burger", "description": "Category Burger", "imageUrl": "https://picsum.photos/seed/cat-burger/200/200", "imageHint": "burger icon" },
+    { "id": "cat-pizza", "description": "Category Pizza", "imageUrl": "https://picsum.photos/seed/cat-pizza/200/200", "imageHint": "pizza slice" },
+    { "id": "cat-biryani", "description": "Category Biryani", "imageUrl": "https://picsum.photos/seed/cat-biryani/200/200", "imageHint": "biryani bowl" },
+    { "id": "cat-chicken", "description": "Category Chicken", "imageUrl": "https://picsum.photos/seed/cat-chicken/200/200", "imageHint": "fried chicken" },
+    { "id": "cat-snacks", "description": "Category Snacks", "imageUrl": "https://picsum.photos/seed/cat-snacks/200/200", "imageHint": "nachos" },
+    { "id": "cat-desserts", "description": "Category Desserts", "imageUrl": "https://picsum.photos/seed/cat-dessert/200/200", "imageHint": "ice cream" },
+    { "id": "cat-drinks", "description": "Category Drinks", "imageUrl": "https://picsum.photos/seed/cat-drink/200/200", "imageHint": "iced tea" }
   ]
 }
