@@ -185,7 +185,7 @@ export default function OrderTrackingPage() {
                   </p>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
       </main>

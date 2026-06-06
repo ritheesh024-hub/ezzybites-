@@ -23,7 +23,7 @@
     --border: 20 5.9% 90%;
     --input: 20 5.9% 90%;
     --ring: 24 100% 50%;
-    --radius: 1.5rem;
+    --radius: 1.8rem;
   }
   .dark {
     --background: 20 14.3% 4.1%;
@@ -64,10 +64,6 @@
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .shadow-3xl { box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.15); }
   .shadow-soft { box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05); }
-  
-  .perspective-1000 { perspective: 1000px; }
-  .preserve-3d { transform-style: preserve-3d; }
-  .rotate-3d { transform: rotateY(15deg) rotateX(5deg); }
   
   .bg-orange-gradient {
     @apply bg-gradient-to-r from-[#FF6B00] to-[#FF8A00];
