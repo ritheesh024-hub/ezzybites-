@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -17,6 +16,7 @@ import { useAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Logo } from './Logo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -66,7 +66,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       }
 
       toast({
-        title: "Welcome to Ezzy Bites!",
+        title: "Welcome Back!",
         description: `Signed in as ${user.displayName}.`,
       });
       
@@ -98,28 +98,28 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !loading && !open && onClose()}>
-      <DialogContent className="max-w-md rounded-[2.5rem] p-10 border-none shadow-3xl bg-white dark:bg-zinc-900">
+      <DialogContent className="max-w-md rounded-[2.5rem] p-8 md:p-12 border-none shadow-3xl bg-white dark:bg-zinc-950">
         <DialogHeader className="text-center space-y-6">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto transform rotate-12 shadow-2xl shadow-primary/20">
-            <ShoppingBag className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-2">
+            <Logo size="md" hideText />
           </div>
-          <div className="space-y-2">
-            <DialogTitle className="text-3xl font-black font-headline tracking-tighter uppercase">
-              Join the <span className="text-primary italic">Family.</span>
+          <div className="space-y-3">
+            <DialogTitle className="text-3xl font-black font-headline tracking-tighter uppercase leading-none">
+              Welcome to <span className="text-primary italic">Ezzy Bites</span>
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium text-muted-foreground leading-relaxed px-4">
-              Sign in to place orders, track your delivery, and unlock exclusive rewards.
+            <DialogDescription className="text-sm font-medium text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+              Sign in to track orders, save favorites, and enjoy faster checkout.
             </DialogDescription>
           </div>
         </DialogHeader>
 
         {authError && (
-          <Alert variant="destructive" className="mt-6 border-none bg-red-50 text-red-900 rounded-2xl">
-            <AlertTitle className="font-black text-xs uppercase mb-2">Setup Required</AlertTitle>
+          <Alert variant="destructive" className="mt-6 border-none bg-red-50 dark:bg-red-950/20 text-red-900 dark:text-red-400 rounded-2xl">
+            <AlertTitle className="font-black text-[10px] uppercase mb-2 tracking-widest">Setup Required</AlertTitle>
             <AlertDescription className="text-[11px] font-medium leading-relaxed">
               {authError.message}
               {authError.domain && (
-                <div className="mt-3 p-3 bg-white/50 rounded-xl flex items-center justify-between gap-2 border border-red-100">
+                <div className="mt-3 p-3 bg-white/50 dark:bg-black/20 rounded-xl flex items-center justify-between gap-2 border border-red-100 dark:border-red-900/30">
                   <code className="text-[10px] font-mono break-all">{authError.domain}</code>
                   <Button 
                     size="icon" 
@@ -135,11 +135,11 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           </Alert>
         )}
 
-        <div className="mt-8 space-y-4">
+        <div className="mt-10 space-y-4">
           <Button 
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full h-16 rounded-2xl bg-white dark:bg-zinc-800 text-foreground border-2 border-muted hover:bg-secondary/50 transition-all font-black uppercase text-[10px] tracking-widest gap-3 shadow-sm"
+            className="w-full h-16 rounded-full bg-white dark:bg-zinc-900 text-foreground border-2 border-muted hover:bg-secondary/50 transition-all font-black uppercase text-[10px] tracking-widest gap-4 shadow-sm"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
               <>
@@ -154,15 +154,22 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
             )}
           </Button>
           
-          <div className="flex items-center gap-2 justify-center p-3 bg-secondary/30 rounded-xl">
-            <Info className="w-3.5 h-3.5 text-primary" />
-            <p className="text-[9px] font-bold text-muted-foreground uppercase">Popups must be enabled</p>
+          <div className="flex items-center gap-2 justify-center py-4">
+            <span className="h-px bg-border flex-1" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-4">Secure Authentication</span>
+            <span className="h-px bg-border flex-1" />
+          </div>
+          
+          <div className="text-center">
+            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
+              By continuing, you agree to our Terms and Conditions
+            </p>
           </div>
         </div>
 
-        <DialogFooter className="mt-8 border-t pt-6">
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mx-auto">
-            Ezzy Bites Premium Fast Food
+        <DialogFooter className="mt-12">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 mx-auto">
+            Premium Fast Food-Tech
           </p>
         </DialogFooter>
       </DialogContent>

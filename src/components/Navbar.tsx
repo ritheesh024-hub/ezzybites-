@@ -192,7 +192,7 @@ export const Navbar = () => {
                     onClick={() => setIsAuthModalOpen(true)}
                     className="rounded-full px-5 h-10 font-black uppercase text-[10px] tracking-widest bg-orange-gradient text-white shadow-lg"
                   >
-                    Sign In
+                    Login
                   </Button>
                 )
               )}
@@ -247,7 +247,7 @@ export const Navbar = () => {
                     ) : (
                       <div className="flex flex-col gap-2">
                         <Logo variant="color" size="sm" />
-                        <p className="text-xs font-medium text-muted-foreground">Join the Ezzy Family today.</p>
+                        <p className="text-xs font-medium text-muted-foreground">Sign in for the best experience.</p>
                       </div>
                     )}
                   </SheetHeader>
@@ -304,9 +304,9 @@ export const Navbar = () => {
                     ) : (
                       <Button 
                         onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }}
-                        className="w-full h-14 rounded-2xl bg-orange-gradient font-black uppercase text-[11px] tracking-widest shadow-xl shadow-primary/20"
+                        className="w-full h-14 rounded-full bg-orange-gradient font-black uppercase text-[11px] tracking-widest shadow-xl shadow-primary/20 text-white"
                       >
-                        Join the Family
+                        Sign Up / Login
                       </Button>
                     )}
                   </div>
