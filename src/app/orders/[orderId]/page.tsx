@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -185,7 +184,7 @@ export default function OrderTrackingPage() {
                   </p>
                 </div>
               </CardContent>
-            </div>
+            </Card>
           </div>
         </div>
       </main>
