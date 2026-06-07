@@ -88,6 +88,19 @@
   animation: float 8s ease-in-out infinite;
 }
 
+/* Brand Orbit Animations */
+@keyframes orbit-0 { from { transform: rotate(0deg) translateX(100px) rotate(0deg); } to { transform: rotate(360deg) translateX(100px) rotate(-360deg); } }
+@keyframes orbit-1 { from { transform: rotate(72deg) translateX(100px) rotate(-72deg); } to { transform: rotate(432deg) translateX(100px) rotate(-432deg); } }
+@keyframes orbit-2 { from { transform: rotate(144deg) translateX(100px) rotate(-144deg); } to { transform: rotate(504deg) translateX(100px) rotate(-504deg); } }
+@keyframes orbit-3 { from { transform: rotate(216deg) translateX(100px) rotate(-216deg); } to { transform: rotate(576deg) translateX(100px) rotate(-576deg); } }
+@keyframes orbit-4 { from { transform: rotate(288deg) translateX(100px) rotate(-288deg); } to { transform: rotate(648deg) translateX(100px) rotate(-648deg); } }
+
+.animate-orbit-0 { animation: orbit-0 8s linear infinite; }
+.animate-orbit-1 { animation: orbit-1 8s linear infinite; }
+.animate-orbit-2 { animation: orbit-2 8s linear infinite; }
+.animate-orbit-3 { animation: orbit-3 8s linear infinite; }
+.animate-orbit-4 { animation: orbit-4 8s linear infinite; }
+
 html { scroll-behavior: smooth; height: 100%; }
 body { height: 100%; position: relative; }
 @media (max-width: 768px) { .animate-in { animation-duration: 400ms !important; } }
