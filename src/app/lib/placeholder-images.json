@@ -11,6 +11,7 @@
     { "id": "cat-chicken", "description": "Category Chicken", "imageUrl": "https://picsum.photos/seed/cat-chicken/200/200", "imageHint": "fried chicken" },
     { "id": "cat-snacks", "description": "Category Snacks", "imageUrl": "https://picsum.photos/seed/cat-snacks/200/200", "imageHint": "nachos" },
     { "id": "cat-desserts", "description": "Category Desserts", "imageUrl": "https://picsum.photos/seed/cat-dessert/200/200", "imageHint": "ice cream" },
-    { "id": "cat-drinks", "description": "Category Drinks", "imageUrl": "https://picsum.photos/seed/cat-drink/200/200", "imageHint": "iced tea" }
+    { "id": "cat-drinks", "description": "Category Drinks", "imageUrl": "https://picsum.photos/seed/cat-drink/200/200", "imageHint": "iced tea" },
+    { "id": "biryani-mobile-featured", "description": "Gourmet Chicken Biryani for Mobile", "imageUrl": "https://t4.ftcdn.net/jpg/15/27/13/33/240_F_1527133341_hSJALih4r2D6l9ymqvt0efOBAxxmV3Pd.jpg", "imageHint": "chicken biryani" }
   ]
 }

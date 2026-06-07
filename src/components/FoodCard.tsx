@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { BeverageCustomizer } from './BeverageCustomizer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import placeholderData from '@/app/lib/placeholder-images.json';
 
 interface FoodCardProps {
   item: FoodItem;
@@ -18,10 +20,17 @@ interface FoodCardProps {
 export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
   const { cart, addToCart, updateQuantity, menuViewMode: storeViewMode } = useStore();
   const [isCustomizing, setIsCustomizing] = useState(false);
+  const isMobile = useIsMobile();
+  const [imgError, setImgError] = useState(false);
   
   const menuViewMode = forceViewMode || storeViewMode;
   const hideVegIndicator = ['Tea', 'Coffee', 'Ice teas'].includes(item.category);
   const cartItemCount = cart.filter(i => i.id === item.id).reduce((acc, i) => acc + i.quantity, 0);
+
+  // Mobile Biryani Image Logic
+  const mobileBiryaniUrl = placeholderData.placeholderImages.find(img => img.id === 'biryani-mobile-featured')?.imageUrl || '';
+  const isBiryaniOnMobile = isMobile && item.category?.toLowerCase() === 'biryani';
+  const displayImageUrl = (isBiryaniOnMobile && !imgError) ? mobileBiryaniUrl : item.imageUrl;
 
   const handleAddClick = () => {
     if (item.isBeverage || item.isCustomizable) {
@@ -63,11 +72,13 @@ export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
         <div className="group bg-white dark:bg-zinc-900 rounded-[1.5rem] md:rounded-[2rem] shadow-soft hover:shadow-xl transition-all duration-500 flex flex-col h-full relative overflow-hidden border border-border/20">
           <div className="relative aspect-square overflow-hidden bg-secondary/30">
             <Image 
-              src={item.imageUrl} 
+              src={displayImageUrl} 
               alt={item.name} 
               fill 
               className="object-cover group-hover:scale-110 transition-transform duration-700"
               unoptimized
+              onError={() => setImgError(true)}
+              data-ai-hint={isBiryaniOnMobile ? "chicken biryani" : "fast food"}
             />
             {item.rating >= 4.7 && (
                <div className="absolute top-2 left-2 z-10 glass px-1.5 py-0.5 rounded-lg flex items-center gap-1">
@@ -131,11 +142,13 @@ export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
 
         <div className="relative aspect-[4/3] overflow-hidden">
           <Image 
-            src={item.imageUrl} 
+            src={displayImageUrl} 
             alt={item.name} 
             fill 
             className="object-cover group-hover:scale-110 transition-transform duration-1000"
             unoptimized
+            onError={() => setImgError(true)}
+            data-ai-hint={isBiryaniOnMobile ? "chicken biryani" : "fast food"}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           
