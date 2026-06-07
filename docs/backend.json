@@ -92,6 +92,8 @@
         "total": { "type": "number" },
         "totalAmount": { "type": "number" },
         "status": { "type": "string", "enum": ["Pending", "Preparing", "Out for Delivery", "Delivered", "Cancelled"] },
+        "cancelledAt": { "type": "string", "format": "date-time" },
+        "cancelledBy": { "type": "string", "enum": ["Customer", "Admin"] },
         "paymentMethod": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },

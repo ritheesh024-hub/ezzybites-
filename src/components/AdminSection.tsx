@@ -14,7 +14,8 @@ import {
   Users, UserPlus, Globe, Utensils,
   TicketPercent, BarChart3, Fingerprint,
   LayoutGrid,
-  Settings2
+  Settings2,
+  Ban
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
@@ -101,10 +102,19 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
       });
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (order: any) => {
+    const status = order.status;
     switch (status) {
       case 'Delivered': return <Badge className="bg-green-100 text-green-700 border-none px-3 font-black text-[9px] uppercase">Delivered</Badge>;
-      case 'Cancelled': return <Badge className="bg-red-100 text-red-700 border-none px-3 font-black text-[9px] uppercase">Denied</Badge>;
+      case 'Cancelled': 
+        return (
+          <div className="flex flex-col items-end gap-1">
+            <Badge className="bg-red-100 text-red-700 border-none px-3 font-black text-[9px] uppercase">Cancelled</Badge>
+            {order.cancelledBy === 'Customer' && (
+              <span className="text-[7px] font-black text-red-500 uppercase tracking-tighter italic">By Customer</span>
+            )}
+          </div>
+        );
       case 'Pending': return <Badge className="bg-blue-100 text-blue-700 border-none px-3 font-black text-[9px] uppercase">New</Badge>;
       case 'Preparing': return <Badge className="bg-orange-100 text-orange-700 border-none px-3 font-black text-[9px] uppercase">Cooking</Badge>;
       case 'Out for Delivery': return <Badge className="bg-purple-100 text-purple-700 border-none px-3 font-black text-[9px] uppercase">Transit</Badge>;
@@ -262,7 +272,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                             <p className="text-sm font-black text-primary">₹{order.total}</p>
                           </div>
                           <div className="flex justify-between items-center pt-2 border-t border-dashed">
-                            {getStatusBadge(order.status)}
+                            {getStatusBadge(order)}
                             <span className="text-[8px] font-bold text-muted-foreground opacity-50 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
@@ -304,7 +314,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
           </DialogHeader>
           {selectedOrderForView && (
             <>
-              <div className="p-8 bg-primary text-white">
+              <div className={cn(
+                "p-8 text-white",
+                selectedOrderForView.status === 'Cancelled' ? "bg-red-600" : "bg-primary"
+              )}>
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -312,6 +325,11 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                        {getOrderTypeBadge(selectedOrderForView.orderType)}
                     </div>
                     <h2 className="text-3xl font-black font-headline">#{selectedOrderForView.orderId}</h2>
+                    {selectedOrderForView.status === 'Cancelled' && (
+                       <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-80">
+                         Cancelled by {selectedOrderForView.cancelledBy || 'System'}
+                       </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-black uppercase opacity-70">Total Value</p>
@@ -355,7 +373,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
 
               <DialogFooter className="p-6 bg-secondary/30 dark:bg-zinc-800 flex gap-3">
                 {selectedOrderForView.status === 'Pending' && (
-                  <Button className="flex-1 rounded-xl h-14 bg-primary text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Preparing')}>Accept</Button>
+                  <>
+                    <Button className="flex-1 rounded-xl h-14 bg-primary text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Preparing')}>Accept</Button>
+                    <Button variant="destructive" className="flex-1 rounded-xl h-14 font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Cancelled')}>Reject</Button>
+                  </>
                 )}
                 {selectedOrderForView.status === 'Preparing' && (
                   <Button className="flex-1 rounded-xl h-14 bg-orange-500 text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Delivered')}>Complete</Button>

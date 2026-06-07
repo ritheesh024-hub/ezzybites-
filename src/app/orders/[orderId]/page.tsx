@@ -1,22 +1,29 @@
 
 "use client"
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { useParams } from 'next/navigation';
-import { CheckCircle2, Clock, MapPin, Phone, MessageSquare, Truck, ChefHat, PackageCheck, Loader2, AlertCircle, Settings2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { 
+  CheckCircle2, MapPin, Phone, MessageSquare, 
+  Truck, ChefHat, PackageCheck, Loader2, 
+  AlertCircle, Settings2, Ban, Clock 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
-import { useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useUser } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { toast } from '@/hooks/use-toast';
 
 export default function OrderTrackingPage() {
   const params = useParams();
   const orderId = params.orderId as string;
   const db = useFirestore();
+  const { user } = useUser();
+  const router = useRouter();
 
   const orderRef = useMemo(() => {
     if (!db || !orderId) return null;
@@ -24,6 +31,72 @@ export default function OrderTrackingPage() {
   }, [db, orderId]);
 
   const { data: order, loading, error } = useDoc<any>(orderRef);
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [canCancel, setCanCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Cancellation Timer Logic
+  useEffect(() => {
+    if (!order?.createdAt || order.status !== 'Pending') {
+      setCanCancel(false);
+      return;
+    }
+
+    const createdAt = order.createdAt.toDate();
+    const expiryTime = createdAt.getTime() + 5 * 60 * 1000; // 5 minutes window
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const difference = expiryTime - now;
+
+      if (difference <= 0) {
+        setTimeLeft(0);
+        setCanCancel(false);
+        return false;
+      }
+
+      setTimeLeft(Math.floor(difference / 1000));
+      setCanCancel(true);
+      return true;
+    };
+
+    updateTimer();
+    const interval = setInterval(() => {
+      const active = updateTimer();
+      if (!active) clearInterval(interval);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [order]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleCancelOrder = async () => {
+    if (!db || !order || !canCancel || !user) return;
+    if (order.userId !== user.uid) {
+      toast({ variant: "destructive", title: "Action denied" });
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: 'Cancelled',
+        cancelledAt: serverTimestamp(),
+        cancelledBy: 'Customer'
+      });
+      toast({ title: "Order Cancelled Successfully 🚀" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Cancellation failed", description: e.message });
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const statusMap: Record<string, number> = {
     'Pending': 1,
@@ -92,6 +165,54 @@ export default function OrderTrackingPage() {
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            {/* Cancellation Window Info */}
+            {order.status === 'Pending' && (
+              <Card className={cn(
+                "rounded-[2rem] border-none shadow-xl overflow-hidden transition-all duration-500",
+                canCancel ? "bg-orange-50 border-orange-100" : "bg-zinc-50 opacity-60"
+              )}>
+                <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                      canCancel ? "bg-orange-100 text-orange-600" : "bg-zinc-200 text-zinc-400"
+                    )}>
+                      <Ban className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-black uppercase text-xs tracking-widest">Order Cancellation</h4>
+                      <p className="text-xs font-medium text-muted-foreground mt-1 max-w-[240px]">
+                        {canCancel 
+                          ? "You can cancel your order within the 5-minute safety window." 
+                          : "The 5-minute cancellation period has expired."}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {canCancel ? (
+                    <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto">
+                      <div className="flex items-center gap-2 text-orange-600 font-black text-sm">
+                        <Clock className="w-4 h-4" />
+                        {timeLeft !== null && formatTime(timeLeft)}
+                      </div>
+                      <Button 
+                        onClick={handleCancelOrder} 
+                        disabled={cancelling}
+                        variant="destructive" 
+                        className="rounded-xl h-11 px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-destructive/20 w-full md:w-auto"
+                      >
+                        {cancelling ? <Loader2 className="animate-spin" /> : 'Cancel Order'}
+                      </Button>
+                    </div>
+                  ) : timeLeft === 0 && (
+                    <Badge variant="secondary" className="px-4 py-2 rounded-xl text-[10px] font-black uppercase opacity-60">
+                      Window Closed
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="rounded-[32px] md:rounded-[40px] border-none shadow-2xl overflow-hidden bg-card">
               <CardContent className="p-6 md:p-10">
                 {order.status === 'Cancelled' ? (
@@ -100,7 +221,16 @@ export default function OrderTrackingPage() {
                         <AlertCircle className="w-8 h-8" />
                       </div>
                       <h4 className="text-2xl font-black mb-2">Order Cancelled</h4>
-                      <p className="text-muted-foreground">This order has been cancelled.</p>
+                      <p className="text-muted-foreground text-sm">
+                        {order.cancelledBy === 'Customer' 
+                          ? "This order was cancelled by you." 
+                          : "This order was cancelled by our staff."}
+                      </p>
+                      {order.cancelledAt && (
+                        <p className="text-[10px] font-black uppercase opacity-40 mt-4 tracking-widest">
+                          On {order.cancelledAt.toDate().toLocaleString()}
+                        </p>
+                      )}
                    </div>
                 ) : (
                   <div className="relative space-y-10">
