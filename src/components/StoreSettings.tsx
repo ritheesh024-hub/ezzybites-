@@ -51,13 +51,23 @@ export const StoreSettings = () => {
   });
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    setOrigin(typeof window !== 'undefined' ? window.location.origin : '');
     if (!db) return;
     const fetchSettings = async () => {
       const docRef = doc(db, 'settings', 'store_config');
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        setSettings(prev => ({ ...prev, ...snap.data() }));
+        const data = snap.data();
+        setSettings(prev => ({ 
+          ...prev, 
+          ...data,
+          storeName: data.storeName || '',
+          contactNumber: data.contactNumber || '',
+          supportEmail: data.supportEmail || '',
+          address: data.address || '',
+          openTime: data.openTime || '08:00',
+          closeTime: data.closeTime || '22:00'
+        }));
       }
       setLoading(false);
     };
@@ -120,21 +130,21 @@ export const StoreSettings = () => {
                 <CardContent className="p-8 space-y-6">
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Restaurant Name</Label>
-                      <Input value={settings.storeName} onChange={e => setSettings({...settings, storeName: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                      <Input value={settings.storeName || ''} onChange={e => setSettings({...settings, storeName: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Contact No.</Label>
-                        <Input value={settings.contactNumber} onChange={e => setSettings({...settings, contactNumber: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input value={settings.contactNumber || ''} onChange={e => setSettings({...settings, contactNumber: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Support Email</Label>
-                        <Input value={settings.supportEmail} onChange={e => setSettings({...settings, supportEmail: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input value={settings.supportEmail || ''} onChange={e => setSettings({...settings, supportEmail: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                    </div>
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Physical Address</Label>
-                      <Input value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                      <Input value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                    </div>
                 </CardContent>
              </Card>
@@ -145,16 +155,16 @@ export const StoreSettings = () => {
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Opening Time</Label>
-                        <Input type="time" value={settings.openTime} onChange={e => setSettings({...settings, openTime: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input type="time" value={settings.openTime || '08:00'} onChange={e => setSettings({...settings, openTime: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Closing Time</Label>
-                        <Input type="time" value={settings.closeTime} onChange={e => setSettings({...settings, closeTime: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input type="time" value={settings.closeTime || '22:00'} onChange={e => setSettings({...settings, closeTime: e.target.value})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                    </div>
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Delivery Radius (KM)</Label>
-                      <Input type="number" value={settings.deliveryRadius} onChange={e => setSettings({...settings, deliveryRadius: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                      <Input type="number" value={settings.deliveryRadius || 0} onChange={e => setSettings({...settings, deliveryRadius: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                    </div>
                    <div className="flex items-center justify-between p-5 bg-primary/5 rounded-2xl border border-primary/10">
                       <div className="space-y-1">
@@ -176,16 +186,16 @@ export const StoreSettings = () => {
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Standard Delivery Fee</Label>
-                        <Input type="number" value={settings.deliveryCharge} onChange={e => setSettings({...settings, deliveryCharge: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input type="number" value={settings.deliveryCharge || 0} onChange={e => setSettings({...settings, deliveryCharge: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Free Delivery @</Label>
-                        <Input type="number" value={settings.freeDeliveryThreshold} onChange={e => setSettings({...settings, freeDeliveryThreshold: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                        <Input type="number" value={settings.freeDeliveryThreshold || 0} onChange={e => setSettings({...settings, freeDeliveryThreshold: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                       </div>
                    </div>
                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Minimum Order Amount (₹)</Label>
-                      <Input type="number" value={settings.minOrderValue} onChange={e => setSettings({...settings, minOrderValue: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
+                      <Input type="number" value={settings.minOrderValue || 0} onChange={e => setSettings({...settings, minOrderValue: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 border-none font-bold" />
                    </div>
                 </CardContent>
               </Card>

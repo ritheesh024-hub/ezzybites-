@@ -49,6 +49,40 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { CATEGORIES } from '@/app/lib/menu-data';
 
+interface ProductFormData {
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  discountPrice: number;
+  imageUrl: string;
+  isVeg: boolean;
+  isAvailable: boolean;
+  isBestSeller: boolean;
+  isFeatured: boolean;
+  spiceLevel: 'None' | 'Mild' | 'Medium' | 'Hot' | 'Extra Hot';
+  prepTime: number;
+  stock: number;
+  lowStockLevel: number;
+}
+
+const DEFAULT_FORM_DATA: ProductFormData = {
+  name: '',
+  description: '',
+  category: 'Veg Maggie',
+  price: 0,
+  discountPrice: 0,
+  imageUrl: '',
+  isVeg: true,
+  isAvailable: true,
+  isBestSeller: false,
+  isFeatured: false,
+  spiceLevel: 'None',
+  prepTime: 20,
+  stock: 100,
+  lowStockLevel: 10
+};
+
 export const ProductManagement = () => {
   const db = useFirestore();
   const productsQuery = useMemo(() => db ? query(collection(db, 'products')) : null, [db]);
@@ -66,22 +100,7 @@ export const ProductManagement = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Form State
-  const [formData, setFormData] = useState<Partial<FoodItem>>({
-    name: '',
-    description: '',
-    category: 'Veg Maggie',
-    price: 0,
-    discountPrice: 0,
-    imageUrl: '',
-    isVeg: true,
-    isAvailable: true,
-    isBestSeller: false,
-    isFeatured: false,
-    spiceLevel: 'None',
-    prepTime: 20,
-    stock: 100,
-    lowStockLevel: 10
-  });
+  const [formData, setFormData] = useState<ProductFormData>(DEFAULT_FORM_DATA);
 
   const stats = useMemo(() => {
     if (!products) return { total: 0, active: 0, oos: 0, featured: 0 };
@@ -107,25 +126,25 @@ export const ProductManagement = () => {
   const handleOpenModal = (item: FoodItem | null = null) => {
     if (item) {
       setEditingItem(item);
-      setFormData({ ...item });
+      setFormData({
+        name: item.name || '',
+        description: item.description || '',
+        category: item.category || 'Veg Maggie',
+        price: item.price || 0,
+        discountPrice: item.discountPrice || 0,
+        imageUrl: item.imageUrl || '',
+        isVeg: item.isVeg ?? true,
+        isAvailable: item.isAvailable ?? true,
+        isBestSeller: item.isBestSeller ?? false,
+        isFeatured: item.isFeatured ?? false,
+        spiceLevel: item.spiceLevel || 'None',
+        prepTime: item.prepTime || 20,
+        stock: item.stock || 0,
+        lowStockLevel: item.lowStockLevel || 10
+      });
     } else {
       setEditingItem(null);
-      setFormData({
-        name: '',
-        description: '',
-        category: 'Veg Maggie',
-        price: 0,
-        discountPrice: 0,
-        imageUrl: '',
-        isVeg: true,
-        isAvailable: true,
-        isBestSeller: false,
-        isFeatured: false,
-        spiceLevel: 'None',
-        prepTime: 20,
-        stock: 100,
-        lowStockLevel: 10
-      });
+      setFormData(DEFAULT_FORM_DATA);
     }
     setIsModalOpen(true);
   };
@@ -392,11 +411,11 @@ export const ProductManagement = () => {
                    <div className="space-y-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Product Name</Label>
-                        <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Flaming Chicken Momos" className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Flaming Chicken Momos" className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Description</Label>
-                        <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the flavors and ingredients..." className="min-h-[100px] rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-medium text-sm" />
+                        <Textarea value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Describe the flavors and ingredients..." className="min-h-[100px] rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-medium text-sm" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-1.5">
@@ -410,7 +429,7 @@ export const ProductManagement = () => {
                             <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Preparation Time (Mins)</Label>
                             <div className="relative">
                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-30" />
-                               <Input type="number" value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: Number(e.target.value)})} className="h-14 pl-12 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                               <Input type="number" value={formData.prepTime || 0} onChange={e => setFormData({...formData, prepTime: Number(e.target.value)})} className="h-14 pl-12 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                             </div>
                          </div>
                       </div>
@@ -420,7 +439,7 @@ export const ProductManagement = () => {
                    <div className="space-y-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Public Image URL</Label>
-                        <Input value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                       {formData.imageUrl && (
                         <div className="h-48 relative rounded-3xl overflow-hidden border-4 border-secondary/50">
@@ -436,19 +455,19 @@ export const ProductManagement = () => {
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Price (₹)</Label>
-                        <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input type="number" value={formData.price || 0} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Compare Price (₹)</Label>
-                        <Input type="number" value={formData.discountPrice} onChange={e => setFormData({...formData, discountPrice: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input type="number" value={formData.discountPrice || 0} onChange={e => setFormData({...formData, discountPrice: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Stock Level</Label>
-                        <Input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input type="number" value={formData.stock || 0} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Low Stock Alert @</Label>
-                        <Input type="number" value={formData.lowStockLevel} onChange={e => setFormData({...formData, lowStockLevel: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                        <Input type="number" value={formData.lowStockLevel || 0} onChange={e => setFormData({...formData, lowStockLevel: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                       </div>
                    </div>
 
