@@ -59,7 +59,7 @@ export default function Home() {
       
       <main className="flex-1">
         {/* COMPACT HERO SECTION */}
-        <section className="relative md:min-h-[90vh] min-h-[55vh] flex items-center md:pt-24 pt-12 md:pb-20 pb-6 overflow-hidden bg-black">
+        <section className="relative md:min-h-[90vh] min-h-[45vh] flex items-center md:pt-24 pt-12 md:pb-20 pb-4 overflow-hidden bg-black">
           <div className="absolute inset-0 z-0">
             <Image 
               src={heroBg}
@@ -80,22 +80,22 @@ export default function Home() {
                 <span className="text-[10px] font-black tracking-[0.3em] uppercase text-white/80">Premium Fast Food Redefined</span>
               </div>
               
-              <div className="md:space-y-6 space-y-1.5">
+              <div className="md:space-y-6 space-y-1">
                 <h1 className="text-3xl md:text-[8rem] font-headline font-black leading-tight md:leading-[0.85] tracking-tighter text-white uppercase">
                   Flavor that <br />
                   <span className="text-primary italic">Commands</span> <br />
                   Respect.
                 </h1>
-                <p className="text-[11px] md:text-xl text-white/60 max-w-xl md:mx-0 mx-auto leading-relaxed font-medium">
+                <p className="text-[10px] md:text-xl text-white/60 max-w-xl md:mx-0 mx-auto leading-relaxed font-medium">
                   Elevate your daily ritual with chef-crafted flavors delivered right to your sanctuary.
                 </p>
               </div>
 
-              <div className="flex md:justify-start justify-center pt-1 md:pt-4">
+              <div className="hidden md:flex justify-start pt-4">
                 <Link href="/menu">
-                  <Button className="rounded-full md:h-20 h-11 px-6 md:px-14 text-sm md:text-xl font-black shadow-3xl bg-primary hover:bg-primary/90 text-white transform transition-all active:scale-95 uppercase tracking-tight gap-3 md:gap-4">
+                  <Button className="rounded-full h-20 px-14 text-xl font-black shadow-3xl bg-primary hover:bg-primary/90 text-white transform transition-all active:scale-95 uppercase tracking-tight gap-4">
                     Start Your Order
-                    <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
+                    <ArrowRight className="w-5 h-5" />
                   </Button>
                 </Link>
               </div>
@@ -104,18 +104,20 @@ export default function Home() {
         </section>
 
         {/* MOBILE APP INTERFACE - SEARCH & CATEGORIES */}
-        <div className="sticky top-10 z-30 bg-white dark:bg-zinc-950 md:hidden pt-2 pb-1 border-b shadow-sm">
-           <div className="container px-4 space-y-3">
-              <form onSubmit={handleSearch} className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+        <div className="sticky top-10 z-30 bg-white dark:bg-zinc-950 md:hidden pt-4 pb-1 border-b shadow-sm">
+           <div className="container px-4 space-y-4">
+              <form onSubmit={handleSearch} className="relative group px-1">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground z-10" />
                 <Input 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search dishes, burgers, momos..." 
-                  className="w-full h-11 pl-11 rounded-2xl bg-secondary/50 border-none font-bold text-sm focus:ring-2 focus:ring-primary/20 !text-foreground"
+                  className="w-full h-14 pl-14 rounded-2xl bg-secondary/50 border-none font-bold text-base focus:ring-2 focus:ring-primary/20 !text-foreground shadow-inner"
                 />
               </form>
-              <Categories />
+              <div className="px-1">
+                <Categories />
+              </div>
            </div>
         </div>
 
@@ -154,7 +156,7 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-8">
                 {menuItems?.map((item) => (
-                  <FoodCard key={item.id} item={item} forceViewMode="small" />
+                  <FoodCard key={item.id} item={item} />
                 ))}
               </div>
             )}
