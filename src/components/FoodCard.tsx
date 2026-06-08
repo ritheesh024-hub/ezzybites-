@@ -2,15 +2,13 @@
 "use client"
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star, Plus, Minus, Clock, Coffee, Sparkles, Settings2 } from 'lucide-react';
+import { Star, Plus, Minus, Clock, Coffee, Sparkles, Settings2, Flame, Leaf } from 'lucide-react';
 import { FoodItem, useStore, BeverageOptions } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { BeverageCustomizer } from './BeverageCustomizer';
-import { useIsMobile } from '@/hooks/use-mobile';
-import placeholderData from '@/app/lib/placeholder-images.json';
 
 interface FoodCardProps {
   item: FoodItem;
@@ -18,19 +16,14 @@ interface FoodCardProps {
 }
 
 export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
-  const { cart, addToCart, updateQuantity, menuViewMode: storeViewMode } = useStore();
+  const { cart, addToCart, updateQuantity } = useStore();
   const [isCustomizing, setIsCustomizing] = useState(false);
-  const isMobile = useIsMobile();
   const [imgError, setImgError] = useState(false);
   
-  const menuViewMode = forceViewMode || storeViewMode;
-  const hideVegIndicator = ['Tea', 'Coffee', 'Ice teas', 'Drinks'].includes(item.category);
   const cartItemCount = cart.filter(i => i.id === item.id).reduce((acc, i) => acc + i.quantity, 0);
 
-  // Use the original image provided in the item data
-  const displayImageUrl = item.imageUrl;
-
-  const handleAddClick = () => {
+  const handleAddClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     if (item.isBeverage || item.isCustomizable) {
       setIsCustomizing(true);
     } else {
@@ -51,10 +44,11 @@ export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
     });
   };
 
-  const handleQtyChange = (delta: number) => {
+  const handleQtyChange = (delta: number, e: React.MouseEvent) => {
+    e.preventDefault();
     if (item.isBeverage || item.isCustomizable) {
        if (delta > 0) setIsCustomizing(true);
-       else toast({ title: "Manage in Cart", description: "Use the tray drawer to remove specific customizations." });
+       else toast({ title: "Manage in Cart", description: "Use the tray drawer to adjust customizations." });
        return;
     }
     
@@ -64,146 +58,83 @@ export const FoodCard = ({ item, forceViewMode }: FoodCardProps) => {
     }
   };
 
-  if (menuViewMode === 'small') {
-    return (
-      <>
-        <div className="group bg-white dark:bg-zinc-900 rounded-[1.5rem] md:rounded-[2rem] shadow-soft hover:shadow-xl transition-all duration-500 flex flex-col h-full relative overflow-hidden border border-border/20">
-          <div className="relative aspect-square overflow-hidden bg-secondary/30">
-            <Image 
-              src={displayImageUrl} 
-              alt={item.name} 
-              fill 
-              className="object-cover group-hover:scale-110 transition-transform duration-700"
-              unoptimized
-              onError={() => setImgError(true)}
-              data-ai-hint="fast food"
-            />
-            {item.rating >= 4.7 && (
-               <div className="absolute top-2 left-2 z-10 glass px-1.5 py-0.5 rounded-lg flex items-center gap-1">
-                 <Star className="w-2 h-2 fill-primary text-primary" />
-                 <span className="text-[7px] font-black text-primary">{item.rating}</span>
-               </div>
-            )}
-            {!hideVegIndicator && (
-              <div className="absolute top-2 right-2 z-10">
-                <div className={cn(
-                  "w-3 h-3 bg-white/90 backdrop-blur rounded-sm border flex items-center justify-center",
-                  item.isVeg ? "border-green-500" : "border-red-500"
-                )}>
-                  <div className={cn("w-1 h-1 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="p-3 md:p-4 flex flex-col flex-1">
-            <h4 className="font-black text-[10px] md:text-sm line-clamp-1 mb-1 uppercase tracking-tight group-hover:text-primary transition-colors">{item.name}</h4>
-            <div className="mt-auto flex items-center justify-between">
-              <span className="text-xs md:text-base font-black text-primary italic">₹{item.price}</span>
-              {cartItemCount > 0 && !item.isBeverage && !item.isCustomizable ? (
-                <div className="flex items-center gap-1.5 bg-orange-gradient text-white rounded-lg h-7 px-1.5 shadow-lg shadow-primary/20">
-                  <button onClick={() => handleQtyChange(-1)} className="hover:bg-white/20 rounded p-0.5"><Minus className="w-2.5 h-2.5" /></button>
-                  <span className="text-[9px] font-black w-3 text-center">{cartItemCount}</span>
-                  <button onClick={() => handleQtyChange(1)} className="hover:bg-white/20 rounded p-0.5"><Plus className="w-2.5 h-2.5" /></button>
-                </div>
-              ) : (
-                <Button 
-                  size="icon" 
-                  onClick={handleAddClick} 
-                  className="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-orange-gradient text-white shadow-lg hover:scale-110 active:scale-95 transition-all border-none"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-        {(item.isBeverage || item.isCustomizable) && (
-          <BeverageCustomizer 
-            item={item} 
-            isOpen={isCustomizing} 
-            onClose={() => setIsCustomizing(false)} 
-            onConfirm={handleCustomizationConfirm} 
-          />
-        )}
-      </>
-    );
-  }
-
   return (
     <>
-      <div className="group bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-xl hover:shadow-2xl transition-all duration-700 flex flex-col h-full relative overflow-hidden border border-border/20">
-        {(item.rating >= 4.7 || item.isBestSeller) && (
-          <div className="absolute top-5 left-5 z-20 bg-orange-gradient text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl">
-            <Sparkles className="w-3.5 h-3.5" /> Best Seller
-          </div>
-        )}
-
+      <div className="group bg-white dark:bg-zinc-900 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 flex flex-col h-full relative overflow-hidden border border-border/20 perspective-1000">
+        {/* Visual Header */}
         <div className="relative aspect-[4/3] overflow-hidden">
           <Image 
-            src={displayImageUrl} 
+            src={item.imageUrl} 
             alt={item.name} 
             fill 
-            className="object-cover group-hover:scale-110 transition-transform duration-1000"
+            className="object-cover group-hover:scale-110 transition-transform duration-700"
             unoptimized
             onError={() => setImgError(true)}
-            data-ai-hint="fast food"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
           
-          {!hideVegIndicator && (
-            <div className="absolute bottom-5 right-5 z-10">
-              <div className={cn(
-                "w-7 h-7 bg-white/90 backdrop-blur rounded-xl border-2 flex items-center justify-center",
-                item.isVeg ? "border-green-500" : "border-red-500"
-              )}>
-                <div className={cn("w-2.5 h-2.5 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
-              </div>
-            </div>
-          )}
+          {/* Badges Overlay */}
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+            {item.isBestSeller && (
+              <Badge className="bg-orange-gradient text-white border-none px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">
+                <Sparkles className="w-3 h-3 mr-1" /> Bestseller
+              </Badge>
+            )}
+            <Badge className="bg-white/90 dark:bg-black/90 backdrop-blur text-foreground border-none shadow-xl font-black px-2 py-1 rounded-lg flex items-center gap-1.5 text-[10px]">
+              <Star className="w-3 h-3 fill-primary text-primary" />
+              {item.rating || '4.5'}
+            </Badge>
+          </div>
 
-          <div className="absolute bottom-5 left-5 z-10">
-            <Badge className="bg-white/90 backdrop-blur text-foreground border-none shadow-2xl font-black px-4 py-2 rounded-2xl flex items-center gap-2">
-              <Star className="w-4 h-4 fill-primary text-primary" />
-              {item.rating}
+          <div className="absolute bottom-4 right-4 z-10">
+            <div className={cn(
+              "w-6 h-6 bg-white/90 dark:bg-black/90 backdrop-blur rounded-lg border-2 flex items-center justify-center shadow-lg",
+              item.isVeg ? "border-green-500" : "border-red-500"
+            )}>
+              <div className={cn("w-2 h-2 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
+            </div>
+          </div>
+          
+          {/* Prep Time Overlay */}
+          <div className="absolute bottom-4 left-4 z-10">
+            <Badge variant="secondary" className="bg-black/40 backdrop-blur-md text-white border-none font-black px-2 py-1 rounded-lg text-[8px] uppercase tracking-widest">
+              <Clock className="w-2.5 h-2.5 mr-1" /> {item.prepTime || 20}m
             </Badge>
           </div>
         </div>
 
-        <div className="p-8 flex flex-col flex-1">
-          <div className="mb-6 space-y-3">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="text-2xl font-black group-hover:text-primary transition-colors tracking-tight uppercase">{item.name}</h3>
-              {item.isCustomizable && <Settings2 className="w-5 h-5 text-primary shrink-0 mt-1" />}
+        {/* Content Area */}
+        <div className="p-5 md:p-6 flex flex-col flex-1 space-y-4">
+          <div className="space-y-1.5 flex-1">
+            <div className="flex justify-between items-start gap-2">
+              <h3 className="text-base md:text-lg font-black uppercase tracking-tight line-clamp-1 group-hover:text-primary transition-colors">
+                {item.name}
+              </h3>
+              {item.isCustomizable && <Settings2 className="w-4 h-4 text-primary shrink-0 opacity-40" />}
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-2 min-h-[3rem] leading-relaxed font-medium">
+            <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-2 leading-relaxed font-medium">
               {item.description}
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-[10px] text-muted-foreground mb-8 uppercase tracking-widest font-black opacity-60">
-            <span className="flex items-center gap-2">
-              <Clock className="w-4 h-4" /> {item.isBeverage ? '8-10 MINS' : '20-25 MINS'}
-            </span>
-          </div>
-
-          <div className="mt-auto flex items-center justify-between">
+          <div className="flex items-center justify-between pt-2">
             <div className="flex flex-col">
-              <span className="text-3xl font-black text-primary italic leading-none">₹{item.price}</span>
+              <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Best Price</span>
+              <span className="text-xl md:text-2xl font-black text-primary italic leading-none">₹{item.price}</span>
             </div>
 
             {cartItemCount > 0 && !item.isBeverage && !item.isCustomizable ? (
-              <div className="flex items-center gap-4 bg-orange-gradient text-white rounded-[1.5rem] h-14 px-5 shadow-2xl shadow-primary/30 animate-in zoom-in">
-                <button onClick={() => handleQtyChange(-1)} className="w-10 h-10 rounded-xl hover:bg-white/20 flex items-center justify-center"><Minus className="w-4 h-4" /></button>
-                <span className="text-xl font-black w-6 text-center">{cartItemCount}</span>
-                <button onClick={() => handleQtyChange(1)} className="w-10 h-10 rounded-xl hover:bg-white/20 flex items-center justify-center"><Plus className="w-4 h-4" /></button>
+              <div className="flex items-center gap-3 bg-orange-gradient text-white rounded-2xl h-11 px-3 shadow-xl shadow-primary/20 animate-in zoom-in duration-300">
+                <button onClick={(e) => handleQtyChange(-1, e)} className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"><Minus className="w-4 h-4" /></button>
+                <span className="text-sm font-black w-4 text-center">{cartItemCount}</span>
+                <button onClick={(e) => handleQtyChange(1, e)} className="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"><Plus className="w-4 h-4" /></button>
               </div>
             ) : (
               <Button 
                 onClick={handleAddClick}
-                className="rounded-[1.5rem] px-8 h-14 font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all shadow-2xl shadow-primary/30 bg-orange-gradient text-white border-none"
+                className="rounded-xl px-5 h-11 font-black uppercase tracking-widest text-[9px] bg-orange-gradient text-white border-none shadow-lg hover:scale-105 active:scale-95 transition-all"
               >
-                {item.isCustomizable || item.isBeverage ? 'Customize' : 'Add to Tray'}
-                <Plus className="ml-2 w-4 h-4" />
+                Add
+                <Plus className="ml-1.5 w-3.5 h-3.5" />
               </Button>
             )}
           </div>
