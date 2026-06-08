@@ -7,15 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { 
-  Plus, Search, Edit2, Trash2, Copy, 
-  LayoutGrid, AlertCircle, CheckCircle2, 
-  Loader2, Filter, Package, Star, 
-  Flame, Clock, ChevronDown, Check,
-  MoreVertical, X, Sparkles, Box,
-  ArrowUpDown, Ban, Power,
-  ChevronRight,
-  Layers,
-  Settings2
+  Plus, Search, Edit2, Trash2, 
+  LayoutGrid, 
+  Loader2, Package, Star, 
+  Power
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -32,17 +27,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel
-} from '@/components/ui/dropdown-menu';
-import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, doc, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, doc, setDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { FoodItem } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
@@ -94,8 +80,6 @@ export const ProductManagement = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState<ProductFormData>(DEFAULT_FORM_DATA);
 
@@ -119,10 +103,9 @@ export const ProductManagement = () => {
     return products.filter(p => {
       const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? p.isAvailable : !p.isAvailable);
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory;
     });
-  }, [products, searchQuery, selectedCategory, statusFilter]);
+  }, [products, searchQuery, selectedCategory]);
 
   const handleOpenModal = (item: FoodItem | null = null) => {
     if (item) {
@@ -209,7 +192,7 @@ export const ProductManagement = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard label="Total Catalog" value={stats.total} icon={LayoutGrid} color="bg-blue-50 text-blue-600" />
-        <StatsCard label="Live Listings" value={stats.active} icon={CheckCircle2} color="bg-green-50 text-green-600" />
+        <StatsCard label="Live Listings" value={stats.active} icon={Package} color="bg-green-50 text-green-600" />
         <StatsCard label="Featured Showcase" value={stats.featured} icon={Star} color="bg-orange-50 text-orange-600" />
       </div>
 
@@ -344,6 +327,8 @@ export const ProductManagement = () => {
     </div>
   );
 };
+
+const Edit2 = (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>;
 
 const StatsCard = ({ label, value, icon: Icon, color }: any) => (
   <Card className="rounded-[2.5rem] border-none shadow-sm bg-white dark:bg-zinc-900 p-8 flex justify-between items-start group hover:scale-[1.02] transition-transform">
