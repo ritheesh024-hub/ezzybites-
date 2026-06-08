@@ -4,7 +4,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BrandIntro } from '@/components/BrandIntro';
-import { MobileOnlyGuard } from '@/components/MobileOnlyGuard';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -63,13 +62,11 @@ export default function RootLayout({
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </head>
       <body className="font-body antialiased min-h-screen bg-background">
-        <MobileOnlyGuard>
-          <FirebaseClientProvider>
-            <BrandIntro />
-            {children}
-            <Toaster />
-          </FirebaseClientProvider>
-        </MobileOnlyGuard>
+        <FirebaseClientProvider>
+          <BrandIntro />
+          {children}
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
