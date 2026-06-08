@@ -1,7 +1,7 @@
 "use client"
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star, Plus, Minus, Sparkles } from 'lucide-react';
+import { Star, Plus, Minus } from 'lucide-react';
 import { FoodItem, useStore, BeverageOptions } from '@/app/lib/store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,9 +47,9 @@ export const FoodCard = ({ item }: FoodCardProps) => {
 
   return (
     <>
-      <div className="group relative flex bg-white dark:bg-zinc-900 rounded-[2rem] border border-border/40 hover:shadow-xl transition-all duration-300 overflow-hidden p-3 md:p-5 gap-4 md:gap-6 items-center">
+      <div className="group bg-white dark:bg-zinc-900 rounded-[1.5rem] border border-border/40 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full relative">
         {/* IMAGE SECTION */}
-        <div className="relative w-28 h-28 md:w-40 md:h-40 shrink-0 rounded-2xl md:rounded-3xl overflow-hidden bg-secondary/30 shadow-inner">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-secondary/30">
           <Image 
             src={item.imageUrl} 
             alt={item.name} 
@@ -58,66 +58,57 @@ export const FoodCard = ({ item }: FoodCardProps) => {
             unoptimized 
           />
           
-          {/* VEG/NON-VEG ICON */}
-          <div className="absolute top-2 left-2 z-10">
+          {/* BADGES OVERLAY */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1.5">
              <div className={cn(
-               "w-5 h-5 bg-white/90 dark:bg-black/90 backdrop-blur rounded border flex items-center justify-center shadow-sm",
+               "w-4 h-4 bg-white/90 dark:bg-black/90 backdrop-blur rounded-[4px] border flex items-center justify-center shadow-sm",
                item.isVeg ? "border-green-500" : "border-red-500"
              )}>
-              <div className={cn("w-2 h-2 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
+              <div className={cn("w-1.5 h-1.5 rounded-full", item.isVeg ? "bg-green-500" : "bg-red-500")} />
             </div>
+            
+            <Badge className="bg-white/90 dark:bg-black/90 text-foreground border-none font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 text-[8px] shadow-sm">
+              <Star className="w-2 h-2 fill-primary text-primary" />
+              {item.rating || '4.5'}
+            </Badge>
           </div>
 
           {item.isFeatured && (
-            <div className="absolute bottom-0 left-0 right-0 bg-primary/90 py-1 text-[8px] font-black text-white text-center uppercase tracking-widest">
+            <div className="absolute bottom-0 left-0 right-0 bg-primary/90 py-0.5 text-[7px] font-black text-white text-center uppercase tracking-widest">
               Bestseller
             </div>
           )}
         </div>
 
         {/* CONTENT SECTION */}
-        <div className="flex-1 flex flex-col justify-between py-1 min-w-0">
-          <div className="space-y-1 md:space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-[7px] md:text-[9px] font-black uppercase border-muted text-muted-foreground tracking-tighter">
-                {item.category}
-              </Badge>
-              <Badge className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-none font-black px-1.5 py-0.5 rounded-md flex items-center gap-1 text-[8px] md:text-[10px]">
-                <Star className="w-2.5 h-2.5 fill-current" />
-                {item.rating || '4.5'}
-              </Badge>
-            </div>
-            
-            <h3 className="text-sm md:text-xl font-black uppercase tracking-tight leading-tight line-clamp-1 md:line-clamp-2">
+        <div className="flex-1 flex flex-col p-3 md:p-4 min-w-0">
+          <div className="flex-1">
+            <h3 className="text-xs md:text-base font-black uppercase tracking-tight leading-tight line-clamp-2 mb-1">
               {item.name}
             </h3>
-            
-            <p className="text-[10px] md:text-sm text-muted-foreground line-clamp-1 md:line-clamp-2 leading-relaxed opacity-60 font-medium">
+            <p className="text-[9px] md:text-xs text-muted-foreground line-clamp-1 opacity-60 font-medium mb-3">
               {item.description}
             </p>
           </div>
 
-          <div className="flex items-center justify-between mt-3 md:mt-4">
+          <div className="flex items-center justify-between mt-auto gap-2">
             <div className="flex flex-col">
-              <span className="text-lg md:text-2xl font-black text-primary italic">₹{item.price}</span>
-              {item.discountPrice! > 0 && (
-                <span className="text-[10px] md:text-xs line-through opacity-30 font-bold">₹{item.discountPrice}</span>
-              )}
+              <span className="text-sm md:text-xl font-black text-primary italic">₹{item.price}</span>
             </div>
 
-            <div className="relative">
+            <div className="shrink-0">
               {cartItemCount > 0 ? (
-                <div className="flex items-center gap-2 md:gap-3 bg-orange-gradient text-white rounded-xl md:rounded-2xl h-10 md:h-12 px-2 md:px-3 shadow-lg">
-                  <button onClick={(e) => handleQtyChange(-1, e)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
-                  <span className="text-xs md:text-sm font-black w-4 md:w-6 text-center">{cartItemCount}</span>
-                  <button onClick={(e) => handleQtyChange(1, e)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                <div className="flex items-center gap-1.5 bg-primary text-white rounded-lg md:rounded-xl h-8 md:h-10 px-1 shadow-md">
+                  <button onClick={(e) => handleQtyChange(-1, e)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Minus className="w-3 h-3" /></button>
+                  <span className="text-[10px] md:text-xs font-black w-4 text-center">{cartItemCount}</span>
+                  <button onClick={(e) => handleQtyChange(1, e)} className="p-1 hover:bg-white/20 rounded-md transition-colors"><Plus className="w-3 h-3" /></button>
                 </div>
               ) : (
                 <Button 
                   onClick={handleAddClick} 
-                  className="rounded-xl md:rounded-2xl h-10 md:h-12 px-4 md:px-8 font-black uppercase tracking-widest text-[9px] md:text-[11px] bg-white dark:bg-zinc-800 text-primary border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
+                  className="rounded-lg md:rounded-xl h-8 md:h-10 px-3 md:px-5 font-black uppercase tracking-widest text-[8px] md:text-[10px] bg-white dark:bg-zinc-800 text-primary border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm"
                 >
-                  ADD <Plus className="ml-1 w-3 h-3 md:w-4 md:h-4" />
+                  ADD <Plus className="ml-1 w-2.5 h-2.5 md:w-3 md:h-3" />
                 </Button>
               )}
             </div>
