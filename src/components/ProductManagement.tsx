@@ -1,6 +1,4 @@
-
-'use client';
-
+"use client"
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +48,7 @@ import { FoodItem } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { CATEGORIES } from '@/app/lib/menu-data';
 
 interface ProductFormData {
@@ -87,31 +85,27 @@ const DEFAULT_FORM_DATA: ProductFormData = {
 
 export const ProductManagement = () => {
   const db = useFirestore();
-  const productsQuery = useMemo(() => db ? query(collection(db, 'products')) : null, [db]);
+  const productsQuery = useMemo(() => db ? query(collection(db, 'products'), orderBy('createdAt', 'desc')) : null, [db]);
   const { data: products, loading } = useCollection<FoodItem>(productsQuery);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Form State
   const [formData, setFormData] = useState<ProductFormData>(DEFAULT_FORM_DATA);
 
   const stats = useMemo(() => {
     if (!products) return { total: 0, active: 0, featured: 0, categoryCounts: {} as Record<string, number> };
-    
     const counts: Record<string, number> = {};
     products.forEach(p => {
-      const cat = p.category || 'Uncategorized';
+      const cat = p.category || 'Other';
       counts[cat] = (counts[cat] || 0) + 1;
     });
-
     return {
       total: products.length,
       active: products.filter(p => p.isAvailable).length,
@@ -157,7 +151,7 @@ export const ProductManagement = () => {
 
   const handleSave = async () => {
     if (!db || !formData.name || !formData.imageUrl) {
-      toast({ variant: "destructive", title: "Validation Error", description: "Name and Image URL are required." });
+      toast({ variant: "destructive", title: "Missing Fields", description: "Identity and Media are mandatory." });
       return;
     }
 
@@ -176,7 +170,7 @@ export const ProductManagement = () => {
 
     setDoc(productRef, finalData, { merge: true })
       .then(() => {
-        toast({ title: editingItem ? "Product Updated" : "Product Created", description: `${formData.name} is now live.` });
+        toast({ title: editingItem ? "Registry Updated" : "Identity Created", description: `${formData.name} sync complete.` });
         setIsModalOpen(false);
       })
       .catch(async (error) => {
@@ -184,7 +178,7 @@ export const ProductManagement = () => {
           path: productRef.path,
           operation: editingItem ? 'update' : 'create',
           requestResourceData: finalData
-        }));
+        } satisfies SecurityRuleContext));
       })
       .finally(() => setSaveLoading(false));
   };
@@ -192,226 +186,91 @@ export const ProductManagement = () => {
   const handleDelete = (id: string) => {
     if (!db) return;
     deleteDoc(doc(db, 'products', id))
-      .then(() => toast({ title: "Product Deleted" }))
+      .then(() => toast({ title: "Product Terminated" }))
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: `products/${id}`,
           operation: 'delete'
-        }));
+        } satisfies SecurityRuleContext));
       });
-  };
-
-  const handleDuplicate = (item: FoodItem) => {
-    const newItem = { ...item, id: `PROD-${Date.now()}`, name: `${item.name} (Copy)` };
-    handleOpenModal(newItem as FoodItem);
-  };
-
-  const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete') => {
-    if (!db || selectedIds.size === 0) return;
-    const batch = writeBatch(db);
-    
-    selectedIds.forEach(id => {
-      const ref = doc(db, 'products', id);
-      if (action === 'delete') batch.delete(ref);
-      else batch.update(ref, { isAvailable: action === 'activate' });
-    });
-
-    try {
-      await batch.commit();
-      toast({ title: `Bulk ${action} successful`, description: `${selectedIds.size} items updated.` });
-      setSelectedIds(new Set());
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "Bulk Action Failed" });
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="space-y-1">
-          <h2 className="text-4xl font-black font-headline uppercase tracking-tighter">Product <span className="text-primary italic">Vault</span></h2>
-          <p className="text-muted-foreground text-sm font-medium">Configure your menu and optimize visibility.</p>
+          <h2 className="text-4xl font-black font-headline uppercase tracking-tighter">Kitchen <span className="text-primary italic">Ledger</span></h2>
+          <p className="text-muted-foreground text-sm font-medium">Provision menu items and optimize visibility parameters.</p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="h-14 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2 bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 transition-all">
-          <Plus className="w-5 h-5" /> Create New Product
+        <Button onClick={() => handleOpenModal()} className="h-14 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2 bg-primary shadow-xl shadow-primary/20">
+          <Plus className="w-5 h-5" /> Provision New Dish
         </Button>
       </div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatsCard label="Total Products" value={stats.total} icon={LayoutGrid} color="bg-blue-50 text-blue-600" />
-        <StatsCard label="Active Listings" value={stats.active} icon={CheckCircle2} color="bg-green-50 text-green-600" />
-        <StatsCard label="Featured Items" value={stats.featured} icon={Star} color="bg-orange-50 text-orange-600" />
+        <StatsCard label="Total Catalog" value={stats.total} icon={LayoutGrid} color="bg-blue-50 text-blue-600" />
+        <StatsCard label="Live Listings" value={stats.active} icon={CheckCircle2} color="bg-green-50 text-green-600" />
+        <StatsCard label="Featured Showcase" value={stats.featured} icon={Star} color="bg-orange-50 text-orange-600" />
       </div>
 
-      {/* Category Stats Scroll */}
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-        {CATEGORIES.map(cat => {
-          const count = cat === 'All' ? stats.total : (stats.categoryCounts[cat] || 0);
-          if (cat !== 'All' && count === 0) return null;
-          return (
-            <div key={cat} className="bg-white dark:bg-zinc-900 border rounded-2xl px-6 py-4 flex flex-col gap-1 min-w-[140px] shadow-sm shrink-0">
-               <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{cat}</p>
-               <h4 className="text-xl font-black italic">{count} <span className="text-[10px] non-italic opacity-40">Items</span></h4>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filter Bar */}
-      <div className="space-y-4 sticky top-24 z-30">
-        <div className="flex flex-col lg:flex-row gap-4 items-center bg-white dark:bg-zinc-900 p-4 rounded-[2rem] border shadow-sm">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search products..." 
-              value={searchQuery || ''} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-              className="h-12 pl-12 rounded-xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold" 
-            />
-          </div>
-          <div className="flex gap-2 w-full lg:w-auto">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-12 w-full lg:w-40 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[9px] tracking-widest">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex flex-col lg:flex-row gap-4 items-center bg-white dark:bg-zinc-900 p-4 rounded-[2.5rem] border shadow-sm sticky top-24 z-30">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Filter by dish name..." 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+            className="h-14 pl-14 rounded-2xl border-none bg-secondary/40 dark:bg-zinc-800 font-bold" 
+          />
         </div>
-
-        {/* Category Horizontal Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-2 px-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                "rounded-full px-6 h-10 font-black uppercase text-[9px] tracking-widest transition-all shrink-0 border",
-                selectedCategory === cat 
-                  ? "bg-primary text-white shadow-lg shadow-primary/20 border-primary" 
-                  : "bg-white dark:bg-zinc-900 border-muted hover:border-primary/40 text-muted-foreground hover:text-primary"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex gap-2 w-full lg:w-auto">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+             <SelectTrigger className="h-14 w-full lg:w-48 rounded-2xl bg-secondary/40 dark:bg-zinc-800 border-none font-black uppercase text-[10px] tracking-widest px-6"><SelectValue placeholder="Cuisine" /></SelectTrigger>
+             <SelectContent className="rounded-2xl">{CATEGORIES.map(c => <SelectItem key={c} value={c} className="font-bold">{c}</SelectItem>)}</SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Bulk Action Toolbar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] bg-zinc-900 text-white p-4 rounded-full shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-5">
-           <span className="text-[10px] font-black uppercase tracking-widest pl-4">{selectedIds.size} Selected</span>
-           <div className="h-4 w-px bg-white/20" />
-           <div className="flex gap-2">
-              <Button size="sm" onClick={() => handleBulkAction('activate')} className="bg-green-600 hover:bg-green-700 rounded-full h-10 px-6 font-black uppercase text-[8px]">Activate</Button>
-              <Button size="sm" onClick={() => handleBulkAction('deactivate')} className="bg-orange-600 hover:bg-orange-700 rounded-full h-10 px-6 font-black uppercase text-[8px]">Deactivate</Button>
-              <Button size="sm" onClick={() => handleBulkAction('delete')} className="bg-destructive hover:bg-destructive/80 rounded-full h-10 px-6 font-black uppercase text-[8px]">Delete</Button>
-           </div>
-           <button onClick={() => setSelectedIds(new Set())} className="pr-4 hover:opacity-50"><X className="w-4 h-4" /></button>
-        </div>
-      )}
-
-      {/* Products Grid */}
       {loading ? (
-        <div className="py-40 text-center space-y-4">
-          <Loader2 className="animate-spin mx-auto w-12 h-12 text-primary" />
-          <p className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">Synchronizing Inventory...</p>
+        <div className="py-40 text-center space-y-6">
+          <div className="relative inline-block">
+             <div className="w-20 h-20 bg-primary/10 rounded-[2.5rem] animate-pulse" />
+             <Loader2 className="animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-primary" />
+          </div>
+          <p className="font-black uppercase tracking-[0.4em] text-[10px] text-muted-foreground animate-pulse">Syncing Cloud Catalog...</p>
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="py-24 text-center bg-white dark:bg-zinc-900 rounded-[3rem] border-2 border-dashed">
-          <Package className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <h3 className="text-xl font-black uppercase">No Products Found</h3>
-          <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or add a new dish.</p>
+        <div className="py-32 text-center bg-white dark:bg-zinc-900 rounded-[4rem] border-2 border-dashed">
+          <Package className="w-20 h-20 mx-auto mb-6 opacity-10" />
+          <h3 className="text-2xl font-black uppercase tracking-tighter">Null Result</h3>
+          <p className="text-sm font-medium text-muted-foreground mt-2 max-w-xs mx-auto">No products matched your current operational filter.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredProducts.map((item) => (
-            <Card key={item.id} className={cn(
-              "rounded-[2rem] border-none shadow-lg overflow-hidden group hover:shadow-2xl transition-all relative bg-white dark:bg-zinc-900",
-              selectedIds.has(item.id) && "ring-4 ring-primary"
-            )}>
-              <button 
-                onClick={() => toggleSelect(item.id)}
-                className={cn(
-                  "absolute top-4 left-4 z-20 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                  selectedIds.has(item.id) ? "bg-primary border-primary text-white" : "bg-white/50 backdrop-blur border-white/20"
-                )}
-              >
-                {selectedIds.has(item.id) && <Check className="w-4 h-4" />}
-              </button>
-
-              <div className="aspect-[4/3] relative overflow-hidden bg-secondary/50">
+            <Card key={item.id} className="rounded-[2.5rem] border-none shadow-xl overflow-hidden group hover:shadow-2xl transition-all relative bg-white dark:bg-zinc-900">
+              <div className="aspect-[4/3] relative overflow-hidden bg-secondary/30">
                 <Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" unoptimized />
-                <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                   <Badge className={cn("border-none px-3 font-black text-[8px] uppercase", item.isAvailable ? "bg-green-500 text-white" : "bg-zinc-500 text-white")}>
-                     {item.isAvailable ? 'Active' : 'Inactive'}
-                   </Badge>
-                   {item.isFeatured && <Badge className="bg-orange-500 text-white border-none px-3 font-black text-[8px] uppercase">Featured</Badge>}
-                </div>
-                <div className="absolute bottom-4 left-4 z-10">
-                   <Badge className="bg-white/90 dark:bg-black/90 backdrop-blur text-primary border-none font-black px-3 py-1 rounded-lg text-[9px] uppercase tracking-widest shadow-xl">
-                     {item.category || 'Uncategorized'}
+                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                   <Badge className={cn("border-none px-4 py-1 rounded-full font-black text-[8px] uppercase tracking-widest shadow-xl", item.isAvailable ? "bg-green-500 text-white" : "bg-zinc-500 text-white")}>
+                     {item.isAvailable ? 'LIVE' : 'IDLE'}
                    </Badge>
                 </div>
               </div>
-
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <h4 className="font-black text-sm uppercase truncate leading-none group-hover:text-primary transition-colors">{item.name}</h4>
-                  {item.isCustomizable && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Settings2 className="w-3 h-3 text-primary" />
-                      <span className="text-[8px] font-black uppercase text-primary tracking-widest">Customizable</span>
-                    </div>
-                  )}
+              <CardContent className="p-8 space-y-6">
+                <div>
+                  <h4 className="font-black text-base uppercase tracking-tight truncate leading-none group-hover:text-primary transition-colors mb-2">{item.name}</h4>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60 italic">{item.category}</p>
                 </div>
-
-                <div className="flex items-end justify-between border-t border-dashed pt-4">
+                <div className="flex items-center justify-between pt-6 border-t border-dashed">
                    <div>
-                      <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Pricing</p>
-                      <div className="flex items-center gap-2">
-                         <span className="text-xl font-black text-primary italic">₹{item.price}</span>
-                         {item.discountPrice! > 0 && <span className="text-[10px] line-through opacity-30">₹{item.discountPrice}</span>}
-                      </div>
+                      <p className="text-[8px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Pricing</p>
+                      <span className="text-2xl font-black text-primary italic">₹{item.price}</span>
                    </div>
-                   <div className="text-right">
-                      <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Prep Time</p>
-                      <Badge variant="secondary" className="rounded-lg px-2 font-black text-[10px]">
-                        {item.prepTime}m
-                      </Badge>
+                   <div className="flex gap-2">
+                      <Button onClick={() => handleOpenModal(item)} variant="outline" size="icon" className="h-12 w-12 rounded-2xl bg-secondary/30 border-none hover:bg-primary hover:text-white transition-all"><Edit2 className="w-4 h-4" /></Button>
+                      <Button onClick={() => handleDelete(item.id)} variant="outline" size="icon" className="h-12 w-12 rounded-2xl bg-destructive/10 border-none hover:bg-destructive hover:text-white transition-all text-destructive"><Trash2 className="w-4 h-4" /></Button>
                    </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                   <Button onClick={() => handleOpenModal(item)} variant="outline" className="flex-1 rounded-xl h-10 font-black text-[9px] uppercase tracking-widest bg-secondary/30 border-none group-hover:bg-primary group-hover:text-white transition-colors">
-                     Edit Details
-                   </Button>
-                   <DropdownMenu>
-                     <DropdownMenuTrigger asChild>
-                       <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl bg-secondary/30 border-none"><MoreVertical className="w-4 h-4" /></Button>
-                     </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2">
-                        <DropdownMenuItem onClick={() => handleDuplicate(item)} className="rounded-xl py-3 font-bold gap-3"><Copy className="w-4 h-4" /> Duplicate Dish</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleSelect(item.id)} className="rounded-xl py-3 font-bold gap-3"><Check className="w-4 h-4" /> {selectedIds.has(item.id) ? 'Deselect' : 'Select for Bulk'}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleDelete(item.id)} className="rounded-xl py-3 font-bold gap-3 text-destructive"><Trash2 className="w-4 h-4" /> Delete Product</DropdownMenuItem>
-                     </DropdownMenuContent>
-                   </DropdownMenu>
                 </div>
               </CardContent>
             </Card>
@@ -419,96 +278,65 @@ export const ProductManagement = () => {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl rounded-[3rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950 max-h-[90vh] flex flex-col">
-          <div className="p-8 bg-primary text-white shrink-0">
-             <DialogHeader>
-                <DialogTitle className="text-3xl font-black font-headline uppercase tracking-tighter">{editingItem ? 'Edit Product' : 'New Dish'}</DialogTitle>
-                <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-widest">Update dish information and visibility logic.</DialogDescription>
+          <div className="p-10 bg-primary text-white shrink-0 relative overflow-hidden">
+             <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+             <DialogHeader className="relative z-10">
+                <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter leading-none">{editingItem ? 'Edit Provision' : 'New Creation'}</DialogTitle>
+                <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-[0.2em] mt-2">Operational Registry Sync</DialogDescription>
              </DialogHeader>
           </div>
 
-          <div className="p-10 space-y-8 overflow-y-auto scrollbar-hide flex-1">
-             <div className="grid md:grid-cols-2 gap-8">
-                {/* Identity */}
-                <div className="space-y-4">
-                  <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Identity</h5>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Product Name</Label>
-                    <Input value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Classic Burger" className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+          <div className="p-10 space-y-10 overflow-y-auto scrollbar-hide flex-1">
+             <div className="grid md:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2">Manifest Identity</h5>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Dish Name</Label>
+                    <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Menu Category</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Provision Category</Label>
                     <Select value={formData.category} onValueChange={v => setFormData({...formData, category: v})}>
-                      <SelectTrigger className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold"><SelectValue /></SelectTrigger>
-                      <SelectContent className="rounded-2xl">{CATEGORIES.filter(c => c !== 'All').map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                      <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl">{CATEGORIES.filter(c => c !== 'All').map(c => <SelectItem key={c} value={c} className="font-bold">{c}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                {/* Economics */}
-                <div className="space-y-4">
-                  <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Economics</h5>
+                <div className="space-y-6">
+                  <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2">Economics & Logistics</h5>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Price (₹)</Label>
-                      <Input type="number" value={formData.price ?? 0} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Base Price (₹)</Label>
+                      <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Discount (₹)</Label>
-                      <Input type="number" value={formData.discountPrice ?? 0} onChange={e => setFormData({...formData, discountPrice: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Prep Time (M)</Label>
+                      <Input type="number" value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: Number(e.target.value)})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Prep Time (Mins)</Label>
-                    <Input type="number" value={formData.prepTime ?? 20} onChange={e => setFormData({...formData, prepTime: Number(e.target.value)})} className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
+                  <div className="flex items-center justify-between p-4 bg-secondary/30 dark:bg-zinc-800 rounded-2xl">
+                     <div className="flex gap-3 items-center">
+                        <Power className="w-4 h-4 text-primary" />
+                        <span className="text-[11px] font-black uppercase">Live Active</span>
+                     </div>
+                     <Switch checked={formData.isAvailable} onCheckedChange={v => setFormData({...formData, isAvailable: v})} />
                   </div>
                 </div>
              </div>
 
              <div className="space-y-4">
-                <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Description & Media</h5>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Public Image URL</Label>
-                  <Input value={formData.imageUrl || ''} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." className="h-12 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Description</Label>
-                  <Textarea value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Flavor details..." className="min-h-[80px] rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-medium text-sm" />
-                </div>
-             </div>
-
-             <div className="space-y-4">
-                <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Visibility & Attributes</h5>
-                <div className="grid md:grid-cols-2 gap-4">
-                   <div className="space-y-3">
-                      <ToggleOption label="Active Listing" checked={!!formData.isAvailable} onChange={v => setFormData({...formData, isAvailable: v})} icon={Power} />
-                      <ToggleOption label="Featured Item" checked={!!formData.isFeatured} onChange={v => setFormData({...formData, isFeatured: v})} icon={Sparkles} />
-                   </div>
-                   <div className="space-y-3">
-                      <ToggleOption label="Bestseller Badge" checked={!!formData.isBestSeller} onChange={v => setFormData({...formData, isBestSeller: v})} icon={Flame} />
-                      <div className="flex items-center justify-between p-3 bg-secondary/30 dark:bg-zinc-800 rounded-xl">
-                        <div className="flex gap-3 items-center">
-                          <Settings2 className="w-4 h-4 text-primary" />
-                          <Label className="text-[11px] font-black uppercase">Customizable</Label>
-                        </div>
-                        <Switch checked={formData.isCustomizable} onCheckedChange={v => setFormData({...formData, isCustomizable: v})} />
-                      </div>
-                   </div>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary/30 dark:bg-zinc-800 rounded-xl max-w-[200px]">
-                  <Label className="text-[11px] font-black uppercase">Veg Only</Label>
-                  <Switch checked={formData.isVeg} onCheckedChange={v => setFormData({...formData, isVeg: v})} />
-                </div>
+                <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2">Digital Asset (Image URL)</h5>
+                <Input value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://cloud.ezzybites.com/image.jpg" className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" />
              </div>
           </div>
 
-          <DialogFooter className="p-8 bg-secondary/10 shrink-0 flex gap-4">
-             <Button variant="outline" className="h-14 flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-             <Button className="h-14 flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-primary text-white shadow-xl shadow-primary/20" onClick={handleSave} disabled={saveLoading}>
-               {saveLoading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-               Save Product
+          <DialogFooter className="p-10 bg-secondary/30 shrink-0 flex gap-4">
+             <Button variant="outline" className="h-16 flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+             <Button className="h-16 flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-primary text-white shadow-2xl shadow-primary/30" onClick={handleSave} disabled={saveLoading}>
+               {saveLoading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Commit to Cloud'}
              </Button>
           </DialogFooter>
         </DialogContent>
@@ -518,25 +346,13 @@ export const ProductManagement = () => {
 };
 
 const StatsCard = ({ label, value, icon: Icon, color }: any) => (
-  <Card className="rounded-[2rem] border-none shadow-sm bg-white dark:bg-zinc-900 p-6">
-    <div className="flex justify-between items-start">
-      <div className="space-y-1">
-        <p className="text-[9px] font-black uppercase tracking-widest opacity-40">{label}</p>
-        <h4 className="text-3xl font-black italic">{value}</h4>
-      </div>
-      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", color)}>
-        <Icon className="w-5 h-5" />
-      </div>
+  <Card className="rounded-[2.5rem] border-none shadow-sm bg-white dark:bg-zinc-900 p-8 flex justify-between items-start group hover:scale-[1.02] transition-transform">
+    <div className="space-y-1">
+      <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">{label}</p>
+      <h4 className="text-4xl font-black italic">{value}</h4>
+    </div>
+    <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:shadow-lg shadow-inner", color)}>
+      <Icon className="w-7 h-7" />
     </div>
   </Card>
-);
-
-const ToggleOption = ({ label, checked, onChange, icon: Icon }: any) => (
-  <div className="flex items-center justify-between p-3 bg-secondary/30 dark:bg-zinc-800 rounded-xl transition-all">
-    <div className="flex gap-3 items-center">
-      <Icon className="w-4 h-4 text-primary" />
-      <p className="font-black text-[11px] uppercase">{label}</p>
-    </div>
-    <Switch checked={checked} onCheckedChange={onChange} />
-  </div>
 );

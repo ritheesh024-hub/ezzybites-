@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-   indianRupee, Loader2, 
+  Loader2, 
   Package, Clock, ChefHat, 
-  Trash2, Database, Receipt, ShoppingBag, 
+  Trash2, Receipt, ShoppingBag, 
   Volume2, VolumeX, BellRing,
-  MapPin, User, Settings, CheckCircle2,
+  MapPin, User, CheckCircle2,
   Users, UserPlus, Globe, Utensils,
   TicketPercent, BarChart3, Fingerprint,
   LayoutGrid,
@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { useSound } from '@/hooks/use-sound';
 import { StaffRole } from '@/app/admin/dashboard/page';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface AdminSectionProps {
   assignedRole: StaffRole;
@@ -78,9 +78,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
     const orderRef = doc(db, 'orders', id);
     const updateData: any = { status: newStatus };
     
-    if (newStatus === 'Confirmed') {
-      updateData.acceptedAt = serverTimestamp();
-    }
+    if (newStatus === 'Confirmed') updateData.acceptedAt = serverTimestamp();
 
     updateDoc(orderRef, updateData)
       .then(() => {
@@ -89,23 +87,19 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
           updateDoc(staffRef, {
             'stats.kitchenUpdates': increment(1),
             'stats.ordersHandled': increment(1)
-          }).catch(err => console.warn("Failed to update staff stats", err));
+          }).catch(err => console.warn("Stats update throttled", err));
         }
 
         playSound('success');
         toast({ title: `Order ${newStatus} Successfully` });
-        
-        // Auto-close details if it was open
-        if (selectedOrderForView?.id === id) {
-          setSelectedOrderForView(null);
-        }
+        if (selectedOrderForView?.id === id) setSelectedOrderForView(null);
       })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: orderRef.path,
           operation: 'update',
           requestResourceData: updateData
-        }));
+        } satisfies SecurityRuleContext));
       });
   };
 
@@ -123,7 +117,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
           </div>
         );
       case 'Pending': return <Badge className="bg-blue-100 text-blue-700 border-none px-3 font-black text-[9px] uppercase">New</Badge>;
-      case 'Confirmed': return <Badge className="bg-cyan-100 text-cyan-700 border-none px-3 font-black text-[9px] uppercase">Confirmed</Badge>;
+      case 'Confirmed': return <Badge className="bg-cyan-100 text-cyan-700 border-none px-3 font-black text-[9px] uppercase">Accepted</Badge>;
       case 'Preparing': return <Badge className="bg-orange-100 text-orange-700 border-none px-3 font-black text-[9px] uppercase">Cooking</Badge>;
       case 'Out for Delivery': return <Badge className="bg-purple-100 text-purple-700 border-none px-3 font-black text-[9px] uppercase">Transit</Badge>;
       default: return <Badge variant="outline" className="px-3 font-black text-[9px] uppercase">{status}</Badge>;
@@ -132,14 +126,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
 
   const getOrderTypeBadge = (type: string) => {
     switch (type) {
-      case 'Online': 
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Globe className="w-2 h-2" /> Online</Badge>;
-      case 'Dine-In': 
-        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Utensils className="w-2 h-2" /> Dine-In</Badge>;
-      case 'Take Away': 
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Package className="w-2 h-2" /> Take Away</Badge>;
-      default: 
-        return <Badge variant="outline" className="text-[7px] font-black uppercase px-1.5 py-0">{type || 'Order'}</Badge>;
+      case 'Online': return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Globe className="w-2 h-2" /> Online</Badge>;
+      case 'Dine-In': return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Utensils className="w-2 h-2" /> Dine-In</Badge>;
+      case 'Take Away': return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100 text-[7px] font-black uppercase px-1.5 py-0 gap-1"><Package className="w-2 h-2" /> Take Away</Badge>;
+      default: return <Badge variant="outline" className="text-[7px] font-black uppercase px-1.5 py-0">{type || 'Order'}</Badge>;
     }
   }
 
@@ -173,12 +163,12 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               )}
               {availableTabs.includes('billing') && (
                 <TabsTrigger value="billing" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0">
-                  <Receipt className="w-3.5 h-3.5" /> Billing
+                  <Receipt className="w-3.5 h-3.5" /> Counter
                 </TabsTrigger>
               )}
               {availableTabs.includes('kitchen') && (
                 <TabsTrigger value="kitchen" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0">
-                  <ChefHat className="w-3.5 h-3.5" /> Kitchen
+                  <ChefHat className="w-3.5 h-3.5" /> Live Kitchen
                 </TabsTrigger>
               )}
               {availableTabs.includes('orders') && (
@@ -191,12 +181,12 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               )}
               {availableTabs.includes('products') && (
                 <TabsTrigger value="products" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0">
-                  <LayoutGrid className="w-3.5 h-3.5" /> Products
+                  <LayoutGrid className="w-3.5 h-3.5" /> Menu
                 </TabsTrigger>
               )}
               {availableTabs.includes('coupons') && (
                 <TabsTrigger value="coupons" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0">
-                  <TicketPercent className="w-3.5 h-3.5" /> Coupons
+                  <TicketPercent className="w-3.5 h-3.5" /> Offers
                 </TabsTrigger>
               )}
               {availableTabs.includes('staff') && (
@@ -206,83 +196,70 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               )}
               {availableTabs.includes('settings') && (
                 <TabsTrigger value="settings" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0">
-                  <Settings className="w-3.5 h-3.5" /> Settings
+                  <Settings className="w-3.5 h-3.5" /> Global
                 </TabsTrigger>
               )}
             </TabsList>
 
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={cn("rounded-xl h-10 gap-2 font-black uppercase text-[10px] tracking-widest", !isAdminMuted && "bg-primary text-white border-none")}
-                onClick={toggleAdminMute}
-              >
-                {isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                {isAdminMuted ? "Muted" : "Audio Active"}
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className={cn("rounded-xl h-10 gap-2 font-black uppercase text-[10px] tracking-widest", !isAdminMuted && "bg-primary text-white border-none")}
+              onClick={toggleAdminMute}
+            >
+              {isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {isAdminMuted ? "Muted" : "Alerts On"}
+            </Button>
           </div>
 
           <TabsContent value="overview">
              <DashboardAnalysis orders={realOrders || []} products={dbMenu || []} />
           </TabsContent>
-
-          <TabsContent value="users">
-            <UserManagement />
-          </TabsContent>
-
-          <TabsContent value="billing">
-            <BillingSystem products={dbMenu || []} orders={realOrders || []} />
-          </TabsContent>
-
-          <TabsContent value="kitchen">
-            <KitchenSystem orders={realOrders || []} onUpdateStatus={handleUpdateStatus} />
-          </TabsContent>
+          <TabsContent value="users"><UserManagement /></TabsContent>
+          <TabsContent value="billing"><BillingSystem products={dbMenu || []} orders={realOrders || []} /></TabsContent>
+          <TabsContent value="kitchen"><KitchenSystem orders={realOrders || []} onUpdateStatus={handleUpdateStatus} /></TabsContent>
+          <TabsContent value="products"><ProductManagement /></TabsContent>
+          <TabsContent value="coupons"><CouponManager /></TabsContent>
+          <TabsContent value="staff"><StaffManagement /></TabsContent>
+          <TabsContent value="settings"><StoreSettings /></TabsContent>
 
           <TabsContent value="orders">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {[
                 { id: 'pending', label: 'Incoming', icon: BellRing, color: 'text-primary' },
-                { id: 'preparing', label: 'In Kitchen', icon: ChefHat, color: 'text-orange-500' },
+                { id: 'preparing', label: 'Live Kitchen', icon: ChefHat, color: 'text-orange-500' },
                 { id: 'completed', label: 'Archive', icon: Package, color: 'text-muted-foreground' }
               ].map((group) => (
                 <div key={group.id} className="space-y-4">
-                  <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center justify-between px-3">
                     <div className="flex items-center gap-2">
                       <group.icon className={cn("w-4 h-4", group.color)} />
-                      <h3 className="font-black uppercase tracking-widest text-[10px] opacity-60">{group.label}</h3>
+                      <h3 className="font-black uppercase tracking-[0.2em] text-[10px] opacity-60">{group.label}</h3>
                     </div>
                     <Badge variant="secondary" className="rounded-full px-2 font-black text-[9px]">{orderGroups[group.id as keyof typeof orderGroups].length}</Badge>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {orderGroups[group.id as keyof typeof orderGroups].map((order) => (
                       <Card 
                         key={order.id} 
-                        className="rounded-[1.2rem] border-none shadow-sm bg-white dark:bg-zinc-900 overflow-hidden group hover:shadow-lg transition-all cursor-pointer"
+                        className="rounded-[1.5rem] border-none shadow-sm bg-white dark:bg-zinc-900 overflow-hidden group hover:shadow-xl transition-all cursor-pointer border-l-4 border-l-transparent"
                         onClick={() => setSelectedOrderForView(order)}
+                        style={{ borderLeftColor: order.status === 'Pending' ? '#ef4444' : order.status === 'Preparing' ? '#f97316' : '#22c55e' }}
                       >
-                        <div className={cn(
-                          "h-1.5 w-full", 
-                          order.status === 'Pending' ? "bg-primary" : 
-                          order.status === 'Confirmed' ? "bg-cyan-500" :
-                          order.status === 'Preparing' ? "bg-orange-500" : 
-                          order.status === 'Cancelled' ? "bg-red-500" : "bg-green-500"
-                        )} />
-                        <div className="p-4 space-y-3">
+                        <div className="p-5 space-y-4">
                           <div className="flex justify-between items-start">
                             <div>
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1.5">
                                 <p className="text-[9px] font-black uppercase text-primary">#{order.orderId}</p>
                                 {getOrderTypeBadge(order.orderType)}
                               </div>
-                              <h4 className="text-xs font-black truncate">{order.customerName}</h4>
+                              <h4 className="text-sm font-black uppercase tracking-tight truncate">{order.customerName}</h4>
                             </div>
-                            <p className="text-sm font-black text-primary">₹{order.total}</p>
+                            <p className="text-base font-black text-primary italic">₹{order.total}</p>
                           </div>
-                          <div className="flex justify-between items-center pt-2 border-t border-dashed">
+                          <div className="flex justify-between items-center pt-3 border-t border-dashed">
                             {getStatusBadge(order)}
-                            <span className="text-[8px] font-bold text-muted-foreground opacity-50 flex items-center gap-1">
+                            <span className="text-[8px] font-bold text-muted-foreground opacity-50 flex items-center gap-1 uppercase">
                               <Clock className="w-3 h-3" />
                               {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                             </span>
@@ -295,74 +272,51 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="products">
-            <ProductManagement />
-          </TabsContent>
-
-          <TabsContent value="coupons">
-             <CouponManager />
-          </TabsContent>
-
-          <TabsContent value="staff">
-            <StaffManagement />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <StoreSettings />
-          </TabsContent>
         </Tabs>
       </div>
 
-      <Dialog open={!!selectedOrderForView} onOpenChange={(open) => {
-        if (!open) setSelectedOrderForView(null);
-      }}>
-        <DialogContent className="max-w-2xl rounded-[2rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-900">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Order Details for #{selectedOrderForView?.orderId}</DialogTitle>
-          </DialogHeader>
+      <Dialog open={!!selectedOrderForView} onOpenChange={(open) => !open && setSelectedOrderForView(null)}>
+        <DialogContent className="max-w-2xl rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-900">
+          <DialogHeader className="sr-only"><DialogTitle>Ticket Breakdown</DialogTitle></DialogHeader>
           {selectedOrderForView && (
             <>
-              <div className={cn(
-                "p-8 text-white",
-                selectedOrderForView.status === 'Cancelled' ? "bg-red-600" : "bg-primary"
-              )}>
-                <div className="flex justify-between items-center">
+              <div className={cn("p-10 text-white relative overflow-hidden", selectedOrderForView.status === 'Cancelled' ? "bg-red-600" : "bg-primary")}>
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+                <div className="relative z-10 flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                       <p className="text-[10px] font-black uppercase opacity-70">Order Number</p>
+                       <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Order Manifest</p>
                        {getOrderTypeBadge(selectedOrderForView.orderType)}
                     </div>
-                    <h2 className="text-3xl font-black font-headline">#{selectedOrderForView.orderId}</h2>
+                    <h2 className="text-4xl font-black font-headline uppercase tracking-tighter">#{selectedOrderForView.orderId}</h2>
                     {selectedOrderForView.status === 'Cancelled' && (
-                       <p className="text-[10px] font-black uppercase tracking-widest mt-1 opacity-80">
-                         Cancelled by {selectedOrderForView.cancelledBy || 'System'}
+                       <p className="text-[10px] font-black uppercase tracking-widest mt-2 bg-white/20 px-3 py-1 rounded-full inline-block">
+                         Revoked by {selectedOrderForView.cancelledBy || 'System'}
                        </p>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black uppercase opacity-70">Total Value</p>
-                    <p className="text-3xl font-black font-headline">₹{selectedOrderForView.total}</p>
+                    <p className="text-[10px] font-black uppercase opacity-70 tracking-widest">Settlement</p>
+                    <p className="text-4xl font-black font-headline italic">₹{selectedOrderForView.total}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="grid md:grid-cols-2 gap-8">
+              <div className="p-10 space-y-8 max-h-[50vh] overflow-y-auto scrollbar-hide">
+                <div className="grid md:grid-cols-2 gap-10">
                   <div className="space-y-4">
-                    <h5 className="text-[10px] font-black uppercase opacity-40">Cart Items</h5>
+                    <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Line Items</h5>
                     <div className="space-y-3">
                       {selectedOrderForView.items?.map((item: any, i: number) => (
-                        <div key={i} className="bg-secondary/20 dark:bg-zinc-800 p-3 rounded-xl space-y-1">
-                          <div className="flex justify-between items-center text-xs font-black">
-                            <span>{item.name} x{item.quantity}</span>
-                            <span className="text-primary">₹{item.price * item.quantity}</span>
+                        <div key={i} className="bg-secondary/30 dark:bg-zinc-800 p-4 rounded-2xl space-y-2">
+                          <div className="flex justify-between items-center text-xs font-black uppercase">
+                            <span>{item.name} <span className="text-primary ml-1">x{item.quantity}</span></span>
+                            <span className="italic">₹{item.price * item.quantity}</span>
                           </div>
                           {item.customization && (
-                            <div className="flex items-center gap-1 text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
-                               <Settings2 className="w-2.5 h-2.5" />
-                               {item.customization.size} • {item.customization.temp} • Sugar: {item.customization.sugar}
-                               {item.customization.addons?.length > 0 && ` • +${item.customization.addons.join(', ')}`}
+                            <div className="flex flex-wrap gap-1.5">
+                               <Badge variant="outline" className="text-[7px] font-black uppercase border-muted">{item.customization.size}</Badge>
+                               <Badge variant="outline" className="text-[7px] font-black uppercase border-muted">{item.customization.temp}</Badge>
                             </div>
                           )}
                         </div>
@@ -370,33 +324,45 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <h5 className="text-[10px] font-black uppercase opacity-40">Client Info</h5>
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold"><User className="inline w-3 h-3 mr-1" /> {selectedOrderForView.customerName}</p>
-                      <p className="text-xs font-medium opacity-60"><MapPin className="inline w-3 h-3 mr-1" /> {selectedOrderForView.address || (selectedOrderForView.orderType === 'Dine-In' ? 'Table Service' : 'In-Store Pickup')}</p>
-                      <p className="text-xs font-bold text-primary"><ShoppingBag className="inline w-3 h-3 mr-1" /> Source: {selectedOrderForView.orderType || 'Online'}</p>
+                    <h5 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b pb-2">Logistics</h5>
+                    <div className="space-y-3">
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary"><User className="w-5 h-5" /></div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase opacity-40">Recipient</p>
+                          <p className="text-sm font-black uppercase">{selectedOrderForView.customerName}</p>
+                          <p className="text-[10px] font-medium opacity-60">{selectedOrderForView.customerPhone}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary"><MapPin className="w-5 h-5" /></div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase opacity-40">Destination</p>
+                          <p className="text-[11px] font-medium leading-relaxed italic">"{selectedOrderForView.address || 'Table Service'}"</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <DialogFooter className="p-6 bg-secondary/30 dark:bg-zinc-800 flex gap-3">
+              <DialogFooter className="p-8 bg-secondary/30 dark:bg-zinc-800 flex gap-4">
                 {selectedOrderForView.status === 'Pending' && (
                   <>
-                    <Button className="flex-1 rounded-xl h-14 bg-primary text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Confirmed')}>Accept</Button>
-                    <Button variant="destructive" className="flex-1 rounded-xl h-14 font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Cancelled')}>Reject</Button>
+                    <Button className="flex-1 rounded-2xl h-16 bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Confirmed')}>Accept Order</Button>
+                    <Button variant="outline" className="flex-1 rounded-2xl h-16 border-2 font-black uppercase text-[10px] tracking-widest text-destructive" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Cancelled')}>Reject</Button>
                   </>
                 )}
                 {selectedOrderForView.status === 'Confirmed' && (
-                   <Button className="flex-1 rounded-xl h-14 bg-orange-500 text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Preparing')}>Start Kitchen</Button>
+                   <Button className="flex-1 rounded-2xl h-16 bg-orange-500 text-white font-black uppercase text-[10px] tracking-widest" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Preparing')}>Start Preparation</Button>
                 )}
                 {selectedOrderForView.status === 'Preparing' && (
-                  <Button className="flex-1 rounded-xl h-14 bg-purple-500 text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Out for Delivery')}>Dispatch</Button>
+                  <Button className="flex-1 rounded-2xl h-16 bg-purple-500 text-white font-black uppercase text-[10px] tracking-widest" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Out for Delivery')}>Dispatch Fleet</Button>
                 )}
                 {selectedOrderForView.status === 'Out for Delivery' && (
-                  <Button className="flex-1 rounded-xl h-14 bg-green-500 text-white font-black uppercase text-[10px]" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Delivered')}>Complete</Button>
+                  <Button className="flex-1 rounded-2xl h-16 bg-green-500 text-white font-black uppercase text-[10px] tracking-widest" onClick={() => handleUpdateStatus(selectedOrderForView.id, 'Delivered')}>Complete Order</Button>
                 )}
-                <Button variant="outline" className="flex-1 rounded-xl h-14 font-black uppercase text-[10px]" onClick={() => setSelectedOrderForView(null)}>Close</Button>
+                <Button variant="ghost" className="rounded-2xl h-16 font-black uppercase text-[10px] tracking-widest px-8" onClick={() => setSelectedOrderForView(null)}>Close</Button>
               </DialogFooter>
             </>
           )}
