@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { 
   ShoppingBag, Lock, Mail, Loader2, ArrowRight, 
   ShieldCheck, Receipt, ChefHat, 
-  ChevronLeft, RefreshCw
+  ChevronLeft, RefreshCw, AlertCircle, Info, Copy, Check
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { doc, setDoc, getDoc, collection, getDocs, limit, query, updateDoc, serverTimestamp, where, deleteDoc } from 'firebase/firestore';
@@ -29,6 +29,8 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [isFirstSetup, setIsFirstSetup] = useState(false);
   const [systemChecked, setSystemChecked] = useState(false);
+  const [authError, setAuthError] = useState<{ message: string; domain?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -37,7 +39,6 @@ export default function AdminLoginPage() {
 
   const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
 
-  // Check system state to see if it's the very first administrator
   useEffect(() => {
     async function checkSystemState() {
       if (!db) return;
@@ -56,7 +57,6 @@ export default function AdminLoginPage() {
     checkSystemState();
   }, [db]);
 
-  // If a user is already logged in, verify they have an admin profile
   useEffect(() => {
     async function checkExistingAuth() {
       if (!userLoading && user && db) {
@@ -82,8 +82,29 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!auth || !email) {
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter your staff email first." });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({ title: "Reset Link Sent", description: `Check your inbox at ${email}` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
+
+  const handleCopyDomain = (domain: string) => {
+    navigator.clipboard.writeText(domain);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Domain Copied" });
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     
     if (!auth || !db) {
       toast({ variant: "destructive", title: "Connection Error" });
@@ -98,23 +119,29 @@ export default function AdminLoginPage() {
       try {
         userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } catch (signInError: any) {
-        // Handle potential first-time setup or account creation
-        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
+        if (signInError.code === 'auth/unauthorized-domain') {
+          const domain = window.location.hostname;
+          setAuthError({ message: "This domain is not authorized in Firebase.", domain });
+          setLoading(false);
+          return;
+        }
+
+        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-email') {
           try {
             userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
             toast({ title: "Account Created", description: "Staff credentials initialized." });
           } catch (createError: any) {
             if (createError.code === 'auth/email-already-in-use') {
-              toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password for this staff email." });
+              toast({ variant: "destructive", title: "Login Failed", description: "Incorrect password for this staff account." });
               setLoading(false);
               return;
             }
-            toast({ variant: "destructive", title: "Login Failed", description: createError.message || "Failed to authenticate." });
+            toast({ variant: "destructive", title: "Auth Error", description: createError.message });
             setLoading(false);
             return;
           }
         } else {
-          toast({ variant: "destructive", title: "Login Failed", description: signInError.message || "Authentication failed." });
+          toast({ variant: "destructive", title: "Login Failed", description: signInError.message });
           setLoading(false);
           return;
         }
@@ -124,7 +151,6 @@ export default function AdminLoginPage() {
       const adminRef = doc(db, 'admins', uid);
       let adminSnap = await getDoc(adminRef);
 
-      // Check if this email is already a staff member in a placeholder record
       const adminsColl = collection(db, 'admins');
       const emailQuery = query(adminsColl, where('email', '==', normalizedEmail));
       const emailSnap = await getDocs(emailQuery);
@@ -141,7 +167,6 @@ export default function AdminLoginPage() {
         }
       });
 
-      // Merge placeholder records if they exist
       if (oldRecordIds.length > 0 || normalizedEmail === PRIMARY_ADMIN_EMAIL) {
         const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
         
@@ -166,7 +191,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // If no admin record exists, create one but potentially disable it until manual approval
       if (!adminSnap.exists()) {
         const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
         const firstAdminData = { 
@@ -216,11 +240,7 @@ export default function AdminLoginPage() {
 
     } catch (error: any) {
       console.error('Auth error:', error);
-      toast({ 
-        variant: "destructive", 
-        title: "Staff Login Failed", 
-        description: error.message || "Failed to authenticate staff record." 
-      });
+      toast({ variant: "destructive", title: "Login Failed", description: error.message || "Failed to authenticate." });
     } finally {
       setLoading(false);
     }
@@ -246,25 +266,11 @@ export default function AdminLoginPage() {
           <p className="text-muted-foreground text-xs font-black uppercase tracking-[0.3em]">Operational Access</p>
         </div>
 
-        {isFirstSetup && (
-          <Alert className="max-w-xl mb-8 bg-primary/10 border-primary/20 rounded-2xl animate-in zoom-in duration-500">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-primary font-black uppercase text-[10px] tracking-widest">System Boot</AlertTitle>
-            <AlertDescription className="text-xs font-medium">
-              Ready for primary administrator setup. Use your work email to claim platform privileges.
-            </AlertDescription>
-          </Alert>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
           <RoleCard icon={ShieldCheck} title="Executive Admin" desc="Platform control & analytics" color="bg-primary" onClick={() => handleRoleSelect('admin')} />
           <RoleCard icon={Receipt} title="Billing Cashier" desc="POS & Dine-in management" color="bg-blue-600" onClick={() => handleRoleSelect('cashier')} />
           <RoleCard icon={ChefHat} title="Kitchen Chef" desc="Live orders & status" color="bg-orange-500" onClick={() => handleRoleSelect('kitchen')} />
         </div>
-        
-        <p className="mt-12 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-30">
-          Staff Identity Portal
-        </p>
       </div>
     );
   }
@@ -304,6 +310,24 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
 
+        {authError && (
+          <div className="px-8 pb-6">
+            <Alert variant="destructive" className="border-none bg-red-50 text-red-900 rounded-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Domain Blocked</AlertTitle>
+              <AlertDescription className="text-[11px] font-medium leading-relaxed">
+                {authError.message} Add this domain to Firebase Authorized Domains:
+                <div className="mt-3 p-3 bg-white/50 rounded-xl flex items-center justify-between border border-red-100">
+                  <code className="text-[9px] font-mono break-all">{authError.domain}</code>
+                  <button onClick={() => handleCopyDomain(authError.domain!)} className="p-1.5 hover:bg-white rounded-lg transition-colors">
+                    {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <form onSubmit={handleAuth}>
           <CardContent className="space-y-6 px-8">
             <div className="space-y-2">
@@ -321,7 +345,10 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
+              <div className="flex justify-between items-center px-1">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Password</Label>
+                <button type="button" onClick={handleForgotPassword} className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">Forgot?</button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
