@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,10 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { 
   ShoppingBag, Lock, Mail, Loader2, ArrowRight, 
   ShieldCheck, Receipt, ChefHat, 
-  ChevronLeft, RefreshCw, AlertCircle, Info, Copy, Check
+  ChevronLeft, AlertCircle, Copy, Check
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { doc, setDoc, getDoc, collection, getDocs, limit, query, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -39,26 +39,12 @@ export default function AdminLoginPage() {
   const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
 
   useEffect(() => {
-    async function checkSystemState() {
-      if (!db) return;
-      try {
-        setSystemChecked(true);
-      } catch (e) {
-        setSystemChecked(true);
-      }
-    }
-    checkSystemState();
-  }, [db]);
-
-  useEffect(() => {
+    // Check if user is already logged in as a valid admin
     async function checkExistingAuth() {
       if (!userLoading && user && db) {
         try {
           const adminRef = doc(db, 'admins', user.uid);
           const adminSnap = await getDoc(adminRef);
-          
-          // If primary admin logs in, and record is missing (deleted), we fix it in handleAuth
-          // If record exists and is active, redirect
           if (adminSnap.exists() && adminSnap.data().status === 'active') {
             router.push('/admin/dashboard');
           }
@@ -66,6 +52,7 @@ export default function AdminLoginPage() {
           console.error("Auth check failed:", e);
         }
       }
+      setSystemChecked(true);
     }
     checkExistingAuth();
   }, [user, userLoading, router, db]);
@@ -73,7 +60,7 @@ export default function AdminLoginPage() {
   const handleRoleSelect = (role: SelectedRole) => {
     setSelectedRole(role);
     setStep('auth');
-    if (role === 'admin' && !email) {
+    if (role === 'admin') {
       setEmail(PRIMARY_ADMIN_EMAIL);
     }
   };
@@ -89,97 +76,95 @@ export default function AdminLoginPage() {
 
     setLoading(true);
     try {
-      let userCredential;
       const normalizedEmail = email.trim().toLowerCase();
       const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
+      let userCredential;
 
-      // 1. Try Signing In First
+      // 1. Attempt Sign In
       try {
         userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } catch (signInError: any) {
-        // Domain issues
+        // Handle "Domain Not Authorized"
         if (signInError.code === 'auth/unauthorized-domain') {
           const domain = typeof window !== 'undefined' ? window.location.hostname : '';
-          setAuthError({ message: "Domain not authorized.", domain });
+          setAuthError({ message: "This domain is not authorized in Firebase Console.", domain });
           setLoading(false);
           return;
         }
 
-        // If user doesn't exist, try to provision (especially for Primary Admin)
+        // Handle "User Not Found" or ambiguity (invalid-credential)
         if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
           try {
+            // Try to create the user if they don't exist (especially useful for first-time primary admin)
             userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-            toast({ title: "Staff Provisioned", description: "Identity created." });
+            toast({ title: "Account Provisioned", description: "First-time setup initialized." });
           } catch (createError: any) {
-            // If creation fails because user actually exists (invalid-credential is ambiguous)
+            // If email is already in use, it means the first signIn failed due to wrong password
             if (createError.code === 'auth/email-already-in-use') {
-              // Try one last login attempt - if this fails, password is wrong
-              try {
-                userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-              } catch (lastError) {
-                toast({ variant: "destructive", title: "Login Failed", description: "Incorrect credentials for this staff email." });
-                setLoading(false);
-                return;
-              }
-            } else {
-              toast({ variant: "destructive", title: "Provision Error", description: createError.message });
+              toast({ variant: "destructive", title: "Authentication Failed", description: "Incorrect password for this staff account." });
               setLoading(false);
               return;
             }
+            throw createError;
           }
         } else {
-          toast({ variant: "destructive", title: "Authentication Failed", description: signInError.message });
-          setLoading(false);
-          return;
+          throw signInError;
         }
       }
 
-      if (!userCredential) throw new Error("Authentication flow failed.");
+      if (!userCredential) throw new Error("Authentication process failed.");
 
+      // 2. Synchronize Firestore Admin Record
       const uid = userCredential.user.uid;
       const adminRef = doc(db, 'admins', uid);
-      const adminSnap = await getDoc(adminRef);
-
-      // 2. REPAIR LOGIC: If record was deleted but Auth exists, OR if isPrimary
-      if (!adminSnap.exists() || isPrimary) {
+      
+      // For PRIMARY admin, we ALWAYS force 'admin' role and 'active' status to prevent lockouts
+      if (isPrimary) {
         const adminData = { 
           id: uid,
           uid: uid,
           email: normalizedEmail, 
           name: normalizedEmail.split('@')[0],
-          role: isPrimary ? 'admin' : (selectedRole || 'cashier'),
+          role: 'admin',
           status: 'active',
           onlineStatus: 'online',
-          createdAt: adminSnap.exists() ? adminSnap.data().createdAt : serverTimestamp(),
           lastLoginAt: serverTimestamp(),
-          stats: adminSnap.exists() ? adminSnap.data().stats : { ordersHandled: 0, billsGenerated: 0, kitchenUpdates: 0 }
+          updatedAt: serverTimestamp()
         };
-        
         await setDoc(adminRef, adminData, { merge: true });
-        toast({ title: "System Ready", description: isPrimary ? "Master Identity Restored." : "Access Synchronized." });
-        router.push('/admin/dashboard');
-        return;
+        toast({ title: "Identity Verified", description: "Master Admin Console granted." });
+      } else {
+        // For other staff, check if they already exist
+        const adminSnap = await getDoc(adminRef);
+        if (!adminSnap.exists()) {
+          const adminData = {
+            id: uid,
+            uid: uid,
+            email: normalizedEmail,
+            name: normalizedEmail.split('@')[0],
+            role: selectedRole || 'cashier',
+            status: 'active',
+            onlineStatus: 'online',
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
+          };
+          await setDoc(adminRef, adminData);
+        } else {
+          if (adminSnap.data().status === 'disabled') {
+            await signOut(auth);
+            toast({ variant: "destructive", title: "Access Denied", description: "This staff account is currently disabled." });
+            setLoading(false);
+            return;
+          }
+          await setDoc(adminRef, { lastLoginAt: serverTimestamp(), onlineStatus: 'online' }, { merge: true });
+        }
       }
 
-      // 3. Standard check
-      const data = adminSnap.data();
-      if (data.status === 'disabled') {
-        await signOut(auth);
-        toast({ variant: "destructive", title: "Access Denied", description: "This staff account is disabled." });
-        setLoading(false);
-        return;
-      }
-      
-      await updateDoc(adminRef, { 
-        lastLoginAt: serverTimestamp(),
-        onlineStatus: 'online'
-      });
-      
       router.push('/admin/dashboard');
 
     } catch (error: any) {
       console.error('Final Auth catch:', error);
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Login Error", description: error.message || "An unexpected error occurred." });
     } finally {
       setLoading(false);
     }
@@ -192,7 +177,11 @@ export default function AdminLoginPage() {
     toast({ title: "Domain Copied" });
   };
 
-  if (!systemChecked) return null;
+  if (!systemChecked) return (
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <Loader2 className="w-10 h-10 animate-spin text-primary" />
+    </div>
+  );
 
   if (step === 'selection') {
     return (
@@ -259,14 +248,29 @@ export default function AdminLoginPage() {
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Staff Email</Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="email" placeholder="name@ezzybites.com" className="h-14 pl-12 rounded-xl font-bold bg-secondary/20" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input 
+                  type="email" 
+                  placeholder="name@ezzybites.com" 
+                  className="h-14 pl-12 rounded-xl font-bold bg-secondary/20" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  required 
+                  disabled={selectedRole === 'admin'} 
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input type="password" className="h-14 pl-12 rounded-xl bg-secondary/20" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                <Input 
+                  type="password" 
+                  className="h-14 pl-12 rounded-xl bg-secondary/20" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                  minLength={6} 
+                />
               </div>
             </div>
           </CardContent>

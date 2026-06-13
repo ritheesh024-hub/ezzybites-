@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useAuth, useFirestore } from '@/firebase';
 import { AdminSection } from '@/components/AdminSection';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt, ArrowLeft, Fingerprint, Copy } from 'lucide-react';
+import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
@@ -32,6 +32,8 @@ function DashboardContent() {
   const [activeView, setActiveView] = useState<StaffRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(true);
 
+  const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
+
   // Get requested view from URL if present
   const requestedView = searchParams.get('view') as StaffRole;
 
@@ -53,22 +55,28 @@ function DashboardContent() {
         if (adminSnap.exists()) {
           const data = adminSnap.data();
           const role = (data.role as StaffRole) || 'cashier';
-          setAssignedRole(role);
           
-          if (role === 'admin' && ['admin', 'cashier', 'kitchen'].includes(requestedView)) {
+          // Force admin role if email matches primary
+          const effectiveRole = user.email === PRIMARY_ADMIN_EMAIL ? 'admin' : role;
+          setAssignedRole(effectiveRole);
+          
+          if (effectiveRole === 'admin' && ['admin', 'cashier', 'kitchen'].includes(requestedView)) {
             setActiveView(requestedView);
           } else {
-            setActiveView(role);
+            setActiveView(effectiveRole);
           }
           
           setCheckingRole(false);
+        } else if (user.email === PRIMARY_ADMIN_EMAIL) {
+          // Fallback for primary admin if record was momentarily missing
+          setAssignedRole('admin');
+          setActiveView('admin');
+          setCheckingRole(false);
         } else {
-          // If user email is the primary admin email, we allow them to fix it by logging in again
-          // or we check if we should auto-provision here. For now, redirect to login for a fresh sync.
           toast({
             variant: "destructive",
-            title: "Identity Desync",
-            description: "Staff record missing. Please sign in again to restore access.",
+            title: "Access Restricted",
+            description: "Staff credentials not found. Please sign in via the hub.",
           });
           await auth.signOut();
           router.push('/admin/login');
@@ -85,7 +93,7 @@ function DashboardContent() {
   const handleLogout = async () => {
     if (auth) {
       await auth.signOut();
-      toast({ title: "Session Closed", description: "Operational hub logged out." });
+      toast({ title: "Session Closed", description: "Logged out successfully." });
       router.push('/admin/login');
     }
   };
@@ -94,7 +102,7 @@ function DashboardContent() {
     if (assignedRole !== 'admin') return;
     router.push(`/admin/dashboard?view=${role}`);
     setActiveView(role);
-    toast({ title: `Switched to ${role.toUpperCase()}` });
+    toast({ title: `View switched to ${role.toUpperCase()}` });
   };
 
   if (userLoading || checkingRole || !activeView) {
