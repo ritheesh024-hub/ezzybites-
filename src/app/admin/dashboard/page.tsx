@@ -48,6 +48,18 @@ function DashboardContent() {
 
       if (!db || !auth) return;
 
+      // IMMEDIATE CHECK: If email is primary admin, bypass Firestore check for speed
+      if (user.email === PRIMARY_ADMIN_EMAIL) {
+        setAssignedRole('admin');
+        if (['admin', 'cashier', 'kitchen'].includes(requestedView)) {
+          setActiveView(requestedView);
+        } else {
+          setActiveView('admin');
+        }
+        setCheckingRole(false);
+        return;
+      }
+
       try {
         const adminRef = doc(db, 'admins', user.uid);
         const adminSnap = await getDoc(adminRef);
@@ -56,21 +68,15 @@ function DashboardContent() {
           const data = adminSnap.data();
           const role = (data.role as StaffRole) || 'cashier';
           
-          // Force admin role if email matches primary
-          const effectiveRole = user.email === PRIMARY_ADMIN_EMAIL ? 'admin' : role;
-          setAssignedRole(effectiveRole);
-          
-          if (effectiveRole === 'admin' && ['admin', 'cashier', 'kitchen'].includes(requestedView)) {
-            setActiveView(requestedView);
-          } else {
-            setActiveView(effectiveRole);
+          if (data.status === 'disabled') {
+            toast({ variant: "destructive", title: "Access Revoked", description: "Your staff account has been disabled." });
+            await auth.signOut();
+            router.push('/admin/login');
+            return;
           }
-          
-          setCheckingRole(false);
-        } else if (user.email === PRIMARY_ADMIN_EMAIL) {
-          // Fallback for primary admin if record was momentarily missing
-          setAssignedRole('admin');
-          setActiveView('admin');
+
+          setAssignedRole(role);
+          setActiveView(role);
           setCheckingRole(false);
         } else {
           toast({

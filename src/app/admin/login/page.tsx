@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,13 +39,14 @@ export default function AdminLoginPage() {
   const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
 
   useEffect(() => {
-    // Check if user is already logged in as a valid admin
     async function checkExistingAuth() {
       if (!userLoading && user && db) {
         try {
           const adminRef = doc(db, 'admins', user.uid);
           const adminSnap = await getDoc(adminRef);
-          if (adminSnap.exists() && adminSnap.data().status === 'active') {
+          
+          // Allow primary admin to enter even if doc is momentarily missing
+          if (user.email === PRIMARY_ADMIN_EMAIL || (adminSnap.exists() && adminSnap.data().status === 'active')) {
             router.push('/admin/dashboard');
           }
         } catch (e) {
@@ -62,6 +63,8 @@ export default function AdminLoginPage() {
     setStep('auth');
     if (role === 'admin') {
       setEmail(PRIMARY_ADMIN_EMAIL);
+    } else {
+      setEmail('');
     }
   };
 
@@ -70,7 +73,7 @@ export default function AdminLoginPage() {
     setAuthError(null);
     
     if (!auth || !db) {
-      toast({ variant: "destructive", title: "Connection Error" });
+      toast({ variant: "destructive", title: "Connection Error", description: "Firebase services not initialized." });
       return;
     }
 
@@ -78,53 +81,22 @@ export default function AdminLoginPage() {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
-      let userCredential;
 
-      // 1. Attempt Sign In
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      } catch (signInError: any) {
-        // Handle "Domain Not Authorized"
-        if (signInError.code === 'auth/unauthorized-domain') {
-          const domain = typeof window !== 'undefined' ? window.location.hostname : '';
-          setAuthError({ message: "This domain is not authorized in Firebase Console.", domain });
-          setLoading(false);
-          return;
-        }
-
-        // Handle "User Not Found" or ambiguity (invalid-credential)
-        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
-          try {
-            // Try to create the user if they don't exist (especially useful for first-time primary admin)
-            userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-            toast({ title: "Account Provisioned", description: "First-time setup initialized." });
-          } catch (createError: any) {
-            // If email is already in use, it means the first signIn failed due to wrong password
-            if (createError.code === 'auth/email-already-in-use') {
-              toast({ variant: "destructive", title: "Authentication Failed", description: "Incorrect password for this staff account." });
-              setLoading(false);
-              return;
-            }
-            throw createError;
-          }
-        } else {
-          throw signInError;
-        }
-      }
-
-      if (!userCredential) throw new Error("Authentication process failed.");
+      // 1. Authenticate
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      const uid = userCredential.user.uid;
 
       // 2. Synchronize Firestore Admin Record
-      const uid = userCredential.user.uid;
       const adminRef = doc(db, 'admins', uid);
-      
-      // For PRIMARY admin, we ALWAYS force 'admin' role and 'active' status to prevent lockouts
+      const adminSnap = await getDoc(adminRef);
+
       if (isPrimary) {
+        // ALWAYS force-repair Master Admin record on login
         const adminData = { 
           id: uid,
           uid: uid,
           email: normalizedEmail, 
-          name: normalizedEmail.split('@')[0],
+          name: "Master Admin",
           role: 'admin',
           status: 'active',
           onlineStatus: 'online',
@@ -132,39 +104,53 @@ export default function AdminLoginPage() {
           updatedAt: serverTimestamp()
         };
         await setDoc(adminRef, adminData, { merge: true });
-        toast({ title: "Identity Verified", description: "Master Admin Console granted." });
+        toast({ title: "Master Access Verified", description: "Welcome back, Chief." });
+      } else if (!adminSnap.exists()) {
+        // For other roles, if account exists in Auth but not in DB (rare sync issue)
+        const adminData = {
+          id: uid,
+          uid: uid,
+          email: normalizedEmail,
+          name: normalizedEmail.split('@')[0],
+          role: selectedRole || 'cashier',
+          status: 'active',
+          onlineStatus: 'online',
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp()
+        };
+        await setDoc(adminRef, adminData);
+      } else if (adminSnap.data().status === 'disabled') {
+        await signOut(auth);
+        throw new Error("Access Denied: This staff account is currently disabled.");
       } else {
-        // For other staff, check if they already exist
-        const adminSnap = await getDoc(adminRef);
-        if (!adminSnap.exists()) {
-          const adminData = {
-            id: uid,
-            uid: uid,
-            email: normalizedEmail,
-            name: normalizedEmail.split('@')[0],
-            role: selectedRole || 'cashier',
-            status: 'active',
-            onlineStatus: 'online',
-            createdAt: serverTimestamp(),
-            lastLoginAt: serverTimestamp()
-          };
-          await setDoc(adminRef, adminData);
-        } else {
-          if (adminSnap.data().status === 'disabled') {
-            await signOut(auth);
-            toast({ variant: "destructive", title: "Access Denied", description: "This staff account is currently disabled." });
-            setLoading(false);
-            return;
-          }
-          await setDoc(adminRef, { lastLoginAt: serverTimestamp(), onlineStatus: 'online' }, { merge: true });
-        }
+        // Standard staff update
+        await setDoc(adminRef, { 
+          lastLoginAt: serverTimestamp(), 
+          onlineStatus: 'online' 
+        }, { merge: true });
       }
 
       router.push('/admin/dashboard');
 
     } catch (error: any) {
-      console.error('Final Auth catch:', error);
-      toast({ variant: "destructive", title: "Login Error", description: error.message || "An unexpected error occurred." });
+      console.error('Login Error:', error);
+      
+      let message = "An unexpected error occurred.";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : '';
+        setAuthError({ message: "This domain is not authorized in Firebase.", domain });
+        setLoading(false);
+        return;
+      }
+
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        message = "Incorrect email or password for this staff account.";
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      toast({ variant: "destructive", title: "Authentication Failed", description: message });
     } finally {
       setLoading(false);
     }
