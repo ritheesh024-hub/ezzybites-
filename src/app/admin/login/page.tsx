@@ -98,8 +98,7 @@ export default function AdminLoginPage() {
       const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
       let uid = '';
 
-      // 1. Authenticate with Email & Password
-      // This path is exclusively for staff. Regular users are blocked here and from using this email in User portal.
+      // 1. Authenticate
       try {
         const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
         uid = userCredential.user.uid;
@@ -107,12 +106,18 @@ export default function AdminLoginPage() {
         // Master Admin Auto-Provision Path
         if (isPrimary && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
            try {
+             // Attempt to create the master account if it doesn't exist
              const createCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
              uid = createCredential.user.uid;
              toast({ title: "Identity Established", description: "Master admin account synchronized." });
            } catch (createError: any) {
              if (createError.code === 'auth/email-already-in-use') {
-                toast({ variant: "destructive", title: "Auth Failed", description: "Incorrect password for this staff email." });
+                // If creation fails because it exists, and sign-in failed, the password MUST be wrong.
+                toast({ 
+                  variant: "destructive", 
+                  title: "Auth Failed", 
+                  description: "Incorrect password for this staff account. Please use 'Forgot?' to reset." 
+                });
                 setLoading(false);
                 return;
              }
@@ -123,7 +128,7 @@ export default function AdminLoginPage() {
         }
       }
 
-      // 2. FORCE SYNC: Synchronize Firestore Admin Record
+      // 2. Synchronize Firestore Admin Record
       const adminRef = doc(db, 'admins', uid);
       
       if (isPrimary) {

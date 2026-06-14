@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +14,7 @@ import {
   Users, UserPlus, Globe, Utensils,
   TicketPercent, BarChart3, Fingerprint,
   LayoutGrid,
-  Settings,
+  Settings2,
   Ban,
   IndianRupee,
   ShieldCheck,
@@ -140,7 +141,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
               {availableTabs.includes('products') && <TabsTrigger value="products" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0"><LayoutGrid className="w-3.5 h-3.5" /> Menu</TabsTrigger>}
               {availableTabs.includes('coupons') && <TabsTrigger value="coupons" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0"><TicketPercent className="w-3.5 h-3.5" /> Offers</TabsTrigger>}
               {availableTabs.includes('staff') && <TabsTrigger value="staff" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0"><UserPlus className="w-3.5 h-3.5" /> Staff</TabsTrigger>}
-              {availableTabs.includes('settings') && <TabsTrigger value="settings" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0"><Settings className="w-3.5 h-3.5" /> Global</TabsTrigger>}
+              {availableTabs.includes('settings') && <TabsTrigger value="settings" className="px-6 py-2.5 font-black uppercase text-[9px] tracking-widest rounded-full gap-2 shrink-0"><Settings2 className="w-3.5 h-3.5" /> Global</TabsTrigger>}
             </TabsList>
             <Button variant="outline" size="sm" className={cn("rounded-xl h-10 gap-2 font-black uppercase text-[10px] tracking-widest", !isAdminMuted ? "bg-primary text-white border-none" : "bg-white dark:bg-zinc-800")} onClick={toggleAdminMute}>{isAdminMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />} {isAdminMuted ? "Muted" : "Alerts On"}</Button>
           </div>

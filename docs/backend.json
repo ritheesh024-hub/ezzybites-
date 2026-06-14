@@ -74,7 +74,7 @@
     },
     "UserProfile": {
       "title": "User Profile",
-      "description": "Customer profile for authenticated users. Note: Restricted admin emails are blocked from creating customer profiles.",
+      "description": "Customer profile for authenticated users. Note: Restricted admin emails (e.g., sunnyritheesh@gmail.com) are blocked from creating customer profiles.",
       "type": "object",
       "properties": {
         "uid": {
