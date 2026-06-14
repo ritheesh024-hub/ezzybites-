@@ -1,7 +1,7 @@
 "use client"
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, use } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { 
   CheckCircle2, MapPin, Phone, MessageSquare, 
   Truck, ChefHat, PackageCheck, Loader2, 
@@ -18,9 +18,8 @@ import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
 import { useAnalytics } from '@/hooks/use-analytics';
 
-export default function OrderTrackingPage() {
-  const params = useParams();
-  const orderId = params.orderId as string;
+export default function OrderTrackingPage({ params }: { params: Promise<{ orderId: string }> }) {
+  const { orderId } = use(params);
   const db = useFirestore();
   const { user } = useUser();
   const router = useRouter();
