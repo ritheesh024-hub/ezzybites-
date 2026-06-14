@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { 
   ShoppingBag, Lock, Mail, Loader2, ArrowRight, 
   ShieldCheck, Receipt, ChefHat, 
-  ChevronLeft, AlertCircle, Copy, Check
+  ChevronLeft, AlertCircle, Copy, Check,
+  Eye, EyeOff
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
@@ -27,6 +27,7 @@ export default function AdminLoginPage() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [systemChecked, setSystemChecked] = useState(false);
   const [authError, setAuthError] = useState<{ message: string; domain?: string } | null>(null);
@@ -299,13 +300,20 @@ export default function AdminLoginPage() {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
-                  type="password" 
-                  className="h-14 pl-12 rounded-xl bg-secondary/20" 
+                  type={showPassword ? "text" : "password"} 
+                  className="h-14 pl-12 pr-12 rounded-xl bg-secondary/20" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
                   minLength={6} 
                 />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
           </CardContent>
