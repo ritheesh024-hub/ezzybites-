@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth } from 'firebase/auth';
-import { Analytics } from 'firebase/analytics';
+import { Analytics, getAnalytics, isSupported } from 'firebase/analytics';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface FirebaseContextValue {
@@ -26,16 +26,34 @@ export function FirebaseProvider({
   app,
   db,
   auth,
-  analytics,
 }: {
   children: ReactNode;
   app: FirebaseApp | null;
   db: Firestore | null;
   auth: Auth | null;
-  analytics?: Analytics | null;
 }) {
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+
+  useEffect(() => {
+    if (app && typeof window !== 'undefined') {
+      isSupported().then((supported) => {
+        if (supported) {
+          try {
+            const analyticsInstance = getAnalytics(app);
+            setAnalytics(analyticsInstance);
+            console.log("Firebase Analytics initialized successfully.");
+          } catch (e) {
+            console.warn("Analytics initialization failed:", e);
+          }
+        } else {
+          console.warn("Analytics is not supported in this environment.");
+        }
+      });
+    }
+  }, [app]);
+
   return (
-    <FirebaseContext.Provider value={{ app, db, auth, analytics: analytics || null }}>
+    <FirebaseContext.Provider value={{ app, db, auth, analytics }}>
       {children}
       <FirebaseErrorListener />
     </FirebaseContext.Provider>

@@ -1,17 +1,17 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { getAnalytics, Analytics } from 'firebase/analytics';
+import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 import { firebaseConfig } from './config';
 
 /**
  * Initializes Firebase services safely.
+ * Note: Analytics is initialized asynchronously in the provider.
  */
 export function initializeFirebase(): { 
   app: FirebaseApp | null; 
   db: Firestore | null; 
   auth: Auth | null;
-  analytics: Analytics | null;
 } {
   // Check if config has been updated from defaults
   const isConfigValid = 
@@ -20,7 +20,7 @@ export function initializeFirebase(): {
 
   if (!isConfigValid) {
     console.warn('Firebase configuration is missing or incomplete.');
-    return { app: null, db: null, auth: null, analytics: null };
+    return { app: null, db: null, auth: null };
   }
 
   try {
@@ -28,23 +28,14 @@ export function initializeFirebase(): {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    // Initialize Analytics synchronously on the client
-    let analytics: Analytics | null = null;
-    if (typeof window !== 'undefined') {
-      try {
-        analytics = getAnalytics(app);
-      } catch (e) {
-        console.warn("Firebase Analytics could not be initialized in this environment:", e);
-      }
-    }
-
-    return { app, db, auth, analytics };
+    return { app, db, auth };
   } catch (error) {
     console.error('Failed to initialize Firebase services:', error);
-    return { app: null, db: null, auth: null, analytics: null };
+    return { app: null, db: null, auth: null };
   }
 }
 
+export { isSupported };
 export * from './provider';
 export * from './auth/use-user';
 export * from './firestore/use-doc';

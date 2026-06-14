@@ -56,7 +56,7 @@ import {
   subMonths, 
   format 
 } from 'date-fns';
-import { useFirestore, useCollection, useFirebase } from '@/firebase';
+import { useFirestore, useCollection, useAnalyticsInstance } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
@@ -70,7 +70,7 @@ type DetailType = 'revenue' | 'orders' | 'kitchen' | 'customers' | 'activity' | 
 
 export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnalysisProps) => {
   const db = useFirestore();
-  const { analytics } = useFirebase();
+  const analytics = useAnalyticsInstance();
   const [filterType, setFilterType] = useState<FilterType>('today');
   const [activeDetail, setActiveDetail] = useState<DetailType>(null);
   const [mounted, setMounted] = useState(false);

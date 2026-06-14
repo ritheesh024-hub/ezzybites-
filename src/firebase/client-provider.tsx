@@ -6,11 +6,10 @@ import { FirebaseProvider } from './provider';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth } from 'firebase/auth';
-import { Analytics } from 'firebase/analytics';
 import { useStore } from '@/app/lib/store';
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  // Initialize services immediately to avoid startup loading screen
+  // Initialize core services immediately
   const [services] = useState(() => initializeFirebase());
   const { isDarkMode } = useStore();
 
@@ -25,13 +24,12 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
     }
   }, [isDarkMode]);
 
-  // Provide initialized services or nulls if they fail (fail gracefully)
+  // Provide initialized services. Analytics will be handled inside FirebaseProvider.
   return (
     <FirebaseProvider 
       app={services.app as FirebaseApp} 
       db={services.db as Firestore} 
       auth={services.auth as Auth}
-      analytics={services.analytics as Analytics}
     >
       {children}
     </FirebaseProvider>
