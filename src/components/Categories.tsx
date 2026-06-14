@@ -1,14 +1,25 @@
+
 "use client"
 import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { MENU_ITEMS, CATEGORIES } from '@/app/lib/menu-data';
+import placeholderData from '@/app/lib/placeholder-images.json';
 
 export const Categories = () => {
   const router = useRouter();
 
-  // Find a representative image from MENU_ITEMS for each category
+  // Find a representative image for each category
   const categoryItems = CATEGORIES.filter(c => c !== 'All').map(cat => {
+    // 1. Check for dedicated category image first (id matches cat-category-name)
+    const catId = `cat-${cat.toLowerCase().replace(/\s+/g, '-')}`;
+    const dedicatedImg = placeholderData.placeholderImages.find(img => img.id === catId)?.imageUrl;
+    
+    if (dedicatedImg) {
+      return { name: cat, img: dedicatedImg };
+    }
+
+    // 2. Fallback to representative item from MENU_ITEMS
     const item = MENU_ITEMS.find(i => i.category === cat);
     return {
       name: cat,
@@ -31,7 +42,6 @@ export const Categories = () => {
           }}
           className="flex flex-col items-center gap-2 shrink-0 group perspective-1000"
         >
-          {/* Reduced from w-16 to w-14 on mobile */}
           <div className="w-14 h-14 md:w-24 md:h-24 rounded-full bg-white dark:bg-zinc-900 shadow-lg group-hover:shadow-2xl transition-all duration-500 overflow-hidden relative border-2 border-transparent group-hover:border-primary/40 group-active:scale-90">
             <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors z-10" />
             <div className="relative w-full h-full transform group-hover:scale-110 transition-transform duration-700">
