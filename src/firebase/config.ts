@@ -11,7 +11,6 @@ export const firebaseConfig = {
   projectId: "studio-954019231-545c1",
   storageBucket: "studio-954019231-545c1.firebasestorage.app",
   messagingSenderId: "718652602424",
-  appId: "1:718652602424:web:f6c8ebf160a22811148ecd",
-  // Ensure your Measurement ID (e.g., G-XXXXXXXXXX) is included here for GA4 tracking
-  measurementId: "G-XXXXXXXXXX" 
+  appId: "1:718652602424:web:2865b2dcd06548ed148ecd",
+  measurementId: "G-G7JSV6J7NC" 
 };
