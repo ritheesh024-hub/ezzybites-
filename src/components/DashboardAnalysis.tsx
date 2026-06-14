@@ -23,21 +23,14 @@ import {
   ChevronDown,
   Download,
   Zap,
-  TrendingUp,
   Package,
   Loader2,
   Users,
   Target,
-  AlertCircle,
   ArrowUpRight,
-  Printer,
   BarChart3,
-  PieChart as PieChartIcon,
   RefreshCw,
-  Activity,
-  CheckCircle2,
   XCircle,
-  UserCheck
 } from 'lucide-react';
 import {
   XAxis,
@@ -47,11 +40,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { 
@@ -206,13 +194,13 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         <MetricCard label="Customers Base" value={metrics.totalRegisteredUsers} icon={Users} color="text-purple-600 bg-purple-50" onClick={() => setActiveDetail('customers')} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 overflow-hidden">
+      <div className="grid grid-cols-1">
+        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 overflow-hidden">
           <CardHeader className="px-0 pb-8 flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Business Velocity</CardTitle>
             <Badge variant="outline" className="text-[8px] font-black uppercase text-primary border-primary/20 px-3 py-1">Live</Badge>
           </CardHeader>
-          <div className="h-[300px]">
+          <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={[
                 { name: '08:00', val: Math.round(metrics.revenue * 0.1) },
@@ -233,25 +221,6 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                 <Area type="monotone" dataKey="val" stroke="#ef4444" strokeWidth={3} fill="url(#colorVal)" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8">
-          <CardHeader className="px-0 pb-8"><CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Fulfillment</CardTitle></CardHeader>
-          <div className="h-[250px] flex flex-col items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={[{ name: 'Done', value: metrics.completed || 1 }, { name: 'Void', value: metrics.cancelled }].filter(i => i.value > 0)} innerRadius={55} outerRadius={80} dataKey="value">
-                  <Cell fill="#22c55e" /><Cell fill="#ef4444" />
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="w-full space-y-3 mt-6">
-              <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="opacity-50">Success Rate</span></div>
-                <span>{metrics.total > 0 ? Math.round((metrics.completed / metrics.total) * 100) : 100}%</span>
-              </div>
-            </div>
           </div>
         </Card>
       </div>
