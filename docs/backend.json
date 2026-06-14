@@ -352,6 +352,19 @@
         "discount",
         "isActive"
       ]
+    },
+    "LoginEvent": {
+      "title": "Login Event",
+      "description": "Log of successful user and admin logins",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "platform": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -404,6 +417,10 @@
         }
       },
       "description": "Temporary OTP codes for verification"
+    },
+    "/login_events/{eventId}": {
+      "schema": "#/backend/entities/LoginEvent",
+      "description": "Audit logs for authentication events"
     }
   }
 }

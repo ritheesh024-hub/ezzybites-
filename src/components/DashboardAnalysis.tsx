@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -31,6 +32,9 @@ import {
   BarChart3,
   RefreshCw,
   XCircle,
+  ShieldCheck,
+  Eye,
+  History
 } from 'lucide-react';
 import {
   XAxis,
@@ -53,7 +57,7 @@ import {
   format 
 } from 'date-fns';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 
 interface DashboardAnalysisProps {
@@ -62,7 +66,7 @@ interface DashboardAnalysisProps {
 }
 
 type FilterType = 'today' | 'yesterday' | 'currentMonth' | 'lastMonth';
-type DetailType = 'revenue' | 'orders' | 'kitchen' | 'customers' | null;
+type DetailType = 'revenue' | 'orders' | 'kitchen' | 'customers' | 'activity' | null;
 
 export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnalysisProps) => {
   const db = useFirestore();
@@ -76,6 +80,9 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
 
   const usersQuery = useMemo(() => db ? query(collection(db, 'users')) : null, [db]);
   const { data: allUsers = [] } = useCollection<any>(usersQuery);
+
+  const eventsQuery = useMemo(() => db ? query(collection(db, 'login_events'), orderBy('timestamp', 'desc'), limit(50)) : null, [db]);
+  const { data: loginEvents = [], loading: eventsLoading } = useCollection<any>(eventsQuery);
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -100,10 +107,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
     const completed = filteredOrders.filter(o => o.status === 'Delivered');
     const revenue = completed.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
     const pending = filteredOrders.filter(o => ['Pending', 'Preparing', 'Confirmed'].includes(o.status));
-    const cancelled = filteredOrders.filter(o => o.status === 'Cancelled');
     
-    const totalRegisteredUsers = (allUsers || []).length;
-
     const itemMap: Record<string, { name: string, quantity: number, revenue: number }> = {};
     completed.forEach(order => {
       order.items?.forEach((item: any) => {
@@ -121,9 +125,8 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
       total: filteredOrders.length, 
       revenue, 
       pending: pending.length,
-      cancelled: cancelled.length,
       itemStats,
-      totalRegisteredUsers,
+      totalRegisteredUsers: allUsers.length,
       completed: completed.length
     };
   }, [filteredOrders, allUsers]);
@@ -194,13 +197,13 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         <MetricCard label="Customers Base" value={metrics.totalRegisteredUsers} icon={Users} color="text-purple-600 bg-purple-50" onClick={() => setActiveDetail('customers')} />
       </div>
 
-      <div className="grid grid-cols-1">
-        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 overflow-hidden">
+      <div className="grid lg:grid-cols-3 gap-8">
+        <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 overflow-hidden">
           <CardHeader className="px-0 pb-8 flex flex-row items-center justify-between">
             <CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Business Velocity</CardTitle>
             <Badge variant="outline" className="text-[8px] font-black uppercase text-primary border-primary/20 px-3 py-1">Live</Badge>
           </CardHeader>
-          <div className="h-[350px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={[
                 { name: '08:00', val: Math.round(metrics.revenue * 0.1) },
@@ -223,6 +226,42 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
             </ResponsiveContainer>
           </div>
         </Card>
+
+        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden flex flex-col">
+          <CardHeader className="p-8 border-b bg-muted/5 flex flex-row items-center justify-between">
+             <div className="flex items-center gap-3">
+               <ShieldCheck className="w-5 h-5 text-primary" />
+               <CardTitle className="text-sm font-black uppercase tracking-widest">Security Logs</CardTitle>
+             </div>
+             <Button variant="ghost" size="icon" onClick={() => setActiveDetail('activity')} className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"><Eye className="w-4 h-4" /></Button>
+          </CardHeader>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+            {eventsLoading ? (
+              <div className="h-full flex items-center justify-center opacity-20"><Loader2 className="animate-spin" /></div>
+            ) : loginEvents.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-[10px] font-black uppercase opacity-20">No logs found</div>
+            ) : (
+              loginEvents.slice(0, 10).map((event: any, i: number) => (
+                <div key={i} className="flex gap-4 p-3 bg-secondary/20 rounded-2xl border border-border/10">
+                   <div className={cn(
+                     "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                     event.role === 'admin' ? "bg-primary/10 text-primary" : "bg-blue-50 text-blue-600"
+                   )}>
+                     <ShieldCheck className="w-5 h-5" />
+                   </div>
+                   <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase truncate">{event.name}</p>
+                      <p className="text-[8px] font-bold opacity-50 uppercase truncate">{event.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <span className="text-[7px] font-black uppercase bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border">{event.role}</span>
+                         <span className="text-[7px] font-medium opacity-40 uppercase">{event.timestamp?.toDate ? format(event.timestamp.toDate(), 'HH:mm') : 'Recently'}</span>
+                      </div>
+                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
       </div>
 
       <Dialog open={!!activeDetail} onOpenChange={() => setActiveDetail(null)}>
@@ -239,6 +278,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
             {activeDetail === 'orders' && <OrdersDetail orders={orders} onExport={() => handleDownloadReport('orders')} />}
             {activeDetail === 'kitchen' && <KitchenDetail orders={orders} />}
             {activeDetail === 'customers' && <CustomersDetail users={allUsers} onExport={() => handleDownloadReport('customers')} />}
+            {activeDetail === 'activity' && <ActivityDetail events={loginEvents} />}
           </div>
         </DialogContent>
       </Dialog>
@@ -260,7 +300,7 @@ const MetricCard = ({ label, value, icon: Icon, color, onClick }: any) => (
 const RevenueDetail = ({ metrics, onExport }: any) => (
   <div className="space-y-8">
     <Card className="rounded-[2rem] p-8 border-none bg-secondary/20 dark:bg-zinc-900 shadow-inner">
-       <h4 className="text-[11px] font-black uppercase mb-6 flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Top Performers by Revenue</h4>
+       <h4 className="text-[11px] font-black uppercase mb-6 flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Top Performers</h4>
        <div className="space-y-3">
          {metrics.itemStats.slice(0, 5).map((item: any, i: number) => (
            <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm">
@@ -270,7 +310,33 @@ const RevenueDetail = ({ metrics, onExport }: any) => (
          ))}
        </div>
     </Card>
-    <div className="flex justify-end gap-3 pt-4"><Button className="rounded-xl h-12 px-6 font-black uppercase text-[10px] bg-primary text-white shadow-xl shadow-primary/20" onClick={onExport}><Download className="w-4 h-4 mr-2" /> Download Log</Button></div>
+    <div className="flex justify-end pt-4"><Button className="rounded-xl h-12 px-6 font-black uppercase text-[10px] bg-primary text-white shadow-xl shadow-primary/20" onClick={onExport}><Download className="w-4 h-4 mr-2" /> Download Log</Button></div>
+  </div>
+);
+
+const ActivityDetail = ({ events }: { events: any[] }) => (
+  <div className="space-y-6">
+    <h4 className="text-[11px] font-black uppercase flex items-center gap-2 mb-6"><History className="w-4 h-4 text-primary" /> Comprehensive Audit Feed</h4>
+    <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border overflow-hidden shadow-xl">
+       <table className="w-full">
+         <thead className="bg-secondary/20 border-b"><tr className="text-[9px] font-black uppercase text-left"><th className="p-6">Entity</th><th className="p-6">Role</th><th className="p-6">Access Point</th><th className="p-6 text-right">Timestamp</th></tr></thead>
+         <tbody className="divide-y">
+           {events.map((e: any, i: number) => (
+             <tr key={i} className="hover:bg-secondary/5 transition-colors">
+               <td className="p-6">
+                  <div className="flex flex-col">
+                    <span className="font-black text-xs uppercase">{e.name}</span>
+                    <span className="text-[9px] font-medium opacity-40">{e.email}</span>
+                  </div>
+               </td>
+               <td className="p-6"><Badge className="bg-primary/10 text-primary border-none text-[8px] uppercase font-black">{e.role}</Badge></td>
+               <td className="p-6 text-[10px] font-bold opacity-60 uppercase">{e.platform || 'Web App'}</td>
+               <td className="p-6 text-right font-black text-[9px] italic">{e.timestamp?.toDate ? format(e.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}</td>
+             </tr>
+           ))}
+         </tbody>
+       </table>
+    </div>
   </div>
 );
 

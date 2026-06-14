@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import {
   ChevronLeft, AlertCircle, Copy, Check
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +68,21 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter your staff email first." });
+      return;
+    }
+    if (!auth) return;
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({ title: "Reset Link Sent", description: `Check ${email} for instructions.` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message });
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -82,22 +98,23 @@ export default function AdminLoginPage() {
       const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
       let uid = '';
 
+      // 1. Authenticate
       try {
-        // 1. Attempt standard sign-in
         const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
         uid = userCredential.user.uid;
       } catch (signInError: any) {
-        // 2. Resilient Path for Primary Admin
-        // If sign-in fails and it's the primary email, maybe the account isn't created yet in this environment
+        // Master Admin Auto-Provision Path
         if (isPrimary && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
            try {
              const createCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
              uid = createCredential.user.uid;
              toast({ title: "Identity Established", description: "Master admin account synchronized." });
            } catch (createError: any) {
-             // If creation fails with email-already-in-use, it means the password provided was wrong for the existing account
              if (createError.code === 'auth/email-already-in-use') {
-               throw new Error("Authentication failed. Please verify your password.");
+                // Wrong password if email exists
+                toast({ variant: "destructive", title: "Auth Failed", description: "Incorrect password for this staff email." });
+                setLoading(false);
+                return;
              }
              throw createError;
            }
@@ -106,11 +123,10 @@ export default function AdminLoginPage() {
         }
       }
 
-      // 3. Synchronize Firestore Admin Record
+      // 2. Synchronize Firestore Admin Record
       const adminRef = doc(db, 'admins', uid);
       
       if (isPrimary) {
-        // FORCE REPAIR for Master Admin
         const adminData = { 
           id: uid,
           uid: uid,
@@ -128,13 +144,32 @@ export default function AdminLoginPage() {
         const adminSnap = await getDoc(adminRef);
         if (!adminSnap.exists()) {
            await signOut(auth);
-           throw new Error("Access Denied: Staff record not found in registry.");
+           toast({ variant: "destructive", title: "Access Denied", description: "Staff record not found." });
+           setLoading(false);
+           return;
         }
         if (adminSnap.data().status === 'disabled') {
            await signOut(auth);
-           throw new Error("Access Denied: Your staff account is currently inactive.");
+           toast({ variant: "destructive", title: "Account Blocked", description: "Your staff account is inactive." });
+           setLoading(false);
+           return;
         }
         await setDoc(adminRef, { lastLoginAt: serverTimestamp(), onlineStatus: 'online' }, { merge: true });
+      }
+
+      // 3. Log Login Event
+      try {
+        await addDoc(collection(db, 'login_events'), {
+          uid,
+          email: normalizedEmail,
+          name: isPrimary ? "Master Admin" : (normalizedEmail.split('@')[0]),
+          role: isPrimary ? 'admin' : (selectedRole || 'staff'),
+          timestamp: serverTimestamp(),
+          platform: 'Admin Dashboard',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+        });
+      } catch (logErr) {
+        console.warn("Audit logging failed", logErr);
       }
 
       router.push('/admin/dashboard');
@@ -251,7 +286,10 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px) font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Password</Label>
+                <button type="button" onClick={handleForgotPassword} className="text-[9px] font-black text-primary uppercase hover:underline">Forgot?</button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 

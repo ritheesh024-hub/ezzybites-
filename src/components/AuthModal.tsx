@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Copy, Check } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Logo } from './Logo';
@@ -55,7 +56,9 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       
       // 1. Primary Admin / Staff Cross-Sync
       const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
-      if (user.email === PRIMARY_ADMIN_EMAIL) {
+      const isPrimaryAdmin = user.email === PRIMARY_ADMIN_EMAIL;
+
+      if (isPrimaryAdmin) {
         const adminRef = doc(db, 'admins', user.uid);
         await setDoc(adminRef, {
           id: user.uid,
@@ -91,6 +94,21 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           lastLoginAt: serverTimestamp(),
           photoUrl: user.photoURL || userSnap.data().photoUrl 
         }, { merge: true });
+      }
+
+      // 3. Log Login Event
+      try {
+        await addDoc(collection(db, 'login_events'), {
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName || 'Member',
+          role: isPrimaryAdmin ? 'admin' : 'customer',
+          timestamp: serverTimestamp(),
+          platform: 'Web Client',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+        });
+      } catch (logErr) {
+        console.warn("Audit logging failed", logErr);
       }
 
       toast({
