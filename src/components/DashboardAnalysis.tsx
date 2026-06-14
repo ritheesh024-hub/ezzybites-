@@ -265,7 +265,9 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                       <p className="text-[8px] font-bold opacity-50 uppercase truncate">{event.email}</p>
                       <div className="flex items-center gap-2 mt-1">
                          <span className="text-[7px] font-black uppercase bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border">{event.role}</span>
-                         <span className="text-[7px] font-medium opacity-40 uppercase">{event.timestamp?.toDate ? format(event.timestamp.toDate(), 'HH:mm') : 'Recently'}</span>
+                         <span className="text-[7px] font-medium opacity-40 uppercase">
+                           {event.timestamp?.toDate ? format(event.timestamp.toDate(), 'hh:mm a') : 'Recently'}
+                         </span>
                       </div>
                    </div>
                 </div>
@@ -342,7 +344,9 @@ const ActivityDetail = ({ events }: { events: any[] }) => (
                </td>
                <td className="p-6"><Badge className="bg-primary/10 text-primary border-none text-[8px] uppercase font-black">{e.role}</Badge></td>
                <td className="p-6 text-[10px] font-bold opacity-60 uppercase">{e.platform || 'Web App'}</td>
-               <td className="p-6 text-right font-black text-[9px] italic">{e.timestamp?.toDate ? format(e.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}</td>
+               <td className="p-6 text-right font-black text-[9px] italic">
+                 {e.timestamp?.toDate ? format(e.timestamp.toDate(), 'MMM d, hh:mm a') : 'Recently'}
+               </td>
              </tr>
            ))}
          </tbody>
