@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useAuth, useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,6 @@ export default function AdminLoginPage() {
           const adminRef = doc(db, 'admins', user.uid);
           const adminSnap = await getDoc(adminRef);
           
-          // Allow primary admin to enter even if doc is momentarily missing
           if (user.email === PRIMARY_ADMIN_EMAIL || (adminSnap.exists() && adminSnap.data().status === 'active')) {
             router.push('/admin/dashboard');
           }
@@ -81,17 +80,37 @@ export default function AdminLoginPage() {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const isPrimary = normalizedEmail === PRIMARY_ADMIN_EMAIL;
+      let uid = '';
 
-      // 1. Authenticate
-      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      const uid = userCredential.user.uid;
+      try {
+        // 1. Attempt standard sign-in
+        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+        uid = userCredential.user.uid;
+      } catch (signInError: any) {
+        // 2. Resilient Path for Primary Admin
+        // If sign-in fails and it's the primary email, maybe the account isn't created yet in this environment
+        if (isPrimary && (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential')) {
+           try {
+             const createCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+             uid = createCredential.user.uid;
+             toast({ title: "Identity Established", description: "Master admin account synchronized." });
+           } catch (createError: any) {
+             // If creation fails with email-already-in-use, it means the password provided was wrong for the existing account
+             if (createError.code === 'auth/email-already-in-use') {
+               throw new Error("Authentication failed. Please verify your password.");
+             }
+             throw createError;
+           }
+        } else {
+          throw signInError;
+        }
+      }
 
-      // 2. Synchronize Firestore Admin Record
+      // 3. Synchronize Firestore Admin Record
       const adminRef = doc(db, 'admins', uid);
-      const adminSnap = await getDoc(adminRef);
-
+      
       if (isPrimary) {
-        // ALWAYS force-repair Master Admin record on login
+        // FORCE REPAIR for Master Admin
         const adminData = { 
           id: uid,
           uid: uid,
@@ -104,38 +123,26 @@ export default function AdminLoginPage() {
           updatedAt: serverTimestamp()
         };
         await setDoc(adminRef, adminData, { merge: true });
-        toast({ title: "Master Access Verified", description: "Welcome back, Chief." });
-      } else if (!adminSnap.exists()) {
-        // For other roles, if account exists in Auth but not in DB (rare sync issue)
-        const adminData = {
-          id: uid,
-          uid: uid,
-          email: normalizedEmail,
-          name: normalizedEmail.split('@')[0],
-          role: selectedRole || 'cashier',
-          status: 'active',
-          onlineStatus: 'online',
-          createdAt: serverTimestamp(),
-          lastLoginAt: serverTimestamp()
-        };
-        await setDoc(adminRef, adminData);
-      } else if (adminSnap.data().status === 'disabled') {
-        await signOut(auth);
-        throw new Error("Access Denied: This staff account is currently disabled.");
+        toast({ title: "Access Granted", description: "Master Console synchronized." });
       } else {
-        // Standard staff update
-        await setDoc(adminRef, { 
-          lastLoginAt: serverTimestamp(), 
-          onlineStatus: 'online' 
-        }, { merge: true });
+        const adminSnap = await getDoc(adminRef);
+        if (!adminSnap.exists()) {
+           await signOut(auth);
+           throw new Error("Access Denied: Staff record not found in registry.");
+        }
+        if (adminSnap.data().status === 'disabled') {
+           await signOut(auth);
+           throw new Error("Access Denied: Your staff account is currently inactive.");
+        }
+        await setDoc(adminRef, { lastLoginAt: serverTimestamp(), onlineStatus: 'online' }, { merge: true });
       }
 
       router.push('/admin/dashboard');
 
     } catch (error: any) {
-      console.error('Login Error:', error);
+      console.error('Auth Error:', error);
       
-      let message = "An unexpected error occurred.";
+      let message = error.message || "An unexpected error occurred.";
       
       if (error.code === 'auth/unauthorized-domain') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -144,10 +151,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        message = "Incorrect email or password for this staff account.";
-      } else if (error.message) {
-        message = error.message;
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        message = "Incorrect password for this staff account.";
       }
 
       toast({ variant: "destructive", title: "Authentication Failed", description: message });
@@ -246,7 +251,7 @@ export default function AdminLoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
+              <Label className="text-[10px) font-black uppercase tracking-widest ml-1 opacity-60">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
