@@ -48,7 +48,7 @@ function DashboardContent() {
 
       if (!db || !auth) return;
 
-      // IMMEDIATE CHECK: If email is primary admin, bypass Firestore check for speed
+      // Master admin check
       if (user.email === PRIMARY_ADMIN_EMAIL) {
         setAssignedRole('admin');
         if (['admin', 'cashier', 'kitchen'].includes(requestedView)) {
@@ -69,7 +69,7 @@ function DashboardContent() {
           const role = (data.role as StaffRole) || 'cashier';
           
           if (data.status === 'disabled') {
-            toast({ variant: "destructive", title: "Access Revoked", description: "Your staff account has been disabled." });
+            toast({ variant: "destructive", title: "Access Revoked", description: "Account disabled." });
             await auth.signOut();
             router.push('/admin/login');
             return;
@@ -82,7 +82,7 @@ function DashboardContent() {
           toast({
             variant: "destructive",
             title: "Access Restricted",
-            description: "Staff credentials not found. Please sign in via the hub.",
+            description: "Staff record not found.",
           });
           await auth.signOut();
           router.push('/admin/login');
@@ -99,7 +99,7 @@ function DashboardContent() {
   const handleLogout = async () => {
     if (auth) {
       await auth.signOut();
-      toast({ title: "Session Closed", description: "Logged out successfully." });
+      toast({ title: "Session Closed" });
       router.push('/admin/login');
     }
   };
@@ -108,7 +108,6 @@ function DashboardContent() {
     if (assignedRole !== 'admin') return;
     router.push(`/admin/dashboard?view=${role}`);
     setActiveView(role);
-    toast({ title: `View switched to ${role.toUpperCase()}` });
   };
 
   if (userLoading || checkingRole || !activeView) {
@@ -118,8 +117,8 @@ function DashboardContent() {
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-black uppercase tracking-tight">Syncing Identity</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Establishing Secure Hub...</p>
+          <h2 className="text-xl font-black uppercase tracking-tight">Syncing Hub</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Establishing Identity...</p>
         </div>
       </div>
     );
