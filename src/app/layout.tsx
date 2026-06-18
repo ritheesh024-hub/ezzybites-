@@ -1,6 +1,5 @@
 'use client';
 
-import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -8,6 +7,9 @@ import { BrandIntro } from '@/components/BrandIntro';
 import Script from 'next/script';
 import React, { useEffect } from 'react';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { useNotifications } from '@/hooks/use-notifications';
+import { toast } from '@/hooks/use-toast';
+import { ShoppingBag, Bell } from 'lucide-react';
 
 function AnalyticsInitializer() {
   const { trackAppOpen } = useAnalytics();
@@ -16,6 +18,27 @@ function AnalyticsInitializer() {
     trackAppOpen();
   }, [trackAppOpen]);
   
+  return null;
+}
+
+function NotificationInitializer() {
+  const { notifications } = useNotifications();
+  
+  // Listen for the newest notification to show an in-app toast
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latest = notifications[0];
+      const isNew = latest.createdAt?.toDate && (Date.now() - latest.createdAt.toDate().getTime()) < 10000;
+      
+      if (isNew && !latest.read) {
+        toast({
+          title: latest.title,
+          description: latest.body,
+        });
+      }
+    }
+  }, [notifications]);
+
   return null;
 }
 
@@ -35,6 +58,7 @@ export default function RootLayout({
       <body className="font-body antialiased min-h-screen bg-background">
         <FirebaseClientProvider>
           <AnalyticsInitializer />
+          <NotificationInitializer />
           <BrandIntro />
           {children}
           <Toaster />

@@ -16,13 +16,14 @@ import {
   Home,
   Utensils,
   ChevronRight,
-  Moon,
-  Sun,
   MapPin,
   TicketPercent,
   Wallet,
   Settings,
-  Gift
+  Gift,
+  Bell,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
@@ -30,12 +31,14 @@ import { cn } from '@/lib/utils';
 import { useUser, useAuth, useFirestore, useDoc } from '@/firebase';
 import { AuthModal } from './AuthModal';
 import { CartDrawer } from './CartDrawer';
+import { NotificationCenter } from './NotificationCenter';
 import { useStore } from '@/app/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Logo } from './Logo';
 import { EditProfileModal } from './EditProfileModal';
+import { useNotifications } from '@/hooks/use-notifications';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -65,6 +68,7 @@ export const Navbar = () => {
   const auth = useAuth();
   const db = useFirestore();
   const { cart, isDarkMode, toggleDarkMode } = useStore();
+  const { unreadCount } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -142,6 +146,22 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
+            {user && (
+              <NotificationCenter>
+                <Button variant="ghost" size="icon" className={cn(
+                  "rounded-full w-9 h-9 transition-all relative",
+                  scrolled ? "hover:bg-primary/5 text-foreground" : "hover:bg-white/10 text-white"
+                )}>
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-primary text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-background shadow-xl animate-in zoom-in">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </NotificationCenter>
+            )}
+
             <ThemeToggle className="hidden md:flex h-8 w-8" />
             
             <div className="hidden md:flex items-center gap-4">

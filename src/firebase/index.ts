@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
+import { getMessaging, Messaging, isSupported as isMessagingSupported } from 'firebase/messaging';
 import { firebaseConfig } from './config';
 
 /**
@@ -12,6 +12,7 @@ export function initializeFirebase(): {
   app: FirebaseApp | null; 
   db: Firestore | null; 
   auth: Auth | null;
+  messaging: Messaging | null;
 } {
   // Check if config has been updated from defaults
   const isConfigValid = 
@@ -20,7 +21,7 @@ export function initializeFirebase(): {
 
   if (!isConfigValid) {
     console.warn('Firebase configuration is missing or incomplete.');
-    return { app: null, db: null, auth: null };
+    return { app: null, db: null, auth: null, messaging: null };
   }
 
   try {
@@ -28,14 +29,21 @@ export function initializeFirebase(): {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    return { app, db, auth };
+    // Messaging is client-only and environment dependent
+    let messaging: Messaging | null = null;
+    if (typeof window !== 'undefined') {
+      isMessagingSupported().then(supported => {
+        if (supported) messaging = getMessaging(app);
+      });
+    }
+    
+    return { app, db, auth, messaging };
   } catch (error) {
     console.error('Failed to initialize Firebase services:', error);
-    return { app: null, db: null, auth: null };
+    return { app: null, db: null, auth: null, messaging: null };
   }
 }
 
-export { isSupported };
 export * from './provider';
 export * from './auth/use-user';
 export * from './firestore/use-doc';

@@ -15,12 +15,14 @@ import {
   Zap,
   BoxSelect,
   Layers,
-  Ban
+  Ban,
+  Bell,
+  Megaphone
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, limit, doc, updateDoc, orderBy, increment, serverTimestamp } from 'firebase/firestore';
+import { collection, query, limit, doc, updateDoc, orderBy, increment, serverTimestamp, addDoc } from 'firebase/firestore';
 import { DashboardAnalysis } from './DashboardAnalysis';
 import { BillingSystem } from './BillingSystem';
 import { StoreSettings } from './StoreSettings';
@@ -30,6 +32,7 @@ import { StaffManagement } from './StaffManagement';
 import { CouponManager } from './CouponManager';
 import { UserManagement } from './UserManagement';
 import { ProductManagement } from './ProductManagement';
+import { AdminNotificationManager } from './AdminNotificationManager';
 import { cn } from '@/lib/utils';
 import { useSound } from '@/hooks/use-sound';
 import { StaffRole } from '@/app/admin/dashboard/page';
@@ -82,7 +85,8 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
     if (newStatus === 'Confirmed') updateData.acceptedAt = serverTimestamp();
 
     updateDoc(orderRef, updateData)
-      .then(() => {
+      .then(async () => {
+        // 1. Log staff action
         const staffRef = doc(db, 'admins', user.uid);
         updateDoc(staffRef, { 
           'stats.kitchenUpdates': increment(1), 
@@ -90,6 +94,36 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
         }).catch(() => {});
 
         logStaffAction(user.uid, user.displayName || 'Staff', 'ORDER_STATUS_CHANGE', `Order #${id} changed to ${newStatus}`);
+
+        // 2. Trigger push notification for customer
+        const orderSnap = realOrders.find(o => o.orderId === id);
+        if (orderSnap?.userId) {
+          const notifRef = collection(db, 'users', orderSnap.userId, 'notifications');
+          const titles: Record<string, string> = {
+            'Confirmed': 'Order Confirmed! ✅',
+            'Preparing': 'Chef is Cooking 🍳',
+            'Out for Delivery': 'Rider is Dispatched 🛵',
+            'Delivered': 'Enjoy your Bites! 🍱',
+            'Cancelled': 'Order Cancelled ❌'
+          };
+          const bodies: Record<string, string> = {
+            'Confirmed': 'Your order has been accepted by the station.',
+            'Preparing': 'Fresh ingredients are being prepared for your meal.',
+            'Out for Delivery': 'Your premium bites are on the way to your sanctuary.',
+            'Delivered': 'Your order was successfully handed over. Thank you!',
+            'Cancelled': 'We regret that your order was revoked. Contact support if needed.'
+          };
+
+          await addDoc(notifRef, {
+            title: titles[newStatus] || `Update: ${newStatus}`,
+            body: bodies[newStatus] || `Your order status changed to ${newStatus}.`,
+            type: 'order',
+            orderId: id,
+            link: `/orders/${id}`,
+            read: false,
+            createdAt: serverTimestamp()
+          });
+        }
 
         playSound('success');
         toast({ title: `Order ${newStatus}` });
@@ -107,7 +141,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
   const availableTabs = useMemo(() => {
     if (activeView === 'kitchen') return ['kitchen'];
     if (activeView === 'cashier') return ['overview', 'billing', 'orders'];
-    return ['overview', 'users', 'billing', 'orders', 'products', 'coupons', 'staff', 'settings'];
+    return ['overview', 'users', 'billing', 'orders', 'products', 'coupons', 'notifications', 'staff', 'settings'];
   }, [activeView]);
 
   return (
@@ -144,9 +178,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                     )}
                     {tab === 'products' && <Layers className="w-4 h-4" />}
                     {tab === 'coupons' && <TicketPercent className="w-4 h-4" />}
+                    {tab === 'notifications' && <Megaphone className="w-4 h-4" />}
                     {tab === 'staff' && <Fingerprint className="w-4 h-4" />}
                     {tab === 'settings' && <Settings2 className="w-4 h-4" />}
-                    <span className="capitalize">{tab === 'overview' ? 'Analytics' : tab === 'billing' ? 'Counter' : tab === 'products' ? 'Inventory' : tab}</span>
+                    <span className="capitalize">{tab === 'overview' ? 'Analytics' : tab === 'billing' ? 'Counter' : tab === 'products' ? 'Inventory' : tab === 'notifications' ? 'Broadcast' : tab}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -170,7 +205,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <section className="flex-1 min-w-0 min-h-[70vh]">
+        <section className="flex-1 min-w-0 min-h-[80vh]">
           <AnimatePresence mode="wait">
             {availableTabs.map((tab) => (
               <TabsContent key={tab} value={tab} className="mt-0 outline-none">
@@ -186,6 +221,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                   {tab === 'kitchen' && <KitchenSystem orders={realOrders || []} onUpdateStatus={handleUpdateStatus} />}
                   {tab === 'products' && <ProductManagement />}
                   {tab === 'coupons' && <CouponManager />}
+                  {tab === 'notifications' && <AdminNotificationManager />}
                   {tab === 'staff' && <StaffManagement />}
                   {tab === 'settings' && <StoreSettings />}
                   {tab === 'orders' && <OrderGrid orderGroups={orderGroups} onOrderClick={setSelectedOrderForView} />}
