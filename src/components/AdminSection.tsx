@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,9 +50,10 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
   const { user } = useUser();
   const { playSound, isAdminMuted, toggleAdminMute } = useSound();
   
+  // High-capacity query for robust analysis from Day 1
   const ordersQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(500));
+    return query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(1000));
   }, [db]);
   const { data: realOrders } = useCollection<any>(ordersQuery);
 

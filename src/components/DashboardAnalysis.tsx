@@ -34,7 +34,8 @@ import {
   ShieldCheck,
   Eye,
   History,
-  Activity
+  Activity,
+  Calendar
 } from 'lucide-react';
 import {
   XAxis,
@@ -54,7 +55,8 @@ import {
   startOfMonth, 
   endOfMonth, 
   subMonths, 
-  format 
+  format,
+  startOfHour
 } from 'date-fns';
 import { useFirestore, useCollection, useAnalyticsInstance } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
@@ -65,7 +67,7 @@ interface DashboardAnalysisProps {
   products: any[];
 }
 
-type FilterType = 'today' | 'yesterday' | 'currentMonth' | 'lastMonth';
+type FilterType = 'today' | 'yesterday' | 'currentMonth' | 'lastMonth' | 'all';
 type DetailType = 'revenue' | 'orders' | 'kitchen' | 'customers' | 'activity' | null;
 
 export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnalysisProps) => {
@@ -82,7 +84,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
   const usersQuery = useMemo(() => db ? query(collection(db, 'users')) : null, [db]);
   const { data: allUsers = [] } = useCollection<any>(usersQuery);
 
-  const eventsQuery = useMemo(() => db ? query(collection(db, 'login_events'), orderBy('timestamp', 'desc'), limit(50)) : null, [db]);
+  const eventsQuery = useMemo(() => db ? query(collection(db, 'login_events'), orderBy('timestamp', 'desc'), limit(100)) : null, [db]);
   const { data: loginEvents = [], loading: eventsLoading } = useCollection<any>(eventsQuery);
 
   const dateRange = useMemo(() => {
@@ -92,17 +94,18 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
       case 'yesterday': { const d = subDays(now, 1); return { start: startOfDay(d), end: endOfDay(d) }; }
       case 'currentMonth': return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'lastMonth': { const d = subMonths(now, 1); return { start: startOfMonth(d), end: endOfMonth(d) }; }
+      case 'all': return { start: new Date(2024, 0, 1), end: endOfDay(now) }; // Project start
       default: return { start: startOfDay(now), end: endOfDay(now) };
     }
   }, [filterType]);
 
   const filteredOrders = useMemo(() => {
     return (orders || []).filter(o => {
-      if (!o.createdAt?.toDate) return false;
+      if (!o.createdAt?.toDate) return filterType === 'all';
       const orderDate = o.createdAt.toDate();
       return isWithinInterval(orderDate, { start: dateRange.start, end: dateRange.end });
     });
-  }, [orders, dateRange]);
+  }, [orders, dateRange, filterType]);
 
   const metrics = useMemo(() => {
     const completed = filteredOrders.filter(o => o.status === 'Delivered');
@@ -122,15 +125,32 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
 
     const itemStats = Object.values(itemMap).sort((a, b) => b.quantity - a.quantity);
 
+    // Dynamic Chart Data Generation
+    const chartMap: Record<string, number> = {};
+    filteredOrders.forEach(order => {
+      if (!order.createdAt?.toDate) return;
+      const date = order.createdAt.toDate();
+      const label = filterType === 'today' || filterType === 'yesterday' 
+        ? format(date, 'HH:00') 
+        : format(date, 'MMM dd');
+      
+      chartMap[label] = (chartMap[label] || 0) + (Number(order.total) || 0);
+    });
+
+    const chartData = Object.entries(chartMap)
+      .map(([name, val]) => ({ name, val }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     return { 
       total: filteredOrders.length, 
       revenue, 
       pending: pending.length,
       itemStats,
       totalRegisteredUsers: allUsers.length,
-      completed: completed.length
+      completed: completed.length,
+      chartData
     };
-  }, [filteredOrders, allUsers]);
+  }, [filteredOrders, allUsers, filterType]);
 
   const handleDownloadReport = (type: string) => {
     const reportDate = format(new Date(), 'yyyy-MM-dd');
@@ -166,6 +186,15 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
               {type}
             </button>
           ))}
+          <button
+            onClick={() => setFilterType('all')}
+            className={cn(
+              "px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all shrink-0 flex items-center gap-2",
+              filterType === 'all' ? "bg-white dark:bg-zinc-700 text-primary shadow-sm" : "text-muted-foreground hover:bg-white/40"
+            )}
+          >
+            <Calendar className="w-3 h-3" /> Since Launch
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={cn(
@@ -211,17 +240,15 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
       <div className="grid lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-2 rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 overflow-hidden">
           <CardHeader className="px-0 pb-8 flex flex-row items-center justify-between">
-            <CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Business Velocity</CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-black font-headline uppercase tracking-tighter">Business Velocity</CardTitle>
+              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Revenue performance over time</p>
+            </div>
             <Badge variant="outline" className="text-[8px] font-black uppercase text-primary border-primary/20 px-3 py-1">Live</Badge>
           </CardHeader>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={[
-                { name: '08:00', val: Math.round(metrics.revenue * 0.1) },
-                { name: '12:00', val: Math.round(metrics.revenue * 0.4) },
-                { name: '16:00', val: Math.round(metrics.revenue * 0.2) },
-                { name: '20:00', val: Math.round(metrics.revenue * 0.3) },
-              ]}>
+              <AreaChart data={metrics.chartData.length > 0 ? metrics.chartData : [{ name: '00:00', val: 0 }]}>
                 <defs>
                   <linearGradient id="colorVal" x1="0" y2="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
@@ -231,7 +258,10 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900}} />
-                <Tooltip contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.05)'}} />
+                <Tooltip 
+                  contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', fontWeight: 900, fontSize: 10}}
+                  formatter={(value: number) => [`₹${value}`, 'Revenue']}
+                />
                 <Area type="monotone" dataKey="val" stroke="#ef4444" strokeWidth={3} fill="url(#colorVal)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -252,7 +282,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
             ) : loginEvents.length === 0 ? (
               <div className="h-full flex items-center justify-center text-[10px] font-black uppercase opacity-20">No logs found</div>
             ) : (
-              loginEvents.slice(0, 10).map((event: any, i: number) => (
+              loginEvents.slice(0, 15).map((event: any, i: number) => (
                 <div key={i} className="flex gap-4 p-3 bg-secondary/20 rounded-2xl border border-border/10">
                    <div className={cn(
                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
@@ -260,12 +290,15 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                    )}>
                      <ShieldCheck className="w-5 h-5" />
                    </div>
-                   <div className="min-w-0">
+                   <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-black uppercase truncate">{event.name}</p>
                       <p className="text-[8px] font-bold opacity-50 uppercase truncate">{event.email}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                         <span className="text-[7px] font-black uppercase bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border">{event.role}</span>
-                         <span className="text-[7px] font-medium opacity-40 uppercase">
+                      <div className="flex items-center justify-between mt-1">
+                         <div className="flex gap-1">
+                           <span className="text-[7px] font-black uppercase bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border">{event.role}</span>
+                           <span className="text-[7px] font-black uppercase bg-white dark:bg-zinc-800 px-1.5 py-0.5 rounded border">{event.platform || 'Web'}</span>
+                         </div>
+                         <span className="text-[7px] font-bold opacity-40 uppercase">
                            {event.timestamp?.toDate ? format(event.timestamp.toDate(), 'hh:mm a') : 'Recently'}
                          </span>
                       </div>
@@ -288,7 +321,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
           </div>
           <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
             {activeDetail === 'revenue' && <RevenueDetail metrics={metrics} onExport={() => handleDownloadReport('revenue')} />}
-            {activeDetail === 'orders' && <OrdersDetail orders={orders} onExport={() => handleDownloadReport('orders')} />}
+            {activeDetail === 'orders' && <OrdersDetail orders={filteredOrders} onExport={() => handleDownloadReport('orders')} />}
             {activeDetail === 'kitchen' && <KitchenDetail orders={orders} />}
             {activeDetail === 'customers' && <CustomersDetail users={allUsers} onExport={() => handleDownloadReport('customers')} />}
             {activeDetail === 'activity' && <ActivityDetail events={loginEvents} />}
@@ -315,10 +348,16 @@ const RevenueDetail = ({ metrics, onExport }: any) => (
     <Card className="rounded-[2rem] p-8 border-none bg-secondary/20 dark:bg-zinc-900 shadow-inner">
        <h4 className="text-[11px] font-black uppercase mb-6 flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Top Performers</h4>
        <div className="space-y-3">
-         {metrics.itemStats.slice(0, 5).map((item: any, i: number) => (
+         {metrics.itemStats.slice(0, 10).map((item: any, i: number) => (
            <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm">
-             <span className="font-black text-[11px] uppercase truncate flex-1 pr-4">{item.name}</span>
-             <span className="font-black text-primary italic whitespace-nowrap">₹{item.revenue}</span>
+             <div className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">#{i+1}</div>
+                <span className="font-black text-[11px] uppercase truncate">{item.name}</span>
+             </div>
+             <div className="flex items-center gap-6">
+                <span className="text-[9px] font-black uppercase opacity-40">{item.quantity} sold</span>
+                <span className="font-black text-primary italic whitespace-nowrap">₹{item.revenue}</span>
+             </div>
            </div>
          ))}
        </div>
@@ -345,7 +384,7 @@ const ActivityDetail = ({ events }: { events: any[] }) => (
                <td className="p-6"><Badge className="bg-primary/10 text-primary border-none text-[8px] uppercase font-black">{e.role}</Badge></td>
                <td className="p-6 text-[10px] font-bold opacity-60 uppercase">{e.platform || 'Web App'}</td>
                <td className="p-6 text-right font-black text-[9px] italic">
-                 {e.timestamp?.toDate ? format(e.timestamp.toDate(), 'MMM d, hh:mm a') : 'Recently'}
+                 {e.timestamp?.toDate ? format(e.timestamp.toDate(), 'MMM dd, hh:mm a') : 'Recently'}
                </td>
              </tr>
            ))}
@@ -357,20 +396,40 @@ const ActivityDetail = ({ events }: { events: any[] }) => (
 
 const OrdersDetail = ({ orders, onExport }: any) => {
   const counts = useMemo(() => {
-    const c: any = { Pending: 0, Confirmed: 0, Preparing: 0, Delivered: 0 };
-    orders.forEach(o => { if (c[o.status] !== undefined) c[o.status]++; });
+    const c: any = { Pending: 0, Confirmed: 0, Preparing: 0, Delivered: 0, Cancelled: 0 };
+    orders.forEach((o: any) => { if (c[o.status] !== undefined) c[o.status]++; });
     return c;
   }, [orders]);
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Object.entries(counts).map(([label, val]: any) => (
           <div key={label} className="p-6 rounded-[2rem] bg-secondary/20 dark:bg-zinc-900 text-center shadow-inner">
              <p className="text-[9px] font-black uppercase opacity-50 mb-1">{label}</p>
              <p className="text-2xl font-black">{val}</p>
           </div>
         ))}
+      </div>
+      <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border overflow-hidden shadow-xl">
+        <table className="w-full">
+          <thead className="bg-secondary/20 border-b"><tr className="text-[9px] font-black uppercase text-left"><th className="p-6">Order ID</th><th className="p-6">Customer</th><th className="p-6">Status</th><th className="p-6 text-right">Settlement</th></tr></thead>
+          <tbody className="divide-y">
+            {orders.slice(0, 50).map((o: any) => (
+              <tr key={o.id} className="hover:bg-secondary/5 transition-colors">
+                <td className="p-6 font-black text-xs text-primary">#{o.orderId}</td>
+                <td className="p-6">
+                  <div className="flex flex-col">
+                    <span className="font-black text-[11px] uppercase">{o.customerName}</span>
+                    <span className="text-[9px] font-medium opacity-40">{o.customerPhone}</span>
+                  </div>
+                </td>
+                <td className="p-6"><Badge variant="outline" className="text-[8px] font-black uppercase">{o.status}</Badge></td>
+                <td className="p-6 text-right font-black text-sm italic">₹{o.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <div className="flex justify-end pt-4"><Button className="rounded-xl h-12 px-6 font-black uppercase text-[10px] bg-primary text-white shadow-xl shadow-primary/20" onClick={onExport}><Download className="w-4 h-4 mr-2" /> Export History</Button></div>
     </div>
@@ -381,11 +440,11 @@ const KitchenDetail = ({ orders }: any) => (
   <div className="space-y-6">
     <h4 className="text-[11px] font-black uppercase flex items-center gap-2 mb-6"><Zap className="w-4 h-4 text-orange-500" /> Active Operational Feed</h4>
     <div className="space-y-3">
-      {orders.filter((o: any) => ['Pending', 'Confirmed', 'Preparing'].includes(o.status)).slice(0, 10).map((o: any) => (
+      {orders.filter((o: any) => ['Pending', 'Confirmed', 'Preparing'].includes(o.status)).slice(0, 15).map((o: any) => (
         <div key={o.id} className="flex items-center justify-between p-4 bg-secondary/20 dark:bg-zinc-900 rounded-2xl shadow-inner border border-white/5">
           <div className="flex-1 truncate pr-4">
              <p className="font-black text-[11px] uppercase truncate">{o.items?.map((i: any) => i.name).join(', ')}</p>
-             <p className="text-[8px] font-bold opacity-40 uppercase">Ticket #{o.orderId}</p>
+             <p className="text-[8px] font-bold opacity-40 uppercase">Ticket #{o.orderId} • {o.orderType || 'Online'}</p>
           </div>
           <Badge className="font-black text-[8px] uppercase bg-primary text-white border-none shadow-sm px-3">{o.status}</Badge>
         </div>
@@ -398,15 +457,18 @@ const CustomersDetail = ({ users, onExport }: any) => (
   <div className="space-y-8">
     <Card className="rounded-[2.5rem] p-0 border-none bg-white dark:bg-zinc-900 shadow-xl overflow-hidden border border-border/40">
        <table className="w-full">
-         <thead className="bg-secondary/20 border-b"><tr className="text-[9px] font-black uppercase text-left"><th className="p-6">Customer</th><th className="p-6 text-right">Engagement</th></tr></thead>
+         <thead className="bg-secondary/20 border-b"><tr className="text-[9px] font-black uppercase text-left"><th className="p-6">Customer</th><th className="p-6">Loyalty</th><th className="p-6 text-right">Engagement</th></tr></thead>
          <tbody className="divide-y">
-           {(users || []).slice(0, 8).map((u: any, i: number) => (
+           {(users || []).slice(0, 20).map((u: any, i: number) => (
              <tr key={i} className="hover:bg-secondary/5 transition-colors">
                <td className="p-6">
                   <div className="flex flex-col">
                     <span className="font-black text-xs uppercase">{u.name || 'Anonymous'}</span>
                     <span className="text-[9px] font-medium opacity-40">{u.email}</span>
                   </div>
+               </td>
+               <td className="p-6">
+                 <Badge variant="outline" className="text-[8px] font-black uppercase text-orange-600 bg-orange-50 border-orange-100">{u.rewardCoins || 0} Coins</Badge>
                </td>
                <td className="p-6 text-right font-black text-[10px] text-primary italic">{u.orderCount || 0} Orders</td>
              </tr>
