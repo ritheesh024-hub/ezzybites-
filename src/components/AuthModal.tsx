@@ -11,7 +11,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Copy, Check, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Loader2, Copy, Check, ShieldAlert, AlertCircle, ExternalLink } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup, setPersistence, browserLocalPersistence, signOut } from 'firebase/auth';
 import { useAuth, useFirestore } from '@/firebase';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
@@ -28,7 +28,7 @@ interface AuthModalProps {
 
 export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [authError, setAuthError] = useState<{ message: string; domain?: string; isRestricted?: boolean } | null>(null);
+  const [authError, setAuthError] = useState<{ message: string; domain?: string; isRestricted?: boolean; isDomainError?: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
   
   const auth = useAuth();
@@ -39,7 +39,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     if (typeof navigator !== 'undefined') {
       navigator.clipboard.writeText(domain);
       setCopied(true);
-      toast({ title: "Domain Copied", description: "Update Firebase Authorized Domains." });
+      toast({ title: "Domain Copied", description: "Now add this to Firebase authorized domains." });
       setTimeout(() => setCopied(false), 2000);
     }
   };
@@ -60,6 +60,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       
       const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
       
+      // Strict separation check
       if (user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL) {
         await signOut(auth);
         setAuthError({
@@ -94,6 +95,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         trackLogin('google');
       }
 
+      // Log successful login audit
       try {
         await addDoc(collection(db, 'login_events'), {
           uid: user.uid,
@@ -109,24 +111,30 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
       toast({
         title: "Authorized Successfully",
-        description: `Welcome, ${user.displayName?.split(' ')[0] || 'Member'}.`,
+        description: `Welcome back, ${user.displayName?.split(' ')[0] || 'Member'}.`,
       });
       
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: any) {
+      console.error("Auth Error Code:", error.code);
+      
       if (error.code === 'auth/popup-closed-by-user') {
         setLoading(false);
         return; 
       }
 
-      if (error.code === 'auth/unauthorized-domain') {
-        const domain = typeof window !== 'undefined' ? window.location.hostname : '';
+      if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-allowed') {
+        const domain = typeof window !== 'undefined' ? window.location.hostname : 'your-workstation-domain';
         setAuthError({
-          message: "Domain not authorized. Please update Firebase Console settings.",
-          domain
+          message: "Authorization failed because this domain is not white-listed in Firebase Console.",
+          domain,
+          isDomainError: true
         });
       } else {
+        setAuthError({
+          message: error.message || "An unexpected identity error occurred. Please try again."
+        });
         toast({
           variant: "destructive",
           title: "Authentication Failed",
@@ -147,7 +155,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           </div>
           <div className="space-y-3">
             <DialogTitle className="text-3xl font-black font-headline tracking-tighter uppercase leading-none">
-              Sign In / <span className="text-primary italic">Sign Up</span>
+              Identity <span className="text-primary italic">Gateway</span>
             </DialogTitle>
             <DialogDescription className="text-sm font-medium text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
               Securely access your account to track orders and save favorites.
@@ -156,30 +164,40 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         </DialogHeader>
 
         {authError && (
-          <Alert variant="destructive" className="mt-6 border-none bg-red-50 dark:bg-red-950/20 text-red-900 dark:text-red-400 rounded-2xl">
+          <Alert variant="destructive" className="mt-6 border-none bg-red-50 dark:bg-red-950/20 text-red-900 dark:text-red-400 rounded-2xl animate-in slide-in-from-top-2">
             <ShieldAlert className="h-5 w-5" />
             <AlertTitle className="font-black text-[10px] uppercase mb-2 tracking-widest">
-              {authError.isRestricted ? "Access Restricted" : "Setup Required"}
+              {authError.isRestricted ? "Access Restricted" : authError.isDomainError ? "Console Setup Required" : "Auth Failed"}
             </AlertTitle>
             <AlertDescription className="text-[11px] font-medium leading-relaxed">
               {authError.message}
               {authError.domain && (
-                <div className="mt-3 p-3 bg-white/50 dark:bg-black/20 rounded-xl flex items-center justify-between gap-2 border border-red-100 dark:border-red-900/30">
-                  <code className="text-[10px] font-mono break-all">{authError.domain}</code>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-8 w-8 shrink-0 hover:bg-red-100"
-                    onClick={() => handleCopyDomain(authError.domain!)}
-                  >
-                    {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                  </Button>
+                <div className="mt-3 p-4 bg-white/50 dark:bg-black/20 rounded-xl space-y-3 border border-red-100 dark:border-red-900/30">
+                  <div className="flex items-center justify-between gap-2">
+                    <code className="text-[9px] font-mono break-all opacity-70">{authError.domain}</code>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-8 w-8 shrink-0 hover:bg-red-100 dark:hover:bg-red-900/40"
+                      onClick={() => handleCopyDomain(authError.domain!)}
+                    >
+                      {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                  <div className="pt-2 border-t border-red-100 dark:border-red-900/20">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-60 mb-2">Instructions for Admin:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-[8px] uppercase font-bold tracking-tight">
+                      <li>Open Firebase Console</li>
+                      <li>Go to Build > Authentication > Settings</li>
+                      <li>Add the domain above to "Authorized domains"</li>
+                    </ol>
+                  </div>
                 </div>
               )}
               {authError.isRestricted && (
                 <div className="mt-4">
-                   <Button variant="outline" className="w-full h-10 rounded-xl font-black uppercase text-[8px] tracking-widest border-red-200 text-red-700 bg-white hover:bg-red-50" onClick={() => window.location.href = '/admin/login'}>
-                     Go to Staff Hub
+                   <Button variant="outline" className="w-full h-11 rounded-xl font-black uppercase text-[9px] tracking-widest border-red-200 text-red-700 bg-white hover:bg-red-50 gap-2" onClick={() => window.location.href = '/admin/login'}>
+                     Launch Staff Hub <ExternalLink className="w-3 h-3" />
                    </Button>
                 </div>
               )}
@@ -207,21 +225,21 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           </Button>
           
           <div className="flex items-center gap-2 justify-center py-4">
-            <span className="h-px bg-border flex-1" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-4">Authorized Access Only</span>
-            <span className="h-px bg-border flex-1" />
+            <span className="h-px bg-border flex-1 opacity-50" />
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground px-4 opacity-40">Zero Trust Network</span>
+            <span className="h-px bg-border flex-1 opacity-50" />
           </div>
           
           <div className="text-center">
             <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
-              Secure infrastructure powered by Ezzy Bites
+              Authorized access protected by Firebase identity
             </p>
           </div>
         </div>
 
         <DialogFooter className="mt-12">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 mx-auto">
-            Ezzy Bites Premium Food-Tech
+          <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/30 mx-auto">
+            Ezzy Bites • Quantum Sync Active
           </p>
         </DialogFooter>
       </DialogContent>
