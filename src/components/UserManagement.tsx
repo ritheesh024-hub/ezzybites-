@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -9,27 +10,28 @@ import {
   Users, Search, Loader2, 
   CalendarDays, Mail, Phone,
   Clock, ShieldCheck, UserCircle2,
-  Download, Filter, ArrowUpDown
+  Download, Filter, ArrowUpDown,
+  UserCheck
 } from 'lucide-react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export const UserManagement = () => {
   const db = useFirestore();
-  const usersQuery = useMemo(() => db ? query(collection(db, 'users'), orderBy('createdAt', 'desc')) : null, [db]);
+  const usersQuery = useMemo(() => db ? query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(1000)) : null, [db]);
   const { data: users, loading } = useCollection<any>(usersQuery);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'new'>('all');
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
     return users.filter(u => {
       const matchesSearch = (u.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           (u.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+                           (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (u.phone || '').includes(searchQuery);
       return matchesSearch;
     });
   }, [users, searchQuery]);
@@ -49,114 +51,119 @@ export const UserManagement = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `EzzyBites_Users_Audit_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute("download", `EzzyBites_CustomerAudit_${format(new Date(), 'yyyy-MM-dd')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="space-y-1">
-          <h2 className="text-4xl font-black font-headline uppercase tracking-tighter">Customer <span className="text-primary italic">Base</span></h2>
-          <p className="text-muted-foreground text-sm font-medium">Monitor user activity, preferences, and retention trends.</p>
+          <h2 className="text-4xl font-black font-headline uppercase tracking-tighter italic">Customer <span className="text-primary">CRM</span></h2>
+          <p className="text-muted-foreground text-sm font-medium tracking-tight">Enterprise directory for user identity and retention management.</p>
         </div>
-        <Button onClick={handleExportUsers} className="h-14 px-8 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2 bg-primary text-white shadow-xl shadow-primary/20 hover:scale-105 transition-all">
-          <Download className="w-4 h-4" /> Export User Audit
+        <Button onClick={handleExportUsers} className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 bg-zinc-950 text-white shadow-3xl hover:bg-zinc-800 transition-all">
+          <Download className="w-5 h-5" /> Export Audit Log
         </Button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 items-center bg-white dark:bg-zinc-900 p-4 rounded-[2rem] border shadow-sm">
+      <div className="flex flex-col lg:flex-row gap-6 items-center bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border shadow-sm border-zinc-100">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground opacity-40" />
           <Input 
-            placeholder="Search by name or email..." 
+            placeholder="Search by identity, email or contact..." 
             value={searchQuery} 
             onChange={(e) => setSearchQuery(e.target.value)} 
-            className="h-12 pl-12 rounded-xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold" 
+            className="h-14 pl-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-base" 
           />
         </div>
-        <div className="flex gap-2 w-full lg:w-auto">
-          <Badge variant="outline" className="h-12 px-5 rounded-xl bg-secondary/30 border-none font-black uppercase text-[9px] tracking-widest items-center flex gap-2">
-             <Users className="w-3 h-3" /> {filteredUsers.length} Total
+        <div className="flex gap-4 w-full lg:w-auto">
+          <Badge variant="outline" className="h-14 px-6 rounded-2xl bg-secondary/50 border-none font-black uppercase text-[10px] tracking-widest items-center flex gap-3">
+             <Users className="w-4 h-4 text-primary" /> {filteredUsers.length} Recorded
           </Badge>
         </div>
       </div>
 
-      <Card className="rounded-[2.5rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden">
+      <Card className="rounded-[3rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden border">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-40 text-center space-y-4">
-              <Loader2 className="animate-spin mx-auto w-12 h-12 text-primary" />
-              <p className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">Syncing Database...</p>
+            <div className="p-48 text-center space-y-6">
+              <Loader2 className="animate-spin mx-auto w-12 h-12 text-primary opacity-20" />
+              <p className="font-black uppercase tracking-[0.3em] text-[10px] text-muted-foreground animate-pulse">Establishing Identity Sync...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full">
-                <thead className="bg-secondary/10 dark:bg-zinc-800 border-b">
-                  <tr className="text-[10px] font-black uppercase text-muted-foreground text-left">
-                    <th className="px-8 py-6">Customer Profile</th>
-                    <th className="px-8 py-6">Verification</th>
-                    <th className="px-8 py-6">Engagement</th>
-                    <th className="px-8 py-6">Registered On</th>
+                <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100">
+                  <tr className="text-[10px] font-black uppercase text-muted-foreground text-left tracking-widest">
+                    <th className="px-10 py-6">Identity Registry</th>
+                    <th className="px-10 py-6">Verification Node</th>
+                    <th className="px-10 py-6">Behavioral Metrics</th>
+                    <th className="px-10 py-6">Registry Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-20 text-center opacity-30">
-                        <UserCircle2 className="w-12 h-12 mx-auto mb-4" />
-                        <p className="font-black uppercase tracking-widest text-xs">No users matched your search</p>
+                      <td colSpan={4} className="py-24 text-center opacity-10">
+                        <UserCircle2 className="w-16 h-16 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-sm italic">No entries found</p>
                       </td>
                     </tr>
                   ) : filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-secondary/5 transition-colors group">
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-12 w-12 rounded-2xl shadow-md border-2 border-background shrink-0">
+                    <tr key={u.id} className="hover:bg-primary/5 transition-all group">
+                      <td className="px-10 py-6">
+                        <div className="flex items-center gap-5">
+                          <Avatar className="h-14 w-14 rounded-2xl shadow-xl border-4 border-white dark:border-zinc-800 shrink-0 group-hover:scale-110 transition-transform">
                             <AvatarImage src={u.photoUrl} alt={u.name} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-black">
+                            <AvatarFallback className="bg-zinc-950 text-white font-black text-base">
                               {(u.name || 'EB').slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col min-w-0">
-                            <span className="font-black text-sm group-hover:text-primary transition-colors truncate">{u.name || 'Anonymous Guest'}</span>
-                            <span className="text-[9px] font-medium opacity-50 truncate flex items-center gap-1.5">
-                               <Mail className="w-2.5 h-2.5" /> {u.email}
+                            <span className="font-black text-base uppercase tracking-tighter group-hover:text-primary transition-colors truncate">{u.name || 'Standard Guest'}</span>
+                            <span className="text-[10px] font-medium opacity-50 truncate flex items-center gap-2 mt-0.5">
+                               <Mail className="w-3.5 h-3.5" /> {u.email}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                         <div className="flex flex-col gap-1">
+                      <td className="px-10 py-6">
+                         <div className="flex flex-col gap-1.5">
                             <div className="flex items-center gap-2">
-                               <ShieldCheck className={cn("w-3.5 h-3.5", u.email ? "text-green-500" : "text-zinc-300")} />
-                               <span className="text-[9px] font-black uppercase">{u.email ? 'Email Verified' : 'Guest Identity'}</span>
+                               <ShieldCheck className={cn("w-4 h-4", u.email ? "text-emerald-500" : "text-zinc-300")} />
+                               <span className="text-[10px] font-black uppercase tracking-tight">{u.email ? 'Identity Verified' : 'Standard Node'}</span>
                             </div>
                             {u.phone && (
-                              <p className="text-[9px] font-bold text-muted-foreground flex items-center gap-1.5">
-                                <Phone className="w-2.5 h-2.5" /> +91 {u.phone}
+                              <p className="text-[11px] font-bold text-muted-foreground flex items-center gap-2 bg-secondary/50 px-2 py-0.5 rounded-lg w-fit">
+                                <Phone className="w-3 h-3" /> +91 {u.phone}
                               </p>
                             )}
                          </div>
                       </td>
-                      <td className="px-8 py-6">
-                         <div className="flex flex-col gap-1">
-                            <Badge variant="secondary" className="w-fit px-2 py-0.5 font-black text-[8px] uppercase">
-                               {u.orderCount || 0} Orders Placed
-                            </Badge>
+                      <td className="px-10 py-6">
+                         <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                               <Badge className="bg-zinc-950 text-white border-none px-3 py-1 font-black text-[9px] uppercase tracking-widest rounded-lg">
+                                  {u.orderCount || 0} Orders
+                               </Badge>
+                               <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase px-2 py-0.5 rounded-md">
+                                  {u.rewardCoins || 0} Coins
+                               </Badge>
+                            </div>
                             {u.lastOrderAt && (
-                              <p className="text-[8px] font-medium opacity-50 flex items-center gap-1">
-                                <Clock className="w-2.5 h-2.5" /> Active: {format(u.lastOrderAt.toDate(), 'MMM d, yyyy')}
+                              <p className="text-[9px] font-bold opacity-40 flex items-center gap-1.5 uppercase">
+                                <Clock className="w-3 h-3" /> Active: {format(u.lastOrderAt.toDate(), 'MMM dd, yyyy')}
                               </p>
                             )}
                          </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground/60">
-                           <CalendarDays className="w-3 h-3" />
-                           {u.createdAt?.toDate ? format(u.createdAt.toDate(), 'MMM d, yyyy') : 'Pre-launch'}
+                      <td className="px-10 py-6">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground opacity-30 italic tracking-widest">
+                           <CalendarDays className="w-4 h-4" />
+                           {u.createdAt?.toDate ? format(u.createdAt.toDate(), 'MMM dd, yyyy') : 'Pre-Launch'}
                         </div>
                       </td>
                     </tr>
