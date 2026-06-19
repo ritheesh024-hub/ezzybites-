@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   collection, 
   query, 
@@ -36,7 +36,7 @@ export function useNotifications() {
 
   // Fetch & Listen to Notifications (In-App Only)
   useEffect(() => {
-    if (!db || !user) {
+    if (!db || !user?.uid) {
       setLoading(false);
       return;
     }
@@ -56,16 +56,19 @@ export function useNotifications() {
       setNotifications(items);
       setUnreadCount(items.filter(n => !n.read).length);
       setLoading(false);
+    }, (error) => {
+      console.warn("Notification listener error:", error);
+      setLoading(false);
     });
 
-    return unsubscribe;
-  }, [db, user]);
+    return () => unsubscribe();
+  }, [db, user?.uid]); // Use UID string to stabilize dependency
 
   // Trigger Notification (Internal Logic)
   const sendNotification = useCallback(async (uid: string, data: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => {
     if (!db) return;
     const notifRef = collection(db, 'users', uid, 'notifications');
-    await addDoc(notifRef, {
+    addDoc(notifRef, {
       ...data,
       read: false,
       createdAt: serverTimestamp()
@@ -74,13 +77,13 @@ export function useNotifications() {
 
   // Mark Read
   const markAsRead = useCallback(async (notifId: string) => {
-    if (!db || !user) return;
+    if (!db || !user?.uid) return;
     const notifRef = doc(db, 'users', user.uid, 'notifications', notifId);
-    await updateDoc(notifRef, { read: true });
-  }, [db, user]);
+    updateDoc(notifRef, { read: true });
+  }, [db, user?.uid]);
 
   const markAllAsRead = useCallback(async () => {
-    if (!db || !user || notifications.length === 0) return;
+    if (!db || !user?.uid || notifications.length === 0) return;
     const unread = notifications.filter(n => !n.read);
     if (unread.length === 0) return;
 
@@ -90,7 +93,7 @@ export function useNotifications() {
       batch.update(ref, { read: true });
     });
     await batch.commit();
-  }, [db, user, notifications]);
+  }, [db, user?.uid, notifications]);
 
   return {
     notifications,

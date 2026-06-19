@@ -1,22 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { onSnapshot, Query, DocumentData, QuerySnapshot } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
  * Robust hook for real-time Firestore collection streams.
- * Ensures strict cleanup and stability.
- * Consumers MUST memoize the query object passed to this hook.
+ * Stabilized with path-based dependency checking to prevent redundant re-subscriptions.
  */
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // We use the string representation of the query to stabilize the dependency array
+  // This prevents infinite loops if the query object is recreated on every render
+  const queryFingerprint = query ? (query as any)._query?.path?.toString() || 'path-pending' : 'null';
+
   useEffect(() => {
-    if (!query) {
+    if (!query || typeof window === 'undefined') {
       setData([]);
       setLoading(false);
       return;
@@ -50,7 +53,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
     // Cleanup: Ensure the listener is closed before a new one starts
     return () => unsubscribe();
-  }, [query]); 
+  }, [queryFingerprint]); // Stabilized dependency
 
   return { data, loading, error };
 }

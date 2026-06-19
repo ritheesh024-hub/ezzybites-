@@ -6,10 +6,15 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * IDEMPOTENT FIREBASE INITIALIZATION
- * Uses the getApps() registry to ensure singleton behavior 
- * across Next.js reloads and hydration.
+ * IDEMPOTENT FIREBASE INITIALIZATION (HARDENED SINGLETON)
+ * Uses a global registry to survive Next.js module re-evaluations during HMR.
  */
+
+interface FirebaseInstances {
+  app: FirebaseApp;
+  db: Firestore;
+  auth: Auth;
+}
 
 export function initializeFirebase(): { 
   app: FirebaseApp | null; 
@@ -21,16 +26,26 @@ export function initializeFirebase(): {
   }
 
   try {
+    const g = globalThis as any;
+    
+    // Check global cache first to prevent "Unexpected state" errors during HMR
+    if (g.__FIREBASE_SINGLETON__) {
+      return g.__FIREBASE_SINGLETON__;
+    }
+
     // 1. Initialize or retrieve the App Registry
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-    // 2. Retrieve Firestore instance (Firebase handles singleton behavior internally)
+    // 2. Retrieve Services
     const db = getFirestore(app);
-
-    // 3. Retrieve Auth instance
     const auth = getAuth(app);
     
-    return { app, db, auth };
+    const instances: FirebaseInstances = { app, db, auth };
+    
+    // 3. Cache globally
+    g.__FIREBASE_SINGLETON__ = instances;
+    
+    return instances;
   } catch (error) {
     console.error('Firebase Critical Init Error:', error);
     return { app: null, db: null, auth: null };

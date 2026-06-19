@@ -7,15 +7,17 @@ import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
  * Robust hook for real-time Firestore document streams.
- * Ensures strict cleanup and stability.
+ * Stabilized with path-based dependency checking.
  */
 export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const docPath = docRef?.path || 'null';
+
   useEffect(() => {
-    if (!docRef) {
+    if (!docRef || typeof window === 'undefined') {
       setData(null);
       setLoading(false);
       return;
@@ -43,7 +45,7 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
     );
 
     return () => unsubscribe();
-  }, [docRef?.path]); // Depend on path to handle reference updates correctly
+  }, [docPath]); // Depend on path string to handle reference updates correctly without re-subscribing on every render
 
   return { data, loading, error };
 }
