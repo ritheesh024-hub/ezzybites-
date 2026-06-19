@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { onSnapshot, DocumentReference, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
  * Robust hook for real-time Firestore document streams.
- * Ensures strict cleanup and stability against Next.js re-renders.
+ * Ensures strict cleanup and stability.
  */
 export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const activePathRef = useRef<string>('');
 
   useEffect(() => {
     if (!docRef) {
@@ -21,9 +20,6 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
       setLoading(false);
       return;
     }
-
-    if (activePathRef.current === docRef.path) return;
-    activePathRef.current = docRef.path;
 
     setLoading(true);
 
@@ -46,12 +42,8 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
       }
     );
 
-    // CRITICAL: Unsubscribe on unmount or when reference changes
-    return () => {
-      unsubscribe();
-      activePathRef.current = '';
-    };
-  }, [docRef?.path]);
+    return () => unsubscribe();
+  }, [docRef?.path]); // Depend on path to handle reference updates correctly
 
   return { data, loading, error };
 }

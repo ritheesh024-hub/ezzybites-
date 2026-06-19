@@ -11,12 +11,6 @@ import { firebaseConfig } from './config';
  * across Next.js reloads and hydration.
  */
 
-declare global {
-  var __FIREBASE_APP__: FirebaseApp | undefined;
-  var __FIREBASE_DB__: Firestore | undefined;
-  var __FIREBASE_AUTH__: Auth | undefined;
-}
-
 export function initializeFirebase(): { 
   app: FirebaseApp | null; 
   db: Firestore | null; 
@@ -27,30 +21,16 @@ export function initializeFirebase(): {
   }
 
   try {
-    // 1. Initialize or retrieve the App
-    let app: FirebaseApp;
-    if (getApps().length === 0) {
-      app = initializeApp(firebaseConfig);
-      globalThis.__FIREBASE_APP__ = app;
-    } else {
-      app = getApp();
-    }
+    // 1. Initialize or retrieve the App Registry
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-    // 2. Initialize or retrieve Firestore
-    if (!globalThis.__FIREBASE_DB__) {
-      globalThis.__FIREBASE_DB__ = getFirestore(app);
-    }
+    // 2. Retrieve Firestore instance (Firebase handles singleton behavior internally)
+    const db = getFirestore(app);
 
-    // 3. Initialize or retrieve Auth
-    if (!globalThis.__FIREBASE_AUTH__) {
-      globalThis.__FIREBASE_AUTH__ = getAuth(app);
-    }
+    // 3. Retrieve Auth instance
+    const auth = getAuth(app);
     
-    return { 
-      app: app, 
-      db: globalThis.__FIREBASE_DB__, 
-      auth: globalThis.__FIREBASE_AUTH__
-    };
+    return { app, db, auth };
   } catch (error) {
     console.error('Firebase Critical Init Error:', error);
     return { app: null, db: null, auth: null };

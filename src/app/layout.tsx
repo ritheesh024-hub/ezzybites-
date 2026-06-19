@@ -11,7 +11,6 @@ import React, { useEffect } from 'react';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useNotifications } from '@/hooks/use-notifications';
 import { toast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase';
 
 function AnalyticsInitializer() {
   const { trackAppOpen } = useAnalytics();
@@ -58,7 +57,7 @@ function PermissionController() {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.Node;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -68,7 +67,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </head>
-      <body className="font-body antialiased min-h-screen bg-background">
+      <body className="font-body antialiased min-h-screen bg-background" suppressHydrationWarning>
         <FirebaseClientProvider>
           <AnalyticsInitializer />
           <NotificationInitializer />

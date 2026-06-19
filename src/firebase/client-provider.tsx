@@ -17,26 +17,25 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const initRef = useRef(false);
 
   // 1. Initialize Firebase strictly ONCE after browser mount
-  // This avoids initializing during SSR and prevents Fast Refresh double-init
   useEffect(() => {
     if (initRef.current) return;
+    initRef.current = true;
     
     const initialized = initializeFirebase();
     setServices(initialized);
     setMounted(true);
-    initRef.current = true;
   }, []);
 
-  // 2. Handle theme syncing independently of Firebase state
+  // 2. Handle theme syncing independently
   useEffect(() => {
     if (mounted && typeof document !== 'undefined') {
       document.documentElement.classList.toggle('dark', isDarkMode);
     }
   }, [isDarkMode, mounted]);
 
-  // Avoid rendering children that might use Firebase hooks until services are ready
-  // This prevents hooks from being called with null instances initially
-  if (!mounted) return null;
+  // CRITICAL: Block rendering of all children until services are ready
+  // This prevents hooks from executing before Firestore/Auth are initialized
+  if (!mounted || !services.app) return null;
 
   return (
     <FirebaseProvider 
