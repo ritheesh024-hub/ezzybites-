@@ -3,11 +3,13 @@
 import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useUser, useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { MapPin, Plus, Trash2, Home, Briefcase, Building, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export default function AddressesPage() {
   const { user, loading: userLoading } = useUser();
@@ -20,14 +22,17 @@ export default function AddressesPage() {
 
   const { data: addresses, loading: addrLoading } = useCollection<any>(addrQuery);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!db) return;
-    try {
-      await deleteDoc(doc(db, 'addresses', id));
-      toast({ title: "Address Deleted" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error deleting address" });
-    }
+    const addrRef = doc(db, 'addresses', id);
+    deleteDoc(addrRef)
+      .then(() => toast({ title: "Address Deleted" }))
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: addrRef.path,
+          operation: 'delete'
+        } satisfies SecurityRuleContext));
+      });
   };
 
   if (userLoading || addrLoading) {

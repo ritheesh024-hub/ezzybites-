@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -12,12 +11,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, Loader2, Send, Camera, X } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Star, Loader2, Send, Camera } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
-import { doc, setDoc, serverTimestamp, updateDoc, increment, collection } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface ReviewFormProps {
   order: any;
@@ -38,58 +39,66 @@ export const ReviewForm = ({ order, isOpen, onClose, onSuccess }: ReviewFormProp
     if (!db || !user || !order) return;
     
     setLoading(true);
-    try {
-      // In a real multi-item order, we usually review the primary item or the order overall
-      // For this system, we'll record the review for each item in the order to build product stats
-      const items = order.items || [];
+    const items = order.items || [];
+    
+    // Process reviews for each item
+    items.forEach((item: any) => {
+      const reviewId = `${order.orderId}_${item.id}`;
+      const reviewRef = doc(db, 'reviews', reviewId);
       
-      for (const item of items) {
-        const reviewId = `${order.orderId}_${item.id}`;
-        const reviewRef = doc(db, 'reviews', reviewId);
-        
-        const reviewData = {
-          orderId: order.orderId,
-          productId: item.id,
-          productName: item.name,
-          userId: user.uid,
-          userName: user.displayName || 'Guest',
-          userPhoto: user.photoURL || '',
-          rating,
-          comment,
-          isHidden: false,
-          isFeatured: false,
-          createdAt: serverTimestamp()
-        };
+      const reviewData = {
+        orderId: order.orderId,
+        productId: item.id,
+        productName: item.name,
+        userId: user.uid,
+        userName: user.displayName || 'Guest',
+        userPhoto: user.photoURL || '',
+        rating,
+        comment,
+        isHidden: false,
+        isFeatured: false,
+        createdAt: serverTimestamp()
+      };
 
-        await setDoc(reviewRef, reviewData);
-
-        // Update Product aggregate stats
-        const productRef = doc(db, 'products', item.id);
-        // This is a simplification. Real production apps use cloud functions for rating aggregation.
-        await updateDoc(productRef, {
-          reviewCount: increment(1),
-          // We can't easily recalculate AVG client-side perfectly with increment, 
-          // but we can track the totalSum and divide by count
-          ratingSum: increment(rating) 
-        }).catch(() => {
-          // If product aggregate fails (e.g. fields don't exist), we silent fail or init
-          setDoc(productRef, { ratingSum: rating, reviewCount: 1 }, { merge: true });
+      setDoc(reviewRef, reviewData)
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: reviewRef.path,
+            operation: 'create',
+            requestResourceData: reviewData
+          } satisfies SecurityRuleContext));
         });
-      }
 
-      // Mark order as reviewed
-      await updateDoc(doc(db, 'orders', order.orderId), {
-        isReviewed: true
+      const productRef = doc(db, 'products', item.id);
+      updateDoc(productRef, {
+        reviewCount: increment(1),
+        ratingSum: increment(rating) 
+      }).catch(async () => {
+        setDoc(productRef, { ratingSum: rating, reviewCount: 1 }, { merge: true })
+          .catch(async () => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              path: productRef.path,
+              operation: 'update'
+            } satisfies SecurityRuleContext));
+          });
       });
+    });
 
-      toast({ title: "Review Published!", description: "Thank you for supporting Ezzy Bites." });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Submission Failed", description: e.message });
-    } finally {
-      setLoading(false);
-    }
+    const orderRef = doc(db, 'orders', order.orderId);
+    updateDoc(orderRef, { isReviewed: true })
+      .then(() => {
+        toast({ title: "Review Published!", description: "Thank you for supporting Ezzy Bites." });
+        onSuccess();
+        onClose();
+      })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: orderRef.path,
+          operation: 'update',
+          requestResourceData: { isReviewed: true }
+        } satisfies SecurityRuleContext));
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
