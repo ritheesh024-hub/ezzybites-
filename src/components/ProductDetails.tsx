@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -19,7 +18,8 @@ import {
   Filter,
   CheckCircle2,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { FoodItem, useStore } from '@/app/lib/store';
 import { useFirestore, useCollection } from '@/firebase';
