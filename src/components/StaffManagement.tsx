@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Users, UserPlus, Trash2, 
   ShieldCheck, Receipt, ChefHat,
-  Loader2, Search,
+  Loader2, 
   MoreVertical, Edit3, Eye,
   Fingerprint, Copy, AlertCircle, CheckCircle2,
   Ban, RefreshCcw, UserCircle2, UserCog
@@ -84,7 +84,6 @@ export const StaffManagement = () => {
     photoUrl: ''
   });
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
@@ -262,12 +261,11 @@ export const StaffManagement = () => {
   const filteredStaff = useMemo(() => {
     if (!staffList) return [];
     return staffList.filter(s => {
-      const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (s.email || '').toLowerCase().includes(searchQuery.toLowerCase()) || (s.id || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = roleFilter === 'all' || s.role === roleFilter;
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesRole && matchesStatus;
     });
-  }, [staffList, searchQuery, roleFilter, statusFilter]);
+  }, [staffList, roleFilter, statusFilter]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -282,11 +280,7 @@ export const StaffManagement = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-center bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border shadow-sm border-zinc-100">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground opacity-40" />
-          <Input placeholder="Search name, email or operational UID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-14 pl-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-base" />
-        </div>
-        <div className="flex gap-4 w-full lg:w-auto">
+        <div className="flex gap-4 w-full justify-between lg:justify-start">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="h-14 w-full lg:w-48 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[9px] tracking-widest px-6">
               <SelectValue placeholder="Roles" />
