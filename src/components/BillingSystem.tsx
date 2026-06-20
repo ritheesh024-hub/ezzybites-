@@ -7,13 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { 
   Calculator, History, 
   Search, Plus, Minus, Trash2, Printer, 
   ShoppingBag, Utensils, 
   Package,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { doc, setDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
@@ -22,6 +24,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { format } from 'date-fns';
 
 interface BillingSystemProps {
   products: any[];
@@ -62,7 +65,8 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
   };
 
   const subtotal = activeBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-  const total = subtotal - discount;
+  const tax = Math.round(subtotal * 0.05); // 5% GST
+  const total = subtotal - discount + tax;
 
   const generateBill = async () => {
     if (activeBill.length === 0) {
@@ -76,7 +80,7 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
     if (!db || !user) return;
 
     setLoading(true);
-    const billId = `EB-${Date.now().toString().slice(-6)}`;
+    const billId = `EB-${Math.floor(100000 + Math.random() * 899999)}`;
     const billData = {
       orderId: billId,
       customerName: customerInfo.name || 'Guest',
@@ -85,12 +89,14 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
       instructions: customerInfo.notes,
       items: activeBill.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
       subtotal,
+      tax,
       discount,
       total,
       paymentMethod,
       status: 'delivered',
       isStoreBill: true,
       processedBy: user.uid,
+      cashierName: user.displayName || user.email?.split('@')[0] || 'Staff',
       createdAt: serverTimestamp()
     };
 
@@ -103,7 +109,7 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
           'stats.ordersHandled': increment(1)
         }).catch(err => console.warn("Failed to update staff stats", err));
 
-        toast({ title: "Invoice Generated" });
+        toast({ title: "Bill Generated Successfully" });
         setViewingInvoice({ ...billData, createdAt: new Date() });
         setActiveBill([]);
         setCustomerInfo({ name: '', phone: '', notes: '' });
@@ -117,6 +123,10 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
         }));
       })
       .finally(() => setLoading(false));
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -221,6 +231,10 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
                   </div>
 
                   <div className="space-y-4 pt-6 border-t-2 border-dashed">
+                    <div className="space-y-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                       <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
+                       <div className="flex justify-between text-emerald-600"><span>Tax (5% GST)</span><span>+ ₹{tax}</span></div>
+                    </div>
                     <div className="flex justify-between items-end">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Gross Total</span>
                       <span className="text-4xl font-black font-headline text-primary italic leading-none">₹{total}</span>
@@ -291,70 +305,125 @@ export const BillingSystem = ({ products, orders }: BillingSystemProps) => {
         </TabsContent>
       </Tabs>
 
-      {/* INVOICE PREVIEW DIALOG */}
-      <Dialog open={!!viewingInvoice} onOpenChange={() => setViewingInvoice(null)}>
+      {/* SUCCESS & INVOICE MODAL */}
+      <Dialog open={!!viewingInvoice} onOpenChange={(open) => !open && setViewingInvoice(null)}>
         <DialogContent className="max-w-md p-0 rounded-[3rem] overflow-hidden border-none shadow-3xl bg-white text-black">
-          <DialogHeader className="sr-only">
-             <DialogTitle>Invoice Preview for #{viewingInvoice?.orderId}</DialogTitle>
-          </DialogHeader>
-          <div id="print-area" className="p-10">
-            <div className="text-center mb-8 pb-8 border-b-4 border-double border-zinc-200">
-              <h2 className="text-3xl font-black font-headline tracking-tighter uppercase leading-none">EZZY BITES</h2>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-2 opacity-50">Premium Fast Food-Tech</p>
-              <div className="mt-4 flex justify-center">
-                 <Badge className="bg-zinc-950 text-white uppercase font-black text-[9px] px-5 py-1.5 rounded-full border-none tracking-widest">{viewingInvoice?.orderType}</Badge>
+          <div className="bg-emerald-600 p-6 text-white flex items-center gap-3 no-print">
+             <CheckCircle2 className="w-6 h-6" />
+             <span className="font-black uppercase text-xs tracking-widest">Bill Generated Successfully</span>
+          </div>
+          
+          <div id="print-area" className="p-10 bg-white">
+            {/* RECEIPT HEADER */}
+            <div className="text-center mb-8 pb-6 border-b-2 border-dashed border-zinc-200">
+              <h2 className="text-3xl font-black font-headline tracking-tighter uppercase leading-none mb-1">EZZY BITES</h2>
+              <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-50 mb-4">Premium Fast Food-Tech</p>
+              
+              <div className="bg-zinc-100 py-3 rounded-xl mb-4">
+                 <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-0.5">Bill Number</p>
+                 <h4 className="text-4xl font-black font-mono tracking-tighter text-primary">{viewingInvoice?.orderId}</h4>
+              </div>
+              
+              <div className="flex justify-center gap-2">
+                 <Badge className="bg-zinc-950 text-white uppercase font-black text-[7px] px-3 py-1 rounded-md border-none tracking-widest">{viewingInvoice?.orderType}</Badge>
+                 <Badge variant="outline" className="uppercase font-black text-[7px] px-3 py-1 rounded-md border-zinc-200 tracking-widest">{viewingInvoice?.paymentMethod || 'Cash'}</Badge>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-8 text-[11px] font-bold mb-10">
-              <div>
-                <p className="uppercase text-[8px] font-black opacity-30 tracking-widest mb-1.5">RECIPIENT</p>
-                <p className="uppercase text-sm leading-none mb-1">{viewingInvoice?.customerName}</p>
+            {/* RECEIPT METADATA */}
+            <div className="grid grid-cols-2 gap-4 text-[10px] font-bold mb-8">
+              <div className="space-y-1">
+                <p className="uppercase text-[7px] font-black opacity-30 tracking-widest">CUSTOMER</p>
+                <p className="uppercase truncate">{viewingInvoice?.customerName}</p>
                 <p className="opacity-60">+91 {viewingInvoice?.customerPhone}</p>
               </div>
-              <div className="text-right">
-                <p className="uppercase text-[8px] font-black opacity-30 tracking-widest mb-1.5">SETTLED ON</p>
-                <p className="uppercase text-sm leading-none mb-1">#{viewingInvoice?.orderId}</p>
-                <p className="opacity-60">{viewingInvoice?.createdAt ? new Date(viewingInvoice.createdAt).toLocaleDateString() : 'Syncing'}</p>
+              <div className="text-right space-y-1">
+                <p className="uppercase text-[7px] font-black opacity-30 tracking-widest">STATION LOG</p>
+                <p className="uppercase truncate">{viewingInvoice?.cashierName || 'Staff Node'}</p>
+                <p className="opacity-60">{viewingInvoice?.createdAt ? format(new Date(viewingInvoice.createdAt), 'dd MMM yyyy, p') : 'Pending Sync'}</p>
               </div>
             </div>
 
-            <div className="space-y-4 mb-10">
-              <div className="grid grid-cols-4 text-[9px] font-black uppercase opacity-30 border-b pb-3 border-zinc-100 tracking-widest">
-                <span className="col-span-2">MANIFEST ITEM</span>
+            {/* ITEM TABLE */}
+            <div className="space-y-4 mb-8">
+              <div className="grid grid-cols-5 text-[8px] font-black uppercase opacity-30 border-b pb-2 border-zinc-100 tracking-widest">
+                <span className="col-span-3">DESCRIPTION</span>
                 <span className="text-center">QTY</span>
-                <span className="text-right">SUM</span>
+                <span className="text-right">PRICE</span>
               </div>
               {viewingInvoice?.items.map((item: any, i: number) => (
-                <div key={i} className="grid grid-cols-4 text-xs font-black uppercase tracking-tight">
-                  <span className="col-span-2 truncate pr-2">{item.name}</span>
+                <div key={i} className="grid grid-cols-5 text-[11px] font-black uppercase tracking-tight">
+                  <span className="col-span-3 truncate pr-2">{item.name}</span>
                   <span className="text-center opacity-60">x{item.quantity}</span>
                   <span className="text-right italic">₹{item.price * item.quantity}</span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-8 border-t-4 border-double border-zinc-200 flex justify-between items-end">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Final Settlement</span>
-              <span className="text-5xl font-black text-primary italic leading-none">₹{viewingInvoice?.total}</span>
+            {/* TOTALS */}
+            <div className="pt-6 border-t-2 border-dashed border-zinc-200 space-y-2">
+              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest opacity-40">
+                 <span>Subtotal</span>
+                 <span>₹{viewingInvoice?.subtotal}</span>
+              </div>
+              {viewingInvoice?.tax > 0 && (
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                   <span>Tax (5% GST)</span>
+                   <span>₹{viewingInvoice?.tax}</span>
+                </div>
+              )}
+              {viewingInvoice?.discount > 0 && (
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-rose-600">
+                   <span>Discount</span>
+                   <span>- ₹{viewingInvoice?.discount}</span>
+                </div>
+              )}
+              <div className="pt-4 flex justify-between items-end">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Grand Total</span>
+                <span className="text-5xl font-black text-primary italic leading-none">₹{viewingInvoice?.total}</span>
+              </div>
             </div>
             
+            {/* FOOTER */}
             <div className="mt-12 text-center opacity-40">
-               <p className="text-[9px] font-black uppercase tracking-[0.3em]">Visit Again • Stay Ezzy</p>
-               <p className="text-[8px] font-bold mt-1 opacity-50">Authorized Hub Generated Invoice</p>
+               <p className="text-[8px] font-black uppercase tracking-[0.4em]">Visit Again • Stay Ezzy</p>
+               <p className="text-[6px] font-bold mt-1 opacity-50 uppercase">Authorized Hub Generated • Pocharam Campus</p>
             </div>
           </div>
-          <div className="p-8 bg-zinc-50 flex gap-4">
-            <Button variant="outline" className="flex-1 h-14 rounded-2xl font-black text-[10px] uppercase border-zinc-200 hover:bg-white transition-all tracking-widest" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2" /> Local Print</Button>
-            <Button className="flex-1 h-14 rounded-2xl font-black text-[10px] uppercase bg-primary text-white shadow-xl shadow-primary/20 tracking-widest" onClick={() => setViewingInvoice(null)}>Dismiss</Button>
+
+          <div className="p-8 bg-zinc-50 flex gap-4 no-print">
+            <Button 
+              className="flex-1 h-16 rounded-[1.5rem] font-black text-[10px] uppercase bg-zinc-950 text-white shadow-xl gap-2 tracking-widest" 
+              onClick={handlePrint}
+            >
+              <Printer className="w-4 h-4" /> Print Bill
+            </Button>
+            <Button 
+              variant="outline"
+              className="flex-1 h-16 rounded-[1.5rem] font-black text-[10px] uppercase border-2 text-zinc-400 gap-2 tracking-widest" 
+              onClick={() => setViewingInvoice(null)}
+            >
+              <X className="w-4 h-4" /> Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
       <style jsx global>{`
         @media print {
           body * { visibility: hidden; }
           #print-area, #print-area * { visibility: visible; }
-          #print-area { position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 1000; }
+          #print-area { 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: white !important; 
+            z-index: 10000; 
+            padding: 20px;
+          }
+          .no-print { display: none !important; }
         }
       `}</style>
     </div>
