@@ -101,7 +101,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
 
         const orderSnap = realOrders.find(o => o.orderId === id);
         if (orderSnap?.userId) {
-          const notifRef = collection(db, 'user_notifications', orderSnap.userId, 'messages');
+          const notifRef = collection(db, 'user_notifications', orderSnap.userId, 'items');
           const titles: Record<string, string> = {
             'confirmed': 'Order Confirmed! ✅',
             'preparing': 'Chef is on it! 👨‍🍳',
@@ -122,7 +122,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
             message: messages[newStatus] || `Your order status changed to ${newStatus}.`,
             type: 'order',
             orderId: id,
-            link: `/orders/${id}`,
+            ctaLink: `/orders/${id}`,
             read: false,
             createdAt: serverTimestamp()
           });
@@ -183,7 +183,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
       <NewOrderPopups pendingOrders={orderGroups.pending} onViewDetails={(order) => setSelectedOrderForView(order)} onUpdateStatus={handleUpdateStatus} />
       
       <Tabs defaultValue={availableTabs[0]} className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* MOBILE NAVIGATION: HORIZONTAL SCROLL OPTIMIZED */}
         <div className="lg:hidden sticky top-[70px] z-50 bg-white/95 dark:bg-black/95 backdrop-blur-3xl border-b py-3 px-4 w-full overflow-hidden">
            <TabsList className="bg-transparent h-auto flex flex-row flex-nowrap justify-start p-0 space-x-2 overflow-x-auto scrollbar-hide snap-x snap-proximity w-full border-none shadow-none">
               {availableTabs.map((tab) => (
@@ -205,7 +204,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
            </TabsList>
         </div>
 
-        {/* DESKTOP SIDEBAR - 220px */}
         <aside className="hidden lg:flex flex-col w-[220px] lg:w-[220px] md:w-[80px] bg-zinc-900/95 dark:bg-zinc-950/80 backdrop-blur-2xl border-r border-white/5 sticky top-[70px] h-[calc(100vh-70px)] shrink-0 transition-all duration-500 overflow-y-auto scrollbar-hide">
           <div className="p-4 space-y-8 flex-1">
             <div className="space-y-1">
@@ -266,7 +264,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
           </div>
         </aside>
 
-        {/* MAIN WORKSPACE */}
         <main className="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-950/50 overflow-y-auto scrollbar-hide relative">
           <AnimatePresence mode="wait">
             {availableTabs.map((tab) => (
@@ -296,7 +293,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
         </main>
       </Tabs>
 
-      {/* GLOBAL ORDER DIALOG */}
       <Dialog open={!!selectedOrderForView} onOpenChange={(open) => !open && setSelectedOrderForView(null)}>
         <DialogContent className="max-w-3xl rounded-[3rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950">
           <DialogHeader className="sr-only">

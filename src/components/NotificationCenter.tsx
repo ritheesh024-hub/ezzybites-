@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -31,8 +30,8 @@ export const NotificationCenter = ({ children }: { children: React.ReactNode }) 
 
   const handleNotifClick = (notif: AppNotification) => {
     markAsRead(notif.id);
-    if (notif.link) {
-      router.push(notif.link);
+    if (notif.ctaLink) {
+      router.push(notif.ctaLink);
     }
   };
 

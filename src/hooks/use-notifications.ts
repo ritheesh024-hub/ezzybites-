@@ -18,7 +18,7 @@ export interface AppNotification {
   title: string;
   message: string;
   type?: 'order' | 'promo' | 'system';
-  link?: string;
+  ctaLink?: string;
   read: boolean;
   createdAt: any;
   orderId?: string;
@@ -38,10 +38,10 @@ export function useNotifications() {
       return;
     }
 
-    // LISTENING TO user_notifications/{userId}/messages
-    // Collection references must have an odd number of segments
+    // LISTENING TO user_notifications/{userId}/items
+    // Path has 3 segments: collection/doc/collection
     const q = query(
-      collection(db, 'user_notifications', user.uid, 'messages'),
+      collection(db, 'user_notifications', user.uid, 'items'),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -65,7 +65,7 @@ export function useNotifications() {
 
   const markAsRead = useCallback(async (notifId: string) => {
     if (!db || !user?.uid) return;
-    const notifRef = doc(db, 'user_notifications', user.uid, 'messages', notifId);
+    const notifRef = doc(db, 'user_notifications', user.uid, 'items', notifId);
     updateDoc(notifRef, { read: true });
   }, [db, user?.uid]);
 
@@ -76,7 +76,7 @@ export function useNotifications() {
 
     const batch = writeBatch(db);
     unread.forEach(n => {
-      const ref = doc(db, 'user_notifications', user.uid!, 'messages', n.id);
+      const ref = doc(db, 'user_notifications', user.uid!, 'items', n.id);
       batch.update(ref, { read: true });
     });
     await batch.commit();

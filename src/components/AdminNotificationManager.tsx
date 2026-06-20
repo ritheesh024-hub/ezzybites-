@@ -34,7 +34,7 @@ export const AdminNotificationManager = () => {
     message: '',
     targetAudience: 'all',
     type: 'promo' as 'promo' | 'system',
-    link: '/menu'
+    ctaLink: '/menu'
   });
 
   const logsQuery = useMemo(() => {
@@ -52,7 +52,7 @@ export const AdminNotificationManager = () => {
 
     setLoading(true);
     try {
-      // 1. Fetch all users to distribute the notification
+      // 1. Fetch all users for mass delivery
       const usersSnap = await getDocs(collection(db, 'users'));
       const batch = writeBatch(db);
 
@@ -62,22 +62,23 @@ export const AdminNotificationManager = () => {
         message: formData.message,
         targetAudience: formData.targetAudience,
         type: formData.type,
-        link: formData.link,
+        ctaLink: formData.ctaLink,
         isActive: true,
         createdBy: user.uid,
         createdAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'notifications'), notificationData);
+      const masterRef = await addDoc(collection(db, 'notifications'), notificationData);
+      const notificationId = masterRef.id;
 
-      // 3. Populate user inboxes (standardized subcollection path)
+      // 3. Populate user inboxes using standardized path
       usersSnap.docs.forEach(userDoc => {
-        const userNotifRef = doc(collection(db, 'user_notifications', userDoc.id, 'messages'));
+        const userNotifRef = doc(db, 'user_notifications', userDoc.id, 'items', notificationId);
         batch.set(userNotifRef, {
           title: formData.title,
           message: formData.message,
           type: formData.type,
-          link: formData.link,
+          ctaLink: formData.ctaLink,
           read: false,
           createdAt: serverTimestamp()
         });
@@ -85,11 +86,15 @@ export const AdminNotificationManager = () => {
 
       await batch.commit();
       
-      toast({ title: "Broadcast Sent! 🚀", description: `Delivered to ${usersSnap.size} active users.` });
-      setFormData({ title: '', message: '', targetAudience: 'all', type: 'promo', link: '/menu' });
+      toast({ 
+        title: "Broadcast Successful! 🚀", 
+        description: `Delivered to ${usersSnap.size} users instantly.` 
+      });
+      
+      setFormData({ title: '', message: '', targetAudience: 'all', type: 'promo', ctaLink: '/menu' });
     } catch (e: any) {
       console.error(e);
-      toast({ variant: "destructive", title: "Transmission Failed", description: e.message });
+      toast({ variant: "destructive", title: "Broadcast Failed", description: e.message });
       errorEmitter.emit('permission-error', new FirestorePermissionError({
         path: 'notifications',
         operation: 'create',
@@ -104,7 +109,7 @@ export const AdminNotificationManager = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="space-y-1">
           <h2 className="text-4xl font-black font-headline uppercase tracking-tighter italic">Broadcast <span className="text-primary">Engine</span></h2>
-          <p className="text-muted-foreground text-sm font-medium tracking-tight">Send high-priority in-app notifications to your customer base.</p>
+          <p className="text-muted-foreground text-sm font-medium tracking-tight">Send real-time in-app notifications to your entire customer base.</p>
         </div>
       </div>
 
@@ -117,26 +122,26 @@ export const AdminNotificationManager = () => {
           <CardHeader className="px-0 pt-0 pb-10 border-b border-dashed mb-10">
              <div className="flex items-center gap-4">
                <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl"><Bell className="w-6 h-6" /></div>
-               <CardTitle className="text-xl font-black font-headline uppercase tracking-tight">Draft Transmission</CardTitle>
+               <CardTitle className="text-xl font-black font-headline uppercase tracking-tight">Compose Dispatch</CardTitle>
              </div>
           </CardHeader>
 
           <div className="space-y-8 relative z-10">
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Message Header</Label>
+                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Notification Title</Label>
                 <Input 
                   value={formData.title} 
                   onChange={e => setFormData({...formData, title: e.target.value})}
                   className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black text-base" 
-                  placeholder="e.g. 50% OFF Midnight Biryani!"
+                  placeholder="e.g. 50 % OFF Tonight!"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Call to Action (Link)</Label>
+                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Destination URL (CTA)</Label>
                 <Input 
-                  value={formData.link} 
-                  onChange={e => setFormData({...formData, link: e.target.value})}
+                  value={formData.ctaLink} 
+                  onChange={e => setFormData({...formData, ctaLink: e.target.value})}
                   className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold" 
                   placeholder="/menu"
                 />
@@ -144,12 +149,12 @@ export const AdminNotificationManager = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Payload Content</Label>
+              <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Message Content</Label>
               <Textarea 
                 value={formData.message} 
                 onChange={e => setFormData({...formData, message: e.target.value})}
                 className="min-h-[140px] rounded-[2rem] bg-secondary/30 dark:bg-zinc-800 border-none px-6 py-6 font-medium text-lg leading-relaxed" 
-                placeholder="Compose your high-converting copy here..."
+                placeholder="Compose your high-speed signal copy..."
               />
             </div>
 
@@ -185,7 +190,7 @@ export const AdminNotificationManager = () => {
            <Card className="rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8">
               <CardHeader className="px-0 pt-0 pb-6 border-b border-dashed mb-6 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-3">
-                  <History className="w-4 h-4 text-primary" /> Global Logs
+                  <History className="w-4 h-4 text-primary" /> Delivery Logs
                 </CardTitle>
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </CardHeader>
@@ -195,7 +200,7 @@ export const AdminNotificationManager = () => {
                 ) : logs.length === 0 ? (
                    <div className="py-20 text-center opacity-20">
                      <Bell className="w-10 h-10 mx-auto mb-2" />
-                     <p className="text-[10px] font-black uppercase tracking-widest">No signals recorded</p>
+                     <p className="text-[10px] font-black uppercase tracking-widest">No Signals Recorded</p>
                    </div>
                 ) : logs.map((log: any, i: number) => (
                   <div key={i} className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border group hover:border-primary/20 transition-all">
@@ -206,7 +211,7 @@ export const AdminNotificationManager = () => {
                      <p className="text-[9px] font-medium text-muted-foreground line-clamp-2 leading-relaxed mb-4">"{log.message}"</p>
                      <div className="flex items-center justify-between pt-3 border-t border-dashed">
                         <div className="flex items-center gap-1.5 text-[8px] font-black uppercase opacity-60">
-                           <Users className="w-3 h-3" /> Audience: {log.targetAudience}
+                           <Users className="w-3 h-3" /> All Node Distribution
                         </div>
                         <Badge className="bg-emerald-50 text-emerald-600 border-none text-[6px] font-black px-1.5 h-4">Deployed</Badge>
                      </div>
@@ -223,7 +228,7 @@ export const AdminNotificationManager = () => {
                  </div>
                  <div className="space-y-1">
                    <h4 className="text-xl font-black uppercase tracking-tighter leading-none italic">Growth Tactics</h4>
-                   <p className="text-[10px] font-medium text-white/70 leading-relaxed uppercase tracking-widest">In-app signals drive <span className="text-white font-black">40% more</span> instant checkouts than passive banners.</p>
+                   <p className="text-[10px] font-medium text-white/70 leading-relaxed uppercase tracking-widest">Internal signals reach <span className="text-white font-black">100 %</span> of your active user base instantly.</p>
                  </div>
               </div>
            </Card>
