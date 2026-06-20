@@ -116,12 +116,13 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       if (onSuccess) onSuccess();
       onClose();
     } catch (error: any) {
-      console.error("Auth Error Code:", error.code);
-      
-      if (error.code === 'auth/popup-closed-by-user') {
+      // Handle user cancellation silently
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
         setLoading(false);
         return; 
       }
+
+      console.error("Auth Error Code:", error.code);
 
       if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-allowed') {
         const domain = typeof window !== 'undefined' ? window.location.hostname : 'your-workstation-domain';
