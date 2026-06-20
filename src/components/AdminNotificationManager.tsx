@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { 
   Bell, 
   Send, 
@@ -69,7 +70,7 @@ export const AdminNotificationManager = () => {
 
       await addDoc(collection(db, 'notifications'), notificationData);
 
-      // 3. Populate user inboxes
+      // 3. Populate user inboxes (standardized subcollection path)
       usersSnap.docs.forEach(userDoc => {
         const userNotifRef = doc(collection(db, 'user_notifications', userDoc.id, 'messages'));
         batch.set(userNotifRef, {
