@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -68,11 +67,11 @@ export const AdminNotificationManager = () => {
         createdAt: serverTimestamp()
       };
 
-      const masterLogRef = await addDoc(collection(db, 'notifications'), notificationData);
+      await addDoc(collection(db, 'notifications'), notificationData);
 
       // 3. Populate user inboxes
       usersSnap.docs.forEach(userDoc => {
-        const userNotifRef = doc(collection(db, 'user_notifications', userDoc.id));
+        const userNotifRef = doc(collection(db, 'user_notifications', userDoc.id, 'messages'));
         batch.set(userNotifRef, {
           title: formData.title,
           message: formData.message,

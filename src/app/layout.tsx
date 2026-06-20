@@ -33,7 +33,7 @@ function NotificationInitializer() {
       if (isNew && !latest.read) {
         toast({
           title: latest.title,
-          description: latest.body,
+          description: latest.message,
         });
       }
     }

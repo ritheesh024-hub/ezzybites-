@@ -101,7 +101,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
 
         const orderSnap = realOrders.find(o => o.orderId === id);
         if (orderSnap?.userId) {
-          const notifRef = collection(db, 'users', orderSnap.userId, 'notifications');
+          const notifRef = collection(db, 'user_notifications', orderSnap.userId, 'messages');
           const titles: Record<string, string> = {
             'confirmed': 'Order Confirmed! ✅',
             'preparing': 'Chef is on it! 👨‍🍳',
@@ -109,7 +109,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
             'delivered': 'Enjoy your Bites! 🍱',
             'Cancelled': 'Order Cancelled ❌'
           };
-          const bodies: Record<string, string> = {
+          const messages: Record<string, string> = {
             'confirmed': 'Your order has been accepted by the station.',
             'preparing': 'Your premium bites are being handcrafted now.',
             'outForDelivery': 'Your premium bites are on the way to your sanctuary.',
@@ -119,7 +119,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
 
           await addDoc(notifRef, {
             title: titles[newStatus] || `Update: ${newStatus}`,
-            body: bodies[newStatus] || `Your order status changed to ${newStatus}.`,
+            message: messages[newStatus] || `Your order status changed to ${newStatus}.`,
             type: 'order',
             orderId: id,
             link: `/orders/${id}`,

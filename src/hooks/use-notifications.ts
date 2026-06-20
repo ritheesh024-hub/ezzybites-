@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,7 +8,6 @@ import {
   limit, 
   doc, 
   updateDoc, 
-  serverTimestamp, 
   onSnapshot,
   writeBatch
 } from 'firebase/firestore';
@@ -40,9 +38,10 @@ export function useNotifications() {
       return;
     }
 
-    // LISTENING TO user_notifications/{userId}
+    // LISTENING TO user_notifications/{userId}/messages
+    // Collection references must have an odd number of segments
     const q = query(
-      collection(db, 'user_notifications', user.uid),
+      collection(db, 'user_notifications', user.uid, 'messages'),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -66,7 +65,7 @@ export function useNotifications() {
 
   const markAsRead = useCallback(async (notifId: string) => {
     if (!db || !user?.uid) return;
-    const notifRef = doc(db, 'user_notifications', user.uid, notifId);
+    const notifRef = doc(db, 'user_notifications', user.uid, 'messages', notifId);
     updateDoc(notifRef, { read: true });
   }, [db, user?.uid]);
 
@@ -77,7 +76,7 @@ export function useNotifications() {
 
     const batch = writeBatch(db);
     unread.forEach(n => {
-      const ref = doc(db, 'user_notifications', user.uid!, n.id);
+      const ref = doc(db, 'user_notifications', user.uid!, 'messages', n.id);
       batch.update(ref, { read: true });
     });
     await batch.commit();
