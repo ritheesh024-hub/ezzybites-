@@ -24,7 +24,11 @@ import {
   Target,
   ShoppingBag,
   PieChart,
-  Activity
+  Activity,
+  CheckCircle2,
+  X,
+  ChefHat,
+  BellRing
 } from 'lucide-react';
 import {
   XAxis,
@@ -53,8 +57,11 @@ import {
   eachHourOfInterval,
   isSameDay,
   isSameHour,
-  endOfMonth
+  endOfMonth,
+  isAfter,
+  isBefore
 } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 interface DashboardAnalysisProps {
   orders: any[];
@@ -71,6 +78,13 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
     to: endOfDay(new Date())
   });
 
+  // Temp state for custom range picker
+  const [tempRange, setTempRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -86,12 +100,12 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         previous = { from: startOfDay(subDays(now, 2)), to: endOfDay(subDays(now, 2)) };
         break;
       case 'week':
-        current = { from: startOfWeek(now), to: endOfDay(now) };
-        previous = { from: startOfWeek(subWeeks(now, 1)), to: subWeeks(now, 1) };
+        current = { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfDay(now) };
+        previous = { from: startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }), to: endOfDay(subWeeks(now, 1)) };
         break;
       case 'month':
         current = { from: startOfMonth(now), to: endOfDay(now) };
-        previous = { from: startOfMonth(subMonths(now, 1)), to: subMonths(now, 1) };
+        previous = { from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) };
         break;
       case 'last_month':
         current = { from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) };
@@ -101,8 +115,8 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         current = { from: startOfDay(dateRange.from), to: endOfDay(dateRange.to) };
         const duration = current.to.getTime() - current.from.getTime();
         previous = { 
-          from: new Date(current.from.getTime() - duration), 
-          to: new Date(current.to.getTime() - duration) 
+          from: new Date(current.from.getTime() - duration - 1000), 
+          to: new Date(current.from.getTime() - 1000) 
         };
         break;
     }
@@ -144,9 +158,10 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
     };
 
     let chartData: any[] = [];
-    const isSingleDay = isSameDay(intervals.current.from, intervals.current.to);
+    const diffInDays = Math.round((intervals.current.to.getTime() - intervals.current.from.getTime()) / (1000 * 3600 * 24));
 
-    if (isSingleDay) {
+    if (diffInDays <= 1) {
+      // Hourly view for short ranges
       const hours = eachHourOfInterval({ start: intervals.current.from, end: intervals.current.to });
       chartData = hours.map(h => {
         const val = currOrders
@@ -158,6 +173,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         return { name: format(h, 'hh a'), val };
       });
     } else {
+      // Daily view
       const days = eachDayOfInterval({ start: intervals.current.from, end: intervals.current.to });
       chartData = days.map(d => {
         const val = currOrders
@@ -191,6 +207,23 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
     };
   }, [orders, intervals]);
 
+  const handleApplyCustomRange = () => {
+    if (!tempRange.from || !tempRange.to) {
+      toast({ variant: "destructive", title: "Incomplete Range", description: "Please select both start and end dates." });
+      return;
+    }
+    
+    if (isAfter(tempRange.from, tempRange.to)) {
+      toast({ variant: "destructive", title: "Invalid Range", description: "Start date cannot be after end date." });
+      return;
+    }
+
+    setDateRange({ from: tempRange.from, to: tempRange.to });
+    setRangeType('custom');
+    setIsCalendarOpen(false);
+    toast({ title: "Filters Applied", description: `Viewing data from ${format(tempRange.from, 'dd MMM')} to ${format(tempRange.to, 'dd MMM')}` });
+  };
+
   const handleExport = () => {
     const headers = ["OrderID", "Customer", "Amount", "Status", "Date"];
     const rows = metrics.recent.map(o => [
@@ -211,7 +244,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
 
   return (
     <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 no-print">
-      {/* FILTER BAR - NON-STICKY ON MOBILE TO PREVENT LAYERING */}
+      {/* FILTER BAR */}
       <div className="bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-3xl lg:static -mx-4 md:-mx-10 px-4 md:px-10 py-4 border-b lg:border-none">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex flex-wrap gap-2 overflow-x-auto scrollbar-hide pb-1 w-full md:w-auto">
@@ -229,7 +262,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
               </Button>
             ))}
             
-            <Popover>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={rangeType === 'custom' ? 'default' : 'outline'}
@@ -242,13 +275,47 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                   Custom
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 rounded-[2rem] border-none shadow-3xl z-[150]" align="start">
-                <Calendar
-                  mode="range"
-                  selected={{ from: dateRange.from, to: dateRange.to }}
-                  onSelect={(range: any) => { if (range?.from && range?.to) { setDateRange({ from: range.from, to: range.to }); setRangeType('custom'); }}}
-                  initialFocus
-                />
+              <PopoverContent className="w-auto p-0 rounded-[2rem] border-none shadow-3xl z-[150] overflow-hidden" align="start">
+                <div className="p-6 bg-white dark:bg-zinc-950 space-y-6">
+                  <div className="flex items-center justify-between border-b pb-4">
+                    <h4 className="font-black uppercase text-xs tracking-widest text-primary italic">Custom Node Range</h4>
+                    <button onClick={() => setIsCalendarOpen(false)} className="text-muted-foreground hover:text-primary transition-colors"><X className="w-4 h-4" /></button>
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-[7px] font-black uppercase opacity-40 ml-1">From Epoch</p>
+                        <div className="h-10 px-3 bg-secondary/30 rounded-xl flex items-center justify-center font-bold text-[10px]">
+                          {tempRange.from ? format(tempRange.from, 'dd MMM yyyy') : 'Start Date'}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[7px] font-black uppercase opacity-40 ml-1">To Epoch</p>
+                        <div className="h-10 px-3 bg-secondary/30 rounded-xl flex items-center justify-center font-bold text-[10px]">
+                          {tempRange.to ? format(tempRange.to, 'dd MMM yyyy') : 'End Date'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-2xl bg-zinc-50 dark:bg-zinc-900/50">
+                      <Calendar
+                        mode="range"
+                        selected={{ from: tempRange.from, to: tempRange.to }}
+                        onSelect={(range: any) => setTempRange({ from: range?.from, to: range?.to })}
+                        initialFocus
+                        numberOfMonths={1}
+                      />
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleApplyCustomRange} 
+                    className="w-full h-12 rounded-xl font-black uppercase text-[10px] tracking-widest bg-primary shadow-xl shadow-primary/20"
+                  >
+                    Apply Temporal Filter
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -297,7 +364,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={metrics.chartData}>
                   <defs>
-                    <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorVal" x1="0" x1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f97316" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                     </linearGradient>
