@@ -312,6 +312,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
         <DialogContent className="max-w-2xl rounded-[2rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950">
           <DialogHeader className="p-5 md:p-6 border-b bg-muted/5">
              <DialogTitle className="text-lg font-black uppercase tracking-tight leading-none">Manifest: #{selectedOrderForView?.orderId}</DialogTitle>
+             <DialogDescription className="sr-only">Detailed view of order items, customer information, and delivery destination.</DialogDescription>
           </DialogHeader>
           
           {selectedOrderForView && (
@@ -358,7 +359,7 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
                         </div>
                         <div className="pt-3 border-t border-dashed">
                            <p className="text-[8px] font-black uppercase opacity-30 mb-1">Destination</p>
-                           <p className="text-[10px] font-medium leading-relaxed italic opacity-80">{selectedOrderForView.address}</p>
+                           <p className="text-10px font-medium leading-relaxed italic opacity-80">{selectedOrderForView.address}</p>
                         </div>
                     </div>
                   </div>

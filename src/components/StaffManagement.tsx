@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
@@ -664,6 +663,10 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl rounded-[3.5rem] p-0 overflow-hidden border-none bg-white dark:bg-zinc-950 shadow-4xl flex flex-col h-[85vh]">
+        <DialogHeader className="sr-only">
+           <DialogTitle>Staff Profile: {staff.name}</DialogTitle>
+           <DialogDescription>Operational details and metrics for staff member {staff.name}.</DialogDescription>
+        </DialogHeader>
         <div className="relative h-64 bg-zinc-950 shrink-0">
            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
            <div className="absolute -bottom-14 left-10">
@@ -746,4 +749,3 @@ const InfoRow = ({ label, val }: any) => (
      <span className="text-[10px] font-bold uppercase">{val || 'N/A'}</span>
   </div>
 );
-
