@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -120,10 +119,10 @@ export default function Home() {
         </div>
 
         {/* BOUNTIES */}
-        <section className="py-8 bg-secondary/10 dark:bg-zinc-900/30">
+        <section className="py-4 bg-secondary/10 dark:bg-zinc-900/30">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-4 mb-6">
-               <h2 className="text-lg font-black uppercase tracking-tighter whitespace-nowrap">Exclusive <span className="text-primary italic">Bounties</span></h2>
+            <div className="flex items-center gap-4 mb-4">
+               <h2 className="text-sm md:text-lg font-black uppercase tracking-tighter whitespace-nowrap">Exclusive <span className="text-primary italic">Bounties</span></h2>
                <div className="h-px bg-border flex-1" />
             </div>
             <PromoBanner />
