@@ -114,11 +114,11 @@ export const Navbar = () => {
     <nav className={cn(
       "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
       scrolled 
-        ? "bg-white/95 dark:bg-black/95 backdrop-blur-3xl border-b py-1.5 shadow-xl" 
-        : "bg-white/5 dark:bg-black/5 backdrop-blur-sm py-2"
+        ? "bg-white/95 dark:bg-black/95 backdrop-blur-3xl border-b py-2 shadow-xl" 
+        : "bg-white/5 dark:bg-black/5 backdrop-blur-sm py-3"
     )}>
       <div className="container mx-auto px-4 max-w-7xl">
-        <div className="h-9 md:h-11 flex items-center justify-between gap-4">
+        <div className="h-10 md:h-12 flex items-center justify-between gap-4">
           <Link href="/" className="transition-transform active:scale-95">
             <Logo 
               variant={scrolled ? 'dark' : (mounted && isDarkMode ? 'dark' : 'light')} 
@@ -130,7 +130,7 @@ export const Navbar = () => {
           <div className="flex-1 max-w-sm hidden md:block">
             <form onSubmit={(e) => { e.preventDefault(); router.push(`/menu?q=${navSearch}`); }} className="relative group">
               <Search className={cn(
-                "absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 transition-colors z-10",
+                "absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10",
                 scrolled ? "text-muted-foreground" : "text-white/40"
               )} />
               <Input 
@@ -139,7 +139,7 @@ export const Navbar = () => {
                 placeholder="Search bites..." 
                 suppressHydrationWarning
                 className={cn(
-                  "w-full h-8 pl-9 pr-4 rounded-xl border-none transition-all font-black text-[9px] uppercase tracking-widest focus:ring-4 focus:ring-primary/20",
+                  "w-full h-9 pl-10 pr-4 rounded-xl border-none transition-all font-black text-[10px] uppercase tracking-widest focus:ring-4 focus:ring-primary/20",
                   scrolled 
                     ? "bg-secondary/60 focus:bg-white dark:bg-zinc-900 !text-foreground" 
                     : "bg-white/10 !text-white placeholder:text-white/40 focus:bg-white/20 backdrop-blur-xl"
@@ -148,16 +148,16 @@ export const Navbar = () => {
             </form>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             {mounted && user && (
               <NotificationCenter>
                 <Button variant="ghost" size="icon" className={cn(
-                  "rounded-full w-8 h-8 md:w-9 md:h-9 transition-all relative",
+                  "rounded-full w-10 h-10 transition-all relative",
                   scrolled ? "hover:bg-primary/5 text-foreground" : "hover:bg-white/10 text-white"
                 )}>
-                  <Bell className="w-4 h-4" />
+                  <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary text-white text-[6px] font-black rounded-full flex items-center justify-center border-2 border-background shadow-xl animate-in zoom-in">
+                    <span className="absolute top-1.5 right-1.5 w-3 h-3 bg-primary text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-background shadow-xl animate-in zoom-in">
                       {unreadCount}
                     </span>
                   )}
@@ -165,7 +165,7 @@ export const Navbar = () => {
               </NotificationCenter>
             )}
 
-            <ThemeToggle className="hidden md:flex h-8 w-8" />
+            <ThemeToggle className="hidden md:flex h-10 w-10" />
             
             <div className="hidden md:flex items-center gap-3">
               {mounted && !userLoading && (
@@ -173,9 +173,9 @@ export const Navbar = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="outline-none rounded-xl ring-offset-background focus:ring-4 focus:ring-primary/20 transition-all active:scale-90 overflow-hidden shadow-lg">
-                        <Avatar className="h-7 w-7 rounded-xl border-2 border-background">
+                        <Avatar className="h-8 w-8 rounded-xl border-2 border-background">
                           <AvatarImage src={customerProfile?.photoUrl || user.photoURL || ''} alt={user.displayName || 'Member'} />
-                          <AvatarFallback className="bg-orange-gradient text-white font-black text-[9px] rounded-xl">
+                          <AvatarFallback className="bg-orange-gradient text-white font-black text-[10px] rounded-xl">
                             {(customerProfile?.name || user.displayName || 'EB').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -213,7 +213,7 @@ export const Navbar = () => {
                 ) : (
                   <Button 
                     onClick={() => setIsAuthModalOpen(true)}
-                    className="rounded-full px-4 h-8 font-black uppercase text-[9px] tracking-widest bg-orange-gradient text-white shadow-xl shadow-primary/20 transform hover:scale-105 transition-all"
+                    className="rounded-full px-5 h-9 font-black uppercase text-[10px] tracking-widest bg-orange-gradient text-white shadow-xl shadow-primary/20 transform hover:scale-105 transition-all"
                   >
                     Login
                   </Button>
@@ -224,12 +224,12 @@ export const Navbar = () => {
             {mounted && (
               <CartDrawer>
                 <Button variant="ghost" size="icon" className={cn(
-                  "rounded-full w-8 h-8 md:w-9 md:h-9 transition-all relative",
+                  "rounded-full w-10 h-10 transition-all relative",
                   scrolled ? "hover:bg-primary/5 text-foreground" : "hover:bg-white/10 text-white"
                 )}>
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-5 h-5" />
                   {cart.length > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-primary text-white text-[7px] font-black rounded-full flex items-center justify-center border-2 border-background shadow-xl animate-in zoom-in">
+                    <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-primary text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-background shadow-xl animate-in zoom-in">
                       {cart.reduce((acc, i) => acc + i.quantity, 0)}
                     </span>
                   )}
@@ -237,100 +237,102 @@ export const Navbar = () => {
               </CartDrawer>
             )}
 
-            <div className="md:hidden">
-              <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className={cn(
-                    "rounded-full w-8 h-8 transition-transform active:scale-90",
-                    scrolled ? "text-foreground" : (mounted && isDarkMode ? "text-foreground" : "text-white")
-                  )}>
-                    <Menu className="w-4 h-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] p-0 border-none bg-background flex flex-col z-[60] shadow-3xl">
-                  <SheetHeader className="p-5 text-left border-b bg-secondary/20">
-                    <SheetTitle className="sr-only">User Menu</SheetTitle>
-                    {mounted && user ? (
-                      <div 
-                        onClick={() => { setIsMenuOpen(false); setIsEditProfileOpen(true); }}
-                        className="flex items-center gap-4 cursor-pointer group"
-                      >
-                        <Avatar className="h-14 w-14 rounded-2xl border-4 border-primary/10 shadow-xl transition-transform group-hover:scale-105">
-                          <AvatarImage src={customerProfile?.photoUrl || user.photoURL || ''} />
-                          <AvatarFallback className="bg-orange-gradient text-white font-black text-base uppercase">
-                            {(customerProfile?.name || user.displayName || 'EB').slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="font-black text-lg uppercase tracking-tighter truncate group-hover:text-primary transition-colors">
-                            {customerProfile?.name?.split(' ')[0] || user.displayName?.split(' ')[0] || 'Member'}
-                          </p>
-                          <div className="flex items-center gap-1 text-primary/60">
-                            <span className="text-[7px] font-black uppercase tracking-widest">Edit Profile</span>
-                            <ChevronRight className="w-2.5 h-2.5" />
+            {mounted && (
+              <div className="md:hidden">
+                <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className={cn(
+                      "rounded-full w-10 h-10 transition-transform active:scale-90",
+                      scrolled ? "text-foreground" : (isDarkMode ? "text-foreground" : "text-white")
+                    )}>
+                      <Menu className="w-5 h-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[300px] p-0 border-none bg-background flex flex-col z-[60] shadow-3xl">
+                    <SheetHeader className="p-6 text-left border-b bg-secondary/20">
+                      <SheetTitle className="sr-only">User Menu</SheetTitle>
+                      {user ? (
+                        <div 
+                          onClick={() => { setIsMenuOpen(false); setIsEditProfileOpen(true); }}
+                          className="flex items-center gap-4 cursor-pointer group"
+                        >
+                          <Avatar className="h-16 w-16 rounded-2xl border-4 border-primary/10 shadow-xl transition-transform group-hover:scale-105">
+                            <AvatarImage src={customerProfile?.photoUrl || user.photoURL || ''} />
+                            <AvatarFallback className="bg-orange-gradient text-white font-black text-lg uppercase">
+                              {(customerProfile?.name || user.displayName || 'EB').slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-black text-xl uppercase tracking-tighter truncate group-hover:text-primary transition-colors">
+                              {customerProfile?.name?.split(' ')[0] || user.displayName?.split(' ')[0] || 'Member'}
+                            </p>
+                            <div className="flex items-center gap-1 text-primary/60">
+                              <span className="text-[8px] font-black uppercase tracking-widest">Edit Profile</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Logo variant="color" size="sm" className="scale-90 origin-left" />
-                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Authorized Hub Only</p>
-                      </div>
-                    )}
-                  </SheetHeader>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <Logo variant="color" size="sm" className="scale-90 origin-left" />
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Authorized Hub Only</p>
+                        </div>
+                      )}
+                    </SheetHeader>
 
-                  <div className="flex-1 overflow-y-auto py-5 px-3 space-y-1 scrollbar-hide">
-                    {menuItems.map((item) => {
-                      if (item.authRequired && (!mounted || !user)) return null;
-                      if (item.staffOnly && (!mounted || !isStaff)) return null;
-                      
-                      return (
-                        <Link 
-                          key={item.label} 
-                          href={item.href}
-                          onClick={() => setIsMenuOpen(false)}
-                          className="flex items-center justify-between p-3.5 rounded-xl hover:bg-primary/5 transition-all active:bg-primary/10 group"
-                        >
-                          <div className="flex items-center gap-3.5">
-                            <div className="w-9 h-9 rounded-xl bg-secondary/60 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                              <item.icon className="w-4.5 h-4.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1 scrollbar-hide">
+                      {menuItems.map((item) => {
+                        if (item.authRequired && !user) return null;
+                        if (item.staffOnly && !isStaff) return null;
+                        
+                        return (
+                          <Link 
+                            key={item.label} 
+                            href={item.href}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="flex items-center justify-between p-4 rounded-xl hover:bg-primary/5 transition-all active:bg-primary/10 group"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-secondary/60 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                <item.icon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                              </div>
+                              <span className="font-black text-[10px] uppercase tracking-widest text-foreground/80 group-hover:text-primary">
+                                {item.label}
+                              </span>
                             </div>
-                            <span className="font-black text-[9px] uppercase tracking-widest text-foreground/80 group-hover:text-primary">
-                              {item.label}
-                            </span>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                          </Link>
+                        );
+                      })}
 
-                    <div className="h-px bg-border my-5 mx-4 opacity-50" />
+                      <div className="h-px bg-border my-6 mx-4 opacity-50" />
 
-                    <div className="px-1.5">
-                       <ThemeToggle className="w-full h-auto p-3.5 rounded-xl bg-secondary/20" />
+                      <div className="px-1.5">
+                         <ThemeToggle className="w-full h-auto p-4 rounded-xl bg-secondary/20" />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="p-6 border-t shrink-0">
-                    {mounted && user ? (
-                      <Button 
-                        variant="ghost" 
-                        onClick={handleLogout}
-                        className="w-full h-14 rounded-2xl font-black uppercase text-[9px] tracking-widest text-destructive hover:bg-destructive/5 gap-3 border-2 border-destructive/10"
-                      >
-                        <LogOut className="w-4.5 h-4.5" /> Log out
-                      </Button>
-                    ) : (
-                      <Button 
-                        onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }}
-                        className="w-full h-14 rounded-2xl bg-orange-gradient font-black uppercase text-[9px] tracking-widest shadow-2xl shadow-primary/20 text-white"
-                      >
-                        Login
-                      </Button>
-                    )}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+                    <div className="p-6 border-t shrink-0">
+                      {user ? (
+                        <Button 
+                          variant="ghost" 
+                          onClick={handleLogout}
+                          className="w-full h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest text-destructive hover:bg-destructive/5 gap-3 border-2 border-destructive/10"
+                        >
+                          <LogOut className="w-5 h-5" /> Log out
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }}
+                          className="w-full h-14 rounded-2xl bg-orange-gradient font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-primary/20 text-white"
+                        >
+                          Login
+                        </Button>
+                      )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            )}
           </div>
         </div>
       </div>
