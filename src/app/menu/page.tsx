@@ -1,23 +1,36 @@
+
 "use client"
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { FoodCard } from '@/components/FoodCard';
-import { Search, Loader2, PackageX, AlertCircle } from 'lucide-react';
+import { Search, Loader2, PackageX, AlertCircle, FilterX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { FoodItem } from '@/app/lib/store';
 import { cn } from '@/lib/utils';
 import { CATEGORIES } from '@/app/lib/menu-data';
 import { useAnalytics } from '@/hooks/use-analytics';
+
+// Custom hook for search debounce
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 function MenuContent() {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
   
   const [searchQuery, setSearchQuery] = useState(urlQuery);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  
   const [dietFilter, setDietFilter] = useState<'all' | 'veg' | 'non-veg'>('all');
   const [activeCategory, setActiveCategory] = useState('All');
   
@@ -31,13 +44,12 @@ function MenuContent() {
   useEffect(() => {
     if (urlQuery) {
       setSearchQuery(urlQuery);
-      trackSearch(urlQuery);
     }
-  }, [urlQuery, trackSearch]);
+  }, [urlQuery]);
 
   const productsQuery = useMemo(() => {
     if (!db) return null;
-    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'products'), orderBy('createdAt', 'desc'), limit(200));
   }, [db]);
 
   const { data: menuItems, loading, error } = useCollection<FoodItem>(productsQuery);
@@ -46,8 +58,8 @@ function MenuContent() {
     if (!menuItems) return [];
     
     return menuItems.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+                           item.description?.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchesDiet = dietFilter === 'all' || 
                         (dietFilter === 'veg' && item.isVeg) || 
                         (dietFilter === 'non-veg' && !item.isVeg);
@@ -55,7 +67,7 @@ function MenuContent() {
       
       return matchesSearch && matchesDiet && matchesCategory;
     });
-  }, [menuItems, searchQuery, dietFilter, activeCategory]);
+  }, [menuItems, debouncedSearch, dietFilter, activeCategory]);
 
   const filterChips = [
     { label: 'All', value: 'all', type: 'category' },
@@ -78,7 +90,7 @@ function MenuContent() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery) trackSearch(searchQuery);
+    if (debouncedSearch) trackSearch(debouncedSearch);
   };
 
   return (
@@ -96,6 +108,15 @@ function MenuContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button 
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <FilterX className="w-4 h-4" />
+              </button>
+            )}
           </form>
         </div>
 
@@ -128,11 +149,10 @@ function MenuContent() {
         </div>
 
         {loading ? (
-          <div className="py-40 flex flex-col items-center gap-6">
-             <div className="relative">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl animate-pulse" />
-                <Loader2 className="w-6 h-6 animate-spin text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-             </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+              <div key={i} className="aspect-[4/3] rounded-[1.5rem] bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+            ))}
           </div>
         ) : error ? (
            <div className="py-24 text-center bg-destructive/5 rounded-[3rem] border-2 border-destructive/10 border-dashed max-w-2xl mx-auto">

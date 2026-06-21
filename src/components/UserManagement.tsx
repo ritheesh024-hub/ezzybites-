@@ -10,7 +10,9 @@ import {
   Users, Search, Loader2, 
   CalendarDays, Mail, Phone,
   Clock, ShieldCheck, UserCircle2,
-  Download
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
@@ -18,12 +20,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
+const ITEMS_PER_PAGE = 20;
+
 export const UserManagement = () => {
   const db = useFirestore();
   const usersQuery = useMemo(() => db ? query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(1000)) : null, [db]);
   const { data: users, loading } = useCollection<any>(usersQuery);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -34,6 +39,12 @@ export const UserManagement = () => {
       return matchesSearch;
     });
   }, [users, searchQuery]);
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredUsers, currentPage]);
 
   const handleExportUsers = () => {
     if (!filteredUsers.length) return;
@@ -61,10 +72,10 @@ export const UserManagement = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="space-y-1">
           <h2 className="text-4xl font-black font-headline uppercase tracking-tighter italic">Customer <span className="text-primary">CRM</span></h2>
-          <p className="text-muted-foreground text-sm font-medium tracking-tight">Enterprise directory for user identity and retention management.</p>
+          <p className="text-muted-foreground text-sm font-medium tracking-tight">Directory Size: {filteredUsers.length}</p>
         </div>
         <Button onClick={handleExportUsers} className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 bg-zinc-950 text-white shadow-3xl hover:bg-zinc-800 transition-all">
-          <Download className="w-5 h-5" /> Export Audit Log
+          <Download className="w-5 h-5" /> Export CRM
         </Button>
       </div>
 
@@ -74,18 +85,13 @@ export const UserManagement = () => {
           <Input 
             placeholder="Search by identity, email or contact..." 
             value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
             className="h-14 pl-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-base" 
           />
         </div>
-        <div className="flex gap-4 w-full lg:w-auto">
-          <Badge variant="outline" className="h-14 px-6 rounded-2xl bg-secondary/50 border-none font-black uppercase text-[10px] tracking-widest items-center flex gap-3">
-             <Users className="w-4 h-4 text-primary" /> {filteredUsers.length} Recorded
-          </Badge>
-        </div>
       </div>
 
-      <Card className="rounded-[3rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden border">
+      <Card className="rounded-[3rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
             <div className="p-48 text-center space-y-6">
@@ -104,25 +110,25 @@ export const UserManagement = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
-                  {filteredUsers.length === 0 ? (
+                  {paginatedUsers.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="py-24 text-center opacity-10">
                         <UserCircle2 className="w-16 h-16 mx-auto mb-4" />
                         <p className="font-black uppercase tracking-[0.4em] text-sm italic">No entries found</p>
                       </td>
                     </tr>
-                  ) : filteredUsers.map((u) => (
+                  ) : paginatedUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-primary/5 transition-all group">
                       <td className="px-10 py-6">
                         <div className="flex items-center gap-5">
-                          <Avatar className="h-14 w-14 rounded-2xl shadow-xl border-4 border-white dark:border-zinc-800 shrink-0 group-hover:scale-110 transition-transform duration-700">
+                          <Avatar className="h-14 w-14 rounded-2xl shadow-xl border-4 border-white dark:border-zinc-800 shrink-0">
                             <AvatarImage src={u.photoUrl} alt={u.name} />
                             <AvatarFallback className="bg-zinc-950 text-white font-black text-base">
                               {(u.name || 'EB').slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex flex-col min-w-0">
-                            <span className="font-black text-base uppercase tracking-tighter group-hover:text-primary transition-colors truncate">{u.name || 'Guest'}</span>
+                            <span className="font-black text-base uppercase tracking-tighter truncate">{u.name || 'Guest'}</span>
                             <span className="text-[10px] font-medium opacity-50 truncate flex items-center gap-2 mt-0.5">
                                <Mail className="w-3.5 h-3.5" /> {u.email}
                             </span>
@@ -135,29 +141,16 @@ export const UserManagement = () => {
                                <ShieldCheck className={cn("w-4 h-4", u.email ? "text-emerald-500" : "text-zinc-300")} />
                                <span className="text-[10px] font-black uppercase tracking-tight">{u.email ? 'Identity Verified' : 'Standard Node'}</span>
                             </div>
-                            {u.phone && (
-                              <p className="text-[11px] font-bold text-muted-foreground flex items-center gap-2 bg-secondary/50 px-2 py-0.5 rounded-lg w-fit">
-                                <Phone className="w-3 h-3" /> +91 {u.phone}
-                              </p>
-                            )}
+                            {u.phone && <p className="text-[11px] font-bold text-muted-foreground">+91 {u.phone}</p>}
                          </div>
                       </td>
                       <td className="px-10 py-6">
-                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                               <Badge className="bg-zinc-950 text-white border-none px-3 py-1 font-black text-[9px] uppercase tracking-widest rounded-lg">
-                                  {u.orderCount || 0} Orders
-                               </Badge>
-                            </div>
-                            {u.lastOrderAt && (
-                              <p className="text-[9px] font-bold opacity-40 flex items-center gap-1.5 uppercase">
-                                <Clock className="w-3 h-3" /> Active: {format(u.lastOrderAt.toDate(), 'MMM dd, yyyy')}
-                              </p>
-                            )}
-                         </div>
+                         <Badge className="bg-zinc-950 text-white border-none px-3 py-1 font-black text-[9px] uppercase tracking-widest rounded-lg">
+                            {u.orderCount || 0} Orders
+                         </Badge>
                       </td>
                       <td className="px-10 py-6">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground opacity-30 italic tracking-[0.2em]">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase text-muted-foreground opacity-30 italic">
                            <CalendarDays className="w-4 h-4" />
                            {u.createdAt?.toDate ? format(u.createdAt.toDate(), 'MMM dd, yyyy') : 'Pre-Launch'}
                         </div>
@@ -169,6 +162,32 @@ export const UserManagement = () => {
             </div>
           )}
         </CardContent>
+        
+        {totalPages > 1 && (
+          <div className="p-8 border-t flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/30">
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Page {currentPage} of {totalPages}</p>
+            <div className="flex gap-2">
+               <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="rounded-xl h-10 w-10 p-0 border-2"
+               >
+                 <ChevronLeft className="w-4 h-4" />
+               </Button>
+               <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-xl h-10 w-10 p-0 border-2"
+               >
+                 <ChevronRight className="w-4 h-4" />
+               </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

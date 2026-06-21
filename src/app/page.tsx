@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -17,7 +18,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
-import { FoodItem, useStore } from '@/app/lib/store';
+import { FoodItem } from '@/app/lib/store';
 import { Logo } from '@/components/Logo';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -38,7 +39,7 @@ export default function Home() {
     return query(
       collection(db, 'products'),
       where('isAvailable', '==', true),
-      limit(8)
+      limit(10)
     );
   }, [db]);
 
@@ -49,12 +50,7 @@ export default function Home() {
     if (search.trim()) router.push(`/menu?q=${encodeURIComponent(search.trim())}`);
   };
 
-  const heroBg = "https://picsum.photos/seed/ezzybites-dark-hero/1920/1080";
-
-  // Critical for Next.js hydration safety
   if (!mounted) return null;
-
-  const currentYear = new Date().getFullYear();
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-zinc-950 overflow-x-hidden">
@@ -62,10 +58,10 @@ export default function Home() {
       
       <main className="flex-1">
         {/* HERO SECTION */}
-        <section className="relative md:min-h-[70vh] min-h-[40vh] flex items-center pt-24 pb-12 overflow-hidden bg-black">
+        <section className="relative md:min-h-[70vh] min-h-[50vh] flex items-center pt-24 pb-12 overflow-hidden bg-black">
           <div className="absolute inset-0 z-0">
             <Image 
-              src={heroBg}
+              src="https://picsum.photos/seed/ezzybites-dark-hero/1920/1080"
               alt="Premium Background"
               fill
               className="object-cover opacity-60"
@@ -150,9 +146,9 @@ export default function Home() {
             </div>
 
             {menuLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="aspect-[4/5] bg-muted animate-pulse rounded-[1.5rem]" />
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                  <div key={i} className="aspect-[4/5] bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-[1.5rem]" />
                 ))}
               </div>
             ) : (
@@ -191,7 +187,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FAQ */}
         <section className="py-16 container mx-auto px-4 max-w-3xl">
           <div className="text-center mb-10 space-y-2">
             <h2 className="text-3xl font-headline font-black uppercase tracking-tighter">Support Core</h2>
@@ -229,7 +224,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-border/50 pt-10 text-center">
-            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.4em] opacity-40">© {currentYear} Ezzy Bites Premium Food-Tech</p>
+            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-[0.4em] opacity-40">© {new Date().getFullYear()} Ezzy Bites Premium Food-Tech</p>
           </div>
         </div>
       </footer>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -21,7 +22,9 @@ import {
   Save,
   Loader2,
   MapPin,
-  MessageSquare
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -49,12 +52,15 @@ interface ArchiveSystemProps {
   onViewDetails: (order: any) => void;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => {
   const db = useFirestore();
   const { user: staffUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Edit State
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
@@ -62,7 +68,6 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
   const [saving, setSaving] = useState(false);
 
   const filteredOrders = useMemo(() => {
-    // Show all orders from the source, no terminal-only restriction
     return orders.filter(o => {
       const matchesSearch = 
         o.orderId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -85,6 +90,12 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [orders, searchQuery, statusFilter, typeFilter]);
+
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
 
   const getStatusBadge = (status: string) => {
     const s = (status || '').toLowerCase();
@@ -117,8 +128,7 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
     setSaving(true);
     try {
       const orderRef = doc(db, 'orders', editingOrder.id);
-      const originalOrder = orders.find(o => o.id === editingOrder.id);
-      const statusChanged = originalOrder && originalOrder.status !== editingOrder.status;
+      const statusChanged = orders.find(o => o.id === editingOrder.id)?.status !== editingOrder.status;
 
       await updateDoc(orderRef, {
         customerName: editingOrder.customerName,
@@ -129,29 +139,11 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
         updatedAt: serverTimestamp()
       });
 
-      // Send In-App Notification if status changed
       if (statusChanged && editingOrder.userId) {
         const notifRef = collection(db, 'user_notifications', editingOrder.userId, 'items');
-        const titles: Record<string, string> = {
-          'confirmed': 'Order Confirmed! ✅',
-          'preparing': 'Chef is on it! 👨‍🍳',
-          'outForDelivery': 'Rider is Dispatched 🛵',
-          'delivered': 'Enjoy your Bites! 🍱',
-          'Cancelled': 'Order Cancelled ❌',
-          'orderPlaced': 'Order Placed! 🎫'
-        };
-        const messages: Record<string, string> = {
-          'confirmed': 'Your order has been accepted by the station.',
-          'preparing': 'Your premium bites are being handcrafted now.',
-          'outForDelivery': 'Your premium bites are on the way to your sanctuary.',
-          'delivered': 'Your order was successfully handed over. Thank you!',
-          'Cancelled': 'We regret that your order was revoked. Contact support if needed.',
-          'orderPlaced': 'Your order has been recorded in our master log.'
-        };
-
         await addDoc(notifRef, {
-          title: titles[editingOrder.status] || `Status Update: ${editingOrder.status}`,
-          message: messages[editingOrder.status] || `Your order status changed to ${editingOrder.status}.`,
+          title: `Order Updated: ${editingOrder.status}`,
+          message: `Your ticket #${editingOrder.orderId} status has changed.`,
           type: 'order',
           orderId: editingOrder.orderId,
           ctaLink: `/orders/${editingOrder.orderId}`,
@@ -160,10 +152,10 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
         });
       }
 
-      toast({ title: "Order Synchronized", description: `Ticket #${editingOrder.orderId} updated successfully.` });
+      toast({ title: "Order Synchronized" });
       setIsEditProfileOpen(false);
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Sync Failed", description: e.message });
+      toast({ variant: "destructive", title: "Sync Failed" });
     } finally {
       setSaving(false);
     }
@@ -178,7 +170,7 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
       o.orderType || 'Online',
       o.status,
       o.total,
-      o.createdAt?.toDate ? format(o.createdAt.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A'
+      o.createdAt?.toDate ? format(o.createdAt.toDate(), 'yyyy-MM-dd') : 'N/A'
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -196,10 +188,10 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="space-y-1">
           <h2 className="text-4xl font-black font-headline uppercase tracking-tighter italic text-zinc-400">Order <span className="text-primary">Master Ledger</span></h2>
-          <p className="text-muted-foreground text-sm font-medium tracking-tight">Comprehensive record of every transaction in the ecosystem.</p>
+          <p className="text-muted-foreground text-sm font-medium tracking-tight">Records: {filteredOrders.length}</p>
         </div>
-        <Button onClick={handleExport} variant="outline" className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 border-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all">
-          <Download className="w-5 h-5" /> Export Data Node
+        <Button onClick={handleExport} variant="outline" className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 border-2">
+          <Download className="w-5 h-5" /> Export Ledger
         </Button>
       </div>
 
@@ -210,15 +202,15 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
             <Input 
               placeholder="Search by Ticket ID, Customer or Mobile..." 
               value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
               className="h-14 pl-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-base" 
             />
           </div>
           <div className="flex gap-3 w-full lg:w-auto">
              <select 
                value={statusFilter} 
-               onChange={(e) => setStatusFilter(e.target.value)}
-               className="h-14 px-6 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[9px] tracking-widest outline-none focus:ring-2 focus:ring-primary/20"
+               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+               className="h-14 px-6 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[9px] tracking-widest outline-none"
              >
                <option value="all">All States</option>
                <option value="orderPlaced">Placed</option>
@@ -228,21 +220,11 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
                <option value="delivered">Delivered</option>
                <option value="Cancelled">Cancelled</option>
              </select>
-             <select 
-               value={typeFilter} 
-               onChange={(e) => setTypeFilter(e.target.value)}
-               className="h-14 px-6 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[9px] tracking-widest outline-none focus:ring-2 focus:ring-primary/20"
-             >
-               <option value="all">All Types</option>
-               <option value="Online">Online Delivery</option>
-               <option value="Dine-In">Dine-In</option>
-               <option value="Take Away">Take Away</option>
-             </select>
           </div>
         </div>
       </div>
 
-      <Card className="rounded-[3rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden border">
+      <Card className="rounded-[3rem] border-none shadow-2xl bg-white dark:bg-zinc-900 overflow-hidden">
         <div className="overflow-x-auto scrollbar-hide">
           <table className="w-full">
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
@@ -255,15 +237,15 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800">
-              {filteredOrders.length === 0 ? (
+              {paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-32 text-center opacity-10">
                     <History className="w-20 h-20 mx-auto mb-4" />
-                    <p className="font-black uppercase tracking-[0.4em] text-sm italic">No Archive Records Match</p>
+                    <p className="font-black uppercase tracking-[0.4em] text-sm italic">No Records Match</p>
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => {
+                paginatedOrders.map((order) => {
                   const statusInfo = getStatusBadge(order.status);
                   return (
                     <tr 
@@ -274,60 +256,28 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
                       <td className="px-10 py-6">
                         <div className="flex flex-col">
                           <span className="font-black text-primary italic">#{order.orderId}</span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Clock className="w-3 h-3 opacity-30" />
-                            <span className="text-[8px] font-bold opacity-40 uppercase">
-                              {order.createdAt?.toDate ? format(order.createdAt.toDate(), 'MMM dd, hh:mm a') : 'Legacy'}
-                            </span>
-                          </div>
+                          <span className="text-[8px] font-bold opacity-40 uppercase">
+                            {order.createdAt?.toDate ? format(order.createdAt.toDate(), 'MMM dd, hh:mm a') : 'Legacy'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-10 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center shrink-0">
-                            <User className="w-5 h-5 text-muted-foreground opacity-40" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-black text-sm uppercase tracking-tighter truncate group-hover:text-primary transition-colors">{order.customerName || 'Anonymous'}</p>
-                            <p className="text-[9px] font-bold opacity-40">{order.customerPhone}</p>
-                          </div>
-                        </div>
+                        <p className="font-black text-sm uppercase tracking-tighter truncate max-w-[150px]">{order.customerName || 'Anonymous'}</p>
+                        <p className="text-[9px] font-bold opacity-40">{order.customerPhone}</p>
                       </td>
                       <td className="px-10 py-6">
-                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              {order.orderType === 'Dine-In' ? <Utensils className="w-3 h-3 text-blue-500" /> : <Package className="w-3 h-3 text-orange-500" />}
-                              <span className="text-[9px] font-black uppercase tracking-widest">{order.orderType || 'Online'}</span>
-                            </div>
-                            <Badge className={cn(
-                              "border px-2 py-0.5 rounded text-[7px] font-black uppercase w-fit shadow-sm",
-                              statusInfo.class
-                            )}>
-                              {statusInfo.label}
-                            </Badge>
+                         <div className="flex flex-col gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest">{order.orderType || 'Online'}</span>
+                            <Badge className={cn("border px-2 py-0.5 rounded text-[7px] font-black uppercase w-fit", statusInfo.class)}>{statusInfo.label}</Badge>
                          </div>
                       </td>
                       <td className="px-10 py-6">
-                         <p className="font-black text-xl text-zinc-900 dark:text-white italic leading-none">₹{order.total}</p>
-                         <p className="text-[8px] font-black uppercase opacity-30 mt-1">{order.items?.length || 0} Units</p>
+                         <p className="font-black text-xl italic">₹{order.total}</p>
                       </td>
                       <td className="px-10 py-6 text-right">
                          <div className="flex justify-end gap-2">
-                           <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             onClick={(e) => handleOpenEdit(e, order)}
-                             className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
-                           >
-                             <Edit2 className="w-4 h-4" />
-                           </Button>
-                           <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             className="h-10 px-6 rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 hover:bg-primary hover:text-white transition-all"
-                           >
-                             <Eye className="w-4 h-4" /> Manifest
-                           </Button>
+                           <Button variant="ghost" size="sm" onClick={(e) => handleOpenEdit(e, order)} className="h-10 w-10 p-0 rounded-xl hover:bg-primary/10 transition-all"><Edit2 className="w-4 h-4" /></Button>
+                           <Button variant="ghost" size="sm" className="h-10 px-6 rounded-xl font-black uppercase text-[9px] tracking-widest gap-2 hover:bg-primary hover:text-white transition-all"><Eye className="w-4 h-4" /> Manifest</Button>
                          </div>
                       </td>
                     </tr>
@@ -337,73 +287,52 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="p-8 border-t flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/30">
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Page {currentPage} of {totalPages}</p>
+            <div className="flex gap-2">
+               <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="rounded-xl h-10 w-10 p-0 border-2"
+               >
+                 <ChevronLeft className="w-4 h-4" />
+               </Button>
+               <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="rounded-xl h-10 w-10 p-0 border-2"
+               >
+                 <ChevronRight className="w-4 h-4" />
+               </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* EDIT ORDER DIALOG */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditProfileOpen}>
         <DialogContent className="max-w-xl rounded-[3rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950">
-           <div className="p-10 bg-primary text-white shrink-0 relative overflow-hidden">
-             <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-             <DialogHeader className="relative z-10">
-                <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter leading-none italic">
-                  Modify <span className="opacity-80">Ticket</span>
-                </DialogTitle>
-                <DialogDescription className="text-white/70 font-medium text-[10px] uppercase tracking-widest mt-2">
-                  Syncing Metadata for #{editingOrder?.orderId}
-                </DialogDescription>
+           <div className="p-10 bg-primary text-white shrink-0">
+             <DialogHeader>
+                <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter italic">Modify <span className="opacity-80">Ticket</span></DialogTitle>
+                <DialogDescription className="text-white/70 font-medium text-[10px] uppercase tracking-widest mt-2">Syncing Metadata for #{editingOrder?.orderId}</DialogDescription>
              </DialogHeader>
           </div>
-
-          <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto scrollbar-hide">
+          <div className="p-10 space-y-8 max-h-[50vh] overflow-y-auto scrollbar-hide">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Entity Identity</Label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                  <Input 
-                    value={editingOrder?.customerName || ''} 
-                    onChange={e => setEditingOrder({...editingOrder, customerName: e.target.value})}
-                    className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6" 
-                  />
-                </div>
+                <Input value={editingOrder?.customerName || ''} onChange={e => setEditingOrder({...editingOrder, customerName: e.target.value})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Mobile Node</Label>
-                <Input 
-                  value={editingOrder?.customerPhone || ''} 
-                  onChange={e => setEditingOrder({...editingOrder, customerPhone: e.target.value})}
-                  className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6" 
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Logistics Sanctuary (Address)</Label>
-              <div className="relative">
-                 <MapPin className="absolute left-4 top-4 w-4 h-4 text-primary" />
-                 <Textarea 
-                   value={editingOrder?.address || ''} 
-                   onChange={e => setEditingOrder({...editingOrder, address: e.target.value})}
-                   className="min-h-[100px] pl-12 rounded-[1.5rem] border-none bg-secondary/30 dark:bg-zinc-800 font-medium py-4 pr-6" 
-                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Kitchen Instructions</Label>
-              <div className="relative">
-                 <MessageSquare className="absolute left-4 top-4 w-4 h-4 text-blue-500" />
-                 <Textarea 
-                   value={editingOrder?.instructions || ''} 
-                   onChange={e => setEditingOrder({...editingOrder, instructions: e.target.value})}
-                   className="min-h-[80px] pl-12 rounded-[1.5rem] border-none bg-secondary/30 dark:bg-zinc-800 font-medium py-4 pr-6" 
-                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-               <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Operational State</Label>
-               <Select value={editingOrder?.status} onValueChange={v => setEditingOrder({...editingOrder, status: v})}>
+                <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Operational State</Label>
+                <Select value={editingOrder?.status} onValueChange={v => setEditingOrder({...editingOrder, status: v})}>
                   <SelectTrigger className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-black uppercase text-[10px] tracking-widest px-6">
                     <SelectValue />
                   </SelectTrigger>
@@ -415,13 +344,17 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
                      <SelectItem value="delivered" className="font-bold">DELIVERED</SelectItem>
                      <SelectItem value="Cancelled" className="font-bold">CANCELLED</SelectItem>
                   </SelectContent>
-               </Select>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Delivery Address</Label>
+              <Textarea value={editingOrder?.address || ''} onChange={e => setEditingOrder({...editingOrder, address: e.target.value})} className="min-h-[100px] rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-medium px-6 py-4" />
             </div>
           </div>
-
           <DialogFooter className="p-8 bg-zinc-50 dark:bg-zinc-900 border-t flex gap-3">
              <Button variant="outline" className="h-16 flex-1 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest border-2" onClick={() => setIsEditProfileOpen(false)}>Close</Button>
-             <Button className="h-16 flex-[2] rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest bg-primary text-white shadow-2xl shadow-primary/30" onClick={handleSaveEdit} disabled={saving}>
+             <Button className="h-16 flex-[2] rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest bg-primary text-white shadow-2xl" onClick={handleSaveEdit} disabled={saving}>
                {saving ? <Loader2 className="animate-spin w-5 h-5" /> : <><Save className="w-5 h-5 mr-2" /> Save</>}
              </Button>
           </DialogFooter>

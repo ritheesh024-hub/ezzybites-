@@ -14,7 +14,7 @@ import { useUser, useFirestore, useDoc } from '@/firebase';
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { AuthModal } from './AuthModal';
 import { ProductDetails } from './ProductDetails';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface FoodCardProps {
   item: FoodItem;
@@ -63,7 +63,7 @@ export const FoodCard = ({ item }: FoodCardProps) => {
         createdAt: serverTimestamp()
       });
       trackEvent('add_to_wishlist', { item_id: item.id, item_name: item.name });
-      toast({ title: "Saved to Favorites", description: `${item.name} bookmarked.` });
+      toast({ title: "Saved to Favorites" });
     }
   };
 
@@ -75,15 +75,8 @@ export const FoodCard = ({ item }: FoodCardProps) => {
     } else {
       addToCart(item);
       trackAddToCart(item);
-      toast({ title: "Added to Tray", description: `${item.name} ready.` });
+      toast({ title: "Added to Tray" });
     }
-  };
-
-  const handleCustomizationConfirm = (options: BeverageOptions) => {
-    addToCart(item, options);
-    trackAddToCart(item);
-    setIsCustomizing(false);
-    toast({ title: "Custom Order Added", description: `${item.name} (${options.size}) added.` });
   };
 
   const handleQtyChange = (delta: number, e: React.MouseEvent) => {
@@ -92,14 +85,13 @@ export const FoodCard = ({ item }: FoodCardProps) => {
     const targetItem = cart.find(i => i.id === item.id);
     if (targetItem) {
       updateQuantity(targetItem.cartId, delta);
-      if (delta > 0) trackAddToCart(item);
     } else if (delta > 0) {
       handleAddClick(e);
     }
   };
 
   const displayRating = item.reviewCount 
-    ? (item.ratingSum / item.reviewCount).toFixed(1) 
+    ? (item.ratingSum! / item.reviewCount).toFixed(1) 
     : (item.rating || '4.5');
 
   return (
@@ -114,11 +106,12 @@ export const FoodCard = ({ item }: FoodCardProps) => {
             src={item.imageUrl} 
             alt={item.name} 
             fill 
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
             className="object-cover group-hover:scale-110 transition-transform duration-700" 
             unoptimized 
+            loading="lazy"
           />
           
-          {/* BADGES OVERLAY */}
           <div className="absolute top-1.5 left-1.5 md:top-2 md:left-2 flex flex-col gap-1">
              <div className={cn(
                "w-3.5 h-3.5 md:w-4 md:h-4 bg-white/90 dark:bg-black/90 backdrop-blur rounded-[3px] border flex items-center justify-center shadow-sm",
@@ -133,27 +126,12 @@ export const FoodCard = ({ item }: FoodCardProps) => {
             </Badge>
           </div>
 
-          {/* FAVORITE TOGGLE */}
           <button 
             onClick={toggleFavorite}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur flex items-center justify-center shadow-lg transform active:scale-75 transition-all z-10"
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur flex items-center justify-center shadow-lg active:scale-75 transition-all z-10"
           >
-            <motion.div animate={isFavorited ? { scale: [1, 1.2, 1] } : {}}>
-              <Heart className={cn("w-4 h-4 transition-colors", isFavorited ? "fill-primary text-primary" : "text-muted-foreground")} />
-            </motion.div>
+            <Heart className={cn("w-4 h-4", isFavorited ? "fill-primary text-primary" : "text-muted-foreground")} />
           </button>
-
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-             <Button variant="outline" className="bg-white/10 backdrop-blur-md border-white/20 text-white font-black uppercase text-[8px] rounded-xl h-8 pointer-events-none">
-               <Eye className="w-3 h-3 mr-2" /> Details
-             </Button>
-          </div>
-
-          {item.isFeatured && (
-            <div className="absolute bottom-0 left-0 right-0 bg-primary/90 py-0.5 text-[6px] md:text-[7px] font-black text-white text-center uppercase tracking-widest">
-              Bestseller
-            </div>
-          )}
         </div>
 
         {/* CONTENT SECTION */}
@@ -168,9 +146,7 @@ export const FoodCard = ({ item }: FoodCardProps) => {
           </div>
 
           <div className="flex items-center justify-between mt-auto gap-2">
-            <div className="flex flex-col">
-              <span className="text-xs md:text-xl font-black text-primary italic">₹{item.price}</span>
-            </div>
+            <span className="text-xs md:text-xl font-black text-primary italic">₹{item.price}</span>
 
             <div className="shrink-0">
               {cartItemCount > 0 ? (
@@ -193,19 +169,10 @@ export const FoodCard = ({ item }: FoodCardProps) => {
       </div>
 
       {(item.isBeverage || item.isCustomizable) && (
-        <BeverageCustomizer item={item} isOpen={isCustomizing} onClose={() => setIsCustomizing(false)} onConfirm={handleCustomizationConfirm} />
+        <BeverageCustomizer item={item} isOpen={isCustomizing} onClose={() => setIsCustomizing(false)} onConfirm={(opts) => { addToCart(item, opts); setIsCustomizing(false); }} />
       )}
       
-      <ProductDetails 
-        item={item} 
-        isOpen={isDetailsOpen} 
-        onClose={() => setIsDetailsOpen(false)} 
-        onAddToCart={() => {
-           setIsDetailsOpen(false);
-           handleAddClick({ preventDefault: () => {}, stopPropagation: () => {} } as any);
-        }}
-      />
-      
+      <ProductDetails item={item} isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} onAddToCart={() => { setIsDetailsOpen(false); handleAddClick({ preventDefault: () => {}, stopPropagation: () => {} } as any); }} />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
