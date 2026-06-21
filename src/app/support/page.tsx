@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -80,7 +81,6 @@ export default function SupportPage() {
   }, [messages, isTyping]);
 
   const addMessage = (role: 'assistant' | 'user', content: string, type: Message['type'] = 'text', options?: string[]) => {
-    // Generate a unique ID using timestamp and a random suffix to prevent collisions
     const newMsg: Message = { 
       id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
       role, 
@@ -113,7 +113,8 @@ export default function SupportPage() {
 
       addMessage('assistant', response.reply, 'text', response.suggestedActions);
     } catch (e) {
-      addMessage('assistant', 'Sorry, my logic node is slightly overwhelmed. Can you try again?');
+      console.error("AI Flow Error:", e);
+      addMessage('assistant', 'Ezzy AI Assistant is currently unavailable. Please try again later or use the contact options.');
     } finally {
       setIsTyping(false);
     }
@@ -132,8 +133,12 @@ export default function SupportPage() {
     } else {
       setIsTyping(true);
       setTimeout(async () => {
-        const response = await ezzySupportAI({ message: cat.label, category: cat.label });
-        addMessage('assistant', response.reply, 'text', response.suggestedActions);
+        try {
+          const response = await ezzySupportAI({ message: cat.label, category: cat.label });
+          addMessage('assistant', response.reply, 'text', response.suggestedActions);
+        } catch (err) {
+          addMessage('assistant', 'Ezzy AI logic node is currently offline. Please try again.');
+        }
         setIsTyping(false);
       }, 500);
     }
