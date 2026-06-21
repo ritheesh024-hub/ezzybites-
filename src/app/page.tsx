@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { PromoBanner } from '@/components/PromoBanner';
 import { SavorTool } from '@/components/SavorTool';
 import { 
@@ -234,7 +233,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      <WhatsAppButton />
     </div>
   );
 }

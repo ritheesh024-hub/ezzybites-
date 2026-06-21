@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { useFirestore, useDoc, useUser } from '@/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -353,7 +352,6 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ orderI
         onClose={() => setIsReviewOpen(false)} 
         onSuccess={() => {}}
       />
-      <WhatsAppButton />
     </div>
   );
 }
