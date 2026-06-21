@@ -15,5 +15,5 @@ export const ai = genkit({
     }),
   ],
   // Use the fully qualified stable model identifier for Gemini 1.5 Flash
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
 });

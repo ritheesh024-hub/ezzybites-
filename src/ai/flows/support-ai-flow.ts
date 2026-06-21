@@ -32,7 +32,7 @@ export async function ezzySupportAI(input: SupportAIInput): Promise<SupportAIOut
 
 const prompt = ai.definePrompt({
   name: 'ezzySupportPrompt',
-  model: 'googleai/gemini-1.5-flash',
+  // Model inherited from global ai config to prevent 404 URL mapping errors
   input: { schema: SupportAIInputSchema },
   output: { schema: SupportAIOutputSchema },
   prompt: `You are "Ezzy AI", the official automated support assistant for "Ezzy Bites", a premium fast food cafe.
