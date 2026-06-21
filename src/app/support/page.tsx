@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -81,7 +80,14 @@ export default function SupportPage() {
   }, [messages, isTyping]);
 
   const addMessage = (role: 'assistant' | 'user', content: string, type: Message['type'] = 'text', options?: string[]) => {
-    const newMsg: Message = { id: Date.now().toString(), role, content, type, options };
+    // Generate a unique ID using timestamp and a random suffix to prevent collisions
+    const newMsg: Message = { 
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
+      role, 
+      content, 
+      type, 
+      options 
+    };
     setMessages(prev => [...prev, newMsg]);
   };
 
