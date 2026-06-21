@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -146,9 +147,6 @@ export const UserManagement = () => {
                             <div className="flex items-center gap-2">
                                <Badge className="bg-zinc-950 text-white border-none px-3 py-1 font-black text-[9px] uppercase tracking-widest rounded-lg">
                                   {u.orderCount || 0} Orders
-                               </Badge>
-                               <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase px-2 py-0.5 rounded-md">
-                                  {u.rewardCoins || 0} Coins
                                </Badge>
                             </div>
                             {u.lastOrderAt && (

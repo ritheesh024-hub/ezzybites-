@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -20,15 +21,13 @@ import {
   Trash2,
   TicketPercent,
   X,
-  PartyPopper,
-  Gift,
-  MapPin
+  PartyPopper
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { doc, setDoc, getDoc, serverTimestamp, increment, collection, addDoc, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, increment, collection, updateDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
@@ -39,7 +38,7 @@ import { useSmartPermissions } from '@/hooks/use-smart-permissions';
 export default function CheckoutPage() {
   const { cart, getTotal, clearCart, removeFromCart } = useStore();
   const db = useFirestore();
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const { trackOrderPlaced } = useAnalytics();
   const { requestSmartly } = useSmartPermissions();
   
@@ -50,12 +49,9 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   
   const [couponInput, setCouponInput] = useState('');
-  const [referralInput, setReferralInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
-  const [appliedReferral, setAppliedReferral] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [isFirstOrder, setIsFirstOrder] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -69,17 +65,6 @@ export default function CheckoutPage() {
     setMounted(true);
     setOrderId(`EB-${Math.floor(10000 + Math.random() * 90000)}`);
   }, []);
-
-  useEffect(() => {
-    if (user && db) {
-      const checkFirstOrder = async () => {
-        const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
-        const snap = await getDocs(q);
-        setIsFirstOrder(snap.empty);
-      };
-      checkFirstOrder();
-    }
-  }, [user, db]);
 
   const subtotal = getTotal();
   const deliveryFee = subtotal >= 149 ? 0 : 40;
@@ -107,7 +92,6 @@ export default function CheckoutPage() {
 
         setDiscount(discountVal);
         setAppliedCoupon({ code, ...data });
-        setAppliedReferral(null);
         setCouponInput('');
         toast({ title: "Coupon Applied! 🎉", description: `${data.discount} ${data.type === 'percent' ? '%' : '₹'} discount activated.` });
       } else {
@@ -120,40 +104,9 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleApplyReferral = async () => {
-    if (!db) return;
-    if (!isFirstOrder) {
-      toast({ variant: "destructive", title: "Ineligible", description: "Referral codes are only for first-time orders." });
-      return;
-    }
-    const code = referralInput.trim().toUpperCase();
-    if (!code) return;
-
-    setCouponLoading(true);
-    try {
-      const usersRef = collection(db, 'users');
-      const snap = await getDocs(usersRef);
-      const referrerDoc = snap.docs.find(d => `EB-${d.id.slice(0, 6).toUpperCase()}` === code);
-
-      if (!referrerDoc) throw new Error("Invalid referral code.");
-      if (referrerDoc.id === user?.uid) throw new Error("You cannot refer yourself.");
-
-      setDiscount(50);
-      setAppliedReferral(code);
-      setAppliedCoupon(null);
-      setReferralInput('');
-      toast({ title: "Referral Applied! 🤝", description: "₹50 discount unlocked for your first order." });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Referral Error", description: e.message });
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
   const removePromo = () => {
     setDiscount(0);
     setAppliedCoupon(null);
-    setAppliedReferral(null);
     toast({ title: "Offer Removed" });
   };
 
@@ -202,7 +155,6 @@ export default function CheckoutPage() {
       subtotal: Number(subtotal),
       discount: Number(discount),
       couponCode: appliedCoupon?.code || null,
-      referralCode: appliedReferral,
       deliveryFee: Number(deliveryFee),
       total: Number(total),
       totalAmount: Number(total),
@@ -224,16 +176,6 @@ export default function CheckoutPage() {
           lastOrderAt: serverTimestamp(),
           orderCount: increment(1)
         }, { merge: true });
-
-        if (appliedReferral) {
-           await addDoc(collection(db, 'referrals'), {
-              newUserId: user.uid,
-              referralCode: appliedReferral,
-              orderId: finalOrderId,
-              status: 'pending',
-              createdAt: serverTimestamp()
-           });
-        }
 
         if (appliedCoupon) {
            await updateDoc(doc(db, 'coupons', appliedCoupon.code), {
@@ -446,12 +388,12 @@ export default function CheckoutPage() {
                   <TicketPercent className="w-4 h-4 text-primary opacity-40" />
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
-                  {(appliedCoupon || appliedReferral) ? (
+                  {appliedCoupon ? (
                     <div className="bg-green-50 border border-green-100 p-4 rounded-2xl flex items-center justify-between animate-in zoom-in">
                       <div className="flex items-center gap-3">
                          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white"><PartyPopper className="w-5 h-5" /></div>
                          <div>
-                            <p className="text-[10px] font-black uppercase text-green-700 tracking-tighter">{appliedCoupon?.code || appliedReferral}</p>
+                            <p className="text-[10px] font-black uppercase text-green-700 tracking-tighter">{appliedCoupon.code}</p>
                             <p className="text-[8px] font-bold text-green-600 uppercase">Discount Activated</p>
                          </div>
                       </div>
@@ -469,25 +411,6 @@ export default function CheckoutPage() {
                           />
                           <Button onClick={handleApplyCoupon} disabled={couponLoading || !couponInput} className="h-12 rounded-xl font-black text-[9px] uppercase px-6 bg-primary">Apply</Button>
                        </div>
-                       
-                       {isFirstOrder && (
-                         <div className="pt-4 border-t border-dashed">
-                            <Label className="text-[9px] font-black uppercase opacity-40 ml-1 mb-2 block">Referral Invite</Label>
-                            <div className="flex gap-2">
-                               <div className="relative flex-1">
-                                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
-                                  <Input 
-                                    placeholder="Friend's Code" 
-                                    value={referralInput} 
-                                    onChange={(e) => setReferralInput(e.target.value.toUpperCase())}
-                                    className="rounded-xl h-11 uppercase font-bold bg-secondary/10 border-none pl-9"
-                                    suppressHydrationWarning
-                                  />
-                               </div>
-                               <Button onClick={handleApplyReferral} disabled={couponLoading || !referralInput} variant="outline" className="h-11 rounded-xl font-black text-[8px] uppercase px-4 border-2">Unlock</Button>
-                            </div>
-                         </div>
-                       )}
                     </div>
                   )}
                   <Link href="/coupons" className="text-[9px] font-black text-primary uppercase text-center block hover:underline">View Available Bounties</Link>

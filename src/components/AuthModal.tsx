@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -79,7 +80,6 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           email: user.email,
           name: user.displayName,
           photoUrl: user.photoURL,
-          rewardCoins: 50,
           orderCount: 0,
           role: 'customer',
           createdAt: serverTimestamp(),

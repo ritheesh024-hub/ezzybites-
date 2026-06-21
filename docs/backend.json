@@ -97,9 +97,6 @@
         "address": {
           "type": "string"
         },
-        "rewardCoins": {
-          "type": "number"
-        },
         "foodPreference": {
           "type": "string",
           "enum": ["Veg", "Non Veg", "Egg"]

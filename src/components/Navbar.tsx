@@ -1,3 +1,4 @@
+
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -15,9 +16,7 @@ import {
   ChevronRight,
   MapPin,
   TicketPercent,
-  Wallet,
   Settings,
-  Gift,
   Bell,
   LogOut,
   ShoppingBag,
@@ -106,7 +105,6 @@ export const Navbar = () => {
     { label: 'Favorites', href: '/favorites', icon: Heart, authRequired: true },
     { label: 'Saved Addresses', href: '/addresses', icon: MapPin, authRequired: true },
     { label: 'Coupons & Offers', href: '/coupons', icon: TicketPercent },
-    { label: 'Reward Points', href: '/rewards', icon: Wallet, authRequired: true },
     { label: 'Contact Us', href: 'https://wa.me/918639366800', icon: Phone, isExternal: true },
     { label: 'Staff Console', href: '/admin/dashboard', icon: LayoutDashboard, authRequired: true, staffOnly: true },
     { label: 'Settings', href: '/settings', icon: Settings, authRequired: true },
@@ -280,24 +278,6 @@ export const Navbar = () => {
                   </SheetHeader>
 
                   <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1 scrollbar-hide">
-                    {mounted && user && (
-                      <div className="mb-8">
-                        <div className="bg-orange-gradient p-6 rounded-[2rem] text-white shadow-2xl relative overflow-hidden group">
-                           <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl transition-transform duration-1000 group-hover:scale-150" />
-                           <div className="relative z-10 flex justify-between items-center">
-                              <div>
-                                <p className="text-[8px] font-black uppercase tracking-widest opacity-80 mb-1">Coin Reserve</p>
-                                <h4 className="text-3xl font-black italic">{customerProfile?.rewardCoins || 0} <span className="text-[10px] non-italic opacity-60 ml-1">Coins</span></h4>
-                              </div>
-                              <Link href="/rewards" onClick={() => setIsMenuOpen(false)} className="h-12 px-5 bg-white/20 backdrop-blur-md rounded-2xl flex items-center gap-2 border border-white/20 active:scale-95 transition-all">
-                                <Gift className="w-4 h-4" />
-                                <span className="text-[9px] font-black uppercase">Redeem</span>
-                              </Link>
-                           </div>
-                        </div>
-                      </div>
-                    )}
-
                     {menuItems.map((item) => {
                       if (item.authRequired && (!mounted || !user)) return null;
                       if (item.staffOnly && (!mounted || !isStaff)) return null;
