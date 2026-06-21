@@ -8,16 +8,17 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#ef4444',
+    theme_color: '#ff6600',
+    orientation: 'portrait',
     icons: [
       {
-        src: 'https://placehold.co/192x192/ef4444/ffffff?text=EB',
+        src: 'https://placehold.co/192x192/ff6600/ffffff?text=EB',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: 'https://placehold.co/512x512/ef4444/ffffff?text=EB',
+        src: 'https://placehold.co/512x512/ff6600/ffffff?text=EB',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
@@ -27,12 +28,12 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: 'Explore Menu',
         url: '/menu',
-        icons: [{ src: 'https://placehold.co/96x96/ef4444/ffffff?text=Menu', sizes: '96x96' }]
+        icons: [{ src: 'https://placehold.co/96x96/ff6600/ffffff?text=Menu', sizes: '96x96' }]
       },
       {
         name: 'Track Orders',
         url: '/orders',
-        icons: [{ src: 'https://placehold.co/96x96/ef4444/ffffff?text=Track', sizes: '96x96' }]
+        icons: [{ src: 'https://placehold.co/96x96/ff6600/ffffff?text=Track', sizes: '96x96' }]
       }
     ]
   };
