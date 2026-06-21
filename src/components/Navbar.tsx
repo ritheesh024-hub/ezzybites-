@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -105,7 +104,6 @@ export const Navbar = () => {
     { label: 'Favorites', href: '/favorites', icon: Heart, authRequired: true },
     { label: 'Saved Addresses', href: '/addresses', icon: MapPin, authRequired: true },
     { label: 'Coupons & Offers', href: '/coupons', icon: TicketPercent },
-    { label: 'Contact Us', href: 'https://wa.me/918639366800', icon: Phone, isExternal: true },
     { label: 'Staff Console', href: '/admin/dashboard', icon: LayoutDashboard, authRequired: true, staffOnly: true },
     { label: 'Settings', href: '/settings', icon: Settings, authRequired: true },
   ];
