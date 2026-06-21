@@ -77,10 +77,14 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
     to: endOfDay(new Date())
   });
 
-  // Staged state for individual date selection in Custom view
+  // Individual popover states for From/To fields
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
+  const [isMainPopoverOpen, setIsMainPopoverOpen] = useState(false);
+
+  // Staged state for individual date selection
   const [tempFrom, setTempFrom] = useState<Date | undefined>(undefined);
   const [tempTo, setTempTo] = useState<Date | undefined>(undefined);
-  const [isMainPopoverOpen, setIsMainPopoverOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -289,7 +293,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                     {/* FROM DATE FIELD */}
                     <div className="space-y-2">
                        <p className="text-[8px] font-black uppercase opacity-40 ml-1">From Epoch</p>
-                       <Popover>
+                       <Popover open={fromOpen} onOpenChange={setFromOpen}>
                           <PopoverTrigger asChild>
                              <button className={cn(
                                "w-full h-14 rounded-2xl border-2 flex items-center px-6 gap-3 transition-all",
@@ -305,7 +309,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                              <Calendar
                                mode="single"
                                selected={tempFrom}
-                               onSelect={(date) => { setTempFrom(date); }}
+                               onSelect={(date) => { setTempFrom(date); setFromOpen(false); }}
                                initialFocus
                                className="bg-white dark:bg-zinc-900 rounded-3xl"
                              />
@@ -316,7 +320,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                     {/* TO DATE FIELD */}
                     <div className="space-y-2">
                        <p className="text-[8px] font-black uppercase opacity-40 ml-1">To Epoch</p>
-                       <Popover>
+                       <Popover open={toOpen} onOpenChange={setToOpen}>
                           <PopoverTrigger asChild>
                              <button className={cn(
                                "w-full h-14 rounded-2xl border-2 flex items-center px-6 gap-3 transition-all",
@@ -332,7 +336,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                              <Calendar
                                mode="single"
                                selected={tempTo}
-                               onSelect={(date) => { setTempTo(date); }}
+                               onSelect={(date) => { setTempTo(date); setToOpen(false); }}
                                initialFocus
                                className="bg-white dark:bg-zinc-900 rounded-3xl"
                              />
@@ -347,7 +351,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                       disabled={!tempFrom || !tempTo}
                       className="w-full h-16 rounded-[1.5rem] font-black uppercase text-[10px] tracking-[0.2em] bg-primary shadow-2xl shadow-primary/30 gap-3"
                     >
-                      Apply Filter <ArrowRight className="w-4 h-4" />
+                      Apply Date Range <ArrowRight className="w-4 h-4" />
                     </Button>
                     <button 
                       onClick={handleClearCustomRange}
@@ -509,7 +513,7 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
       </Card>
       
       <div className="pt-10 text-center">
-         <p className="text-[8px] font-black uppercase tracking-[0.4em] opacity-20">Ezzy Bites • Quantum Analytics Engine v3.5</p>
+         <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-20">Ezzy Bites • Quantum Analytics Engine v3.5</p>
       </div>
     </div>
   );
