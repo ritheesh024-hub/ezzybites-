@@ -21,6 +21,7 @@ import { FoodItem } from '@/app/lib/store';
 import { Logo } from '@/components/Logo';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
+import { PWAInlinePromo } from '@/components/PWAInlinePromo';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -91,7 +92,7 @@ export default function Home() {
 
               <div className="flex justify-start pt-2">
                 <Link href="/menu">
-                  <Button className="rounded-full h-12 px-6 text-sm font-black shadow-3xl bg-primary hover:bg-primary/90 text-white transform transition-all active:scale-95 uppercase tracking-tight gap-3">
+                  <Button className="rounded-full h-14 px-8 text-sm font-black shadow-3xl bg-primary hover:bg-primary/90 text-white transform transition-all active:scale-95 uppercase tracking-tight gap-3">
                     Start Your Order
                     <ArrowRight className="w-4 h-4" />
                   </Button>
@@ -174,11 +175,11 @@ export default function Home() {
                 { icon: Clock, title: "Hyper-Local", desc: "A strict 25-minute delivery promise for locals." },
                 { icon: ShieldCheck, title: "Gold Standard", desc: "Only A-grade ingredients. No preservatives." }
               ].map((f, i) => (
-                <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-6 rounded-[2rem] shadow-sm border border-border/20 group text-center">
-                  <div className="w-10 h-10 bg-orange-gradient rounded-xl flex items-center justify-center mb-3 text-white shadow-2xl mx-auto group-hover:scale-110 transition-transform">
+                <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-8 rounded-[2.5rem] shadow-sm border border-border/20 group text-center">
+                  <div className="w-12 h-12 bg-orange-gradient rounded-xl flex items-center justify-center mb-3 text-white shadow-2xl mx-auto group-hover:scale-110 transition-transform">
                     <f.icon className="w-5 h-5" />
                   </div>
-                  <h4 className="text-base font-black mb-1 uppercase tracking-tight">{f.title}</h4>
+                  <h4 className="text-lg font-black mb-1 uppercase tracking-tight">{f.title}</h4>
                   <p className="text-muted-foreground font-medium text-[10px] md:text-xs leading-relaxed max-w-[200px] mx-auto">{f.desc}</p>
                 </div>
               ))}
@@ -204,6 +205,9 @@ export default function Home() {
             ))}
           </Accordion>
         </section>
+
+        {/* PWA DOWNLOAD SECTION */}
+        <PWAInlinePromo />
       </main>
 
       <footer className="bg-white dark:bg-zinc-950 border-t pt-12 pb-8">
