@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { 
   format,
   isToday,
+  isWithinInterval,
   subDays,
   startOfDay,
   endOfDay,
@@ -49,7 +50,6 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
-  isWithinInterval,
   subMonths,
   subWeeks,
   eachDayOfInterval,
@@ -99,11 +99,10 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         break;
       case 'last_month':
         current = { from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) };
-        previous = { from: startOfMonth(subMonths(now, 2)), to: endOfMonth(subMonths(now, 2)) };
+        previous = { from: startOfMonth(subMonths(2)), to: endOfMonth(subMonths(2)) };
         break;
       case 'custom':
         current = { from: startOfDay(dateRange.from), to: endOfDay(dateRange.to) };
-        // Comparison for custom is the same duration prior to 'from'
         const duration = current.to.getTime() - current.from.getTime();
         previous = { 
           from: new Date(current.from.getTime() - duration), 
@@ -218,24 +217,24 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
   };
 
   if (!mounted) return (
-    <div className="h-[600px] flex flex-col items-center justify-center gap-4">
+    <div className="h-[400px] flex flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-primary w-10 h-10" />
       <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Syncing Matrix...</p>
     </div>
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-32">
-      {/* STICKY FILTER BAR */}
-      <div className="sticky top-0 z-40 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl -mx-6 md:-mx-10 px-6 md:px-10 py-6 border-b border-zinc-200/50 dark:border-zinc-800/50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 no-print">
-        <div className="flex flex-wrap gap-2">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700 pb-20 md:pb-32">
+      {/* STICKY FILTER BAR - Z-80 - POSITIONED TO PREVENT OVERLAP */}
+      <div className="sticky top-0 lg:static z-[80] bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-3xl -mx-4 md:-mx-10 px-4 md:px-10 py-4 md:py-6 border-b lg:border-none flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6 no-print">
+        <div className="flex flex-wrap gap-1.5 md:gap-2">
           {(['today', 'yesterday', 'week', 'month', 'last_month'] as RangeType[]).map((r) => (
             <Button
               key={r}
               onClick={() => setRangeType(r)}
               variant={rangeType === r ? 'default' : 'outline'}
               className={cn(
-                "h-10 px-6 rounded-full font-black uppercase text-[9px] tracking-widest transition-all",
+                "h-8 md:h-10 px-3 md:px-6 rounded-full font-black uppercase text-[8px] md:text-[9px] tracking-widest transition-all",
                 rangeType === r ? "bg-primary shadow-lg shadow-primary/20 border-none" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
               )}
             >
@@ -248,11 +247,11 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
               <Button
                 variant={rangeType === 'custom' ? 'default' : 'outline'}
                 className={cn(
-                  "h-10 px-6 rounded-full font-black uppercase text-[9px] tracking-widest gap-2",
+                  "h-8 md:h-10 px-3 md:px-6 rounded-full font-black uppercase text-[8px] md:text-[9px] tracking-widest gap-2",
                   rangeType === 'custom' ? "bg-primary border-none shadow-lg shadow-primary/20" : "bg-white dark:bg-zinc-900"
                 )}
               >
-                <CalendarIcon className="w-3.5 h-3.5" />
+                <CalendarIcon className="w-3 h-3 md:w-3.5 md:h-3.5" />
                 Custom
               </Button>
             </PopoverTrigger>
@@ -272,27 +271,18 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
           </Popover>
         </div>
 
-        <div className="flex gap-3 w-full lg:w-auto">
-          <Button onClick={handlePrint} variant="outline" className="flex-1 lg:flex-none h-12 rounded-xl font-black uppercase text-[9px] tracking-widest gap-3 border-2">
-            <Printer className="w-4 h-4" /> Print Report
+        <div className="flex gap-2 w-full lg:w-auto pt-2 lg:pt-0 border-t lg:border-none">
+          <Button onClick={handlePrint} variant="outline" className="flex-1 lg:flex-none h-10 md:h-12 rounded-xl font-black uppercase text-[8px] md:text-[9px] tracking-widest gap-2 md:gap-3 border-2">
+            <Printer className="w-3.5 h-3.5 md:w-4 md:h-4" /> Print
           </Button>
-          <Button onClick={handleExport} variant="outline" className="flex-1 lg:flex-none h-12 rounded-xl font-black uppercase text-[9px] tracking-widest gap-3 border-2 bg-zinc-950 text-white hover:bg-zinc-800">
-            <Download className="w-4 h-4" /> Export Excel
+          <Button onClick={handleExport} variant="outline" className="flex-1 lg:flex-none h-10 md:h-12 rounded-xl font-black uppercase text-[8px] md:text-[9px] tracking-widest gap-2 md:gap-3 border-2 bg-zinc-950 text-white hover:bg-zinc-800">
+            <Download className="w-3.5 h-3.5 md:w-4 md:h-4" /> Export
           </Button>
         </div>
       </div>
 
-      {/* PRINT HEADER */}
-      <div className="hidden print:block text-center space-y-4 mb-12">
-         <h1 className="text-4xl font-black font-headline uppercase tracking-tighter italic">EZZY BITES <span className="text-primary">OPS</span></h1>
-         <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-50">Operational Intelligence Report</p>
-         <div className="bg-zinc-100 p-4 rounded-2xl border-2 border-dashed">
-            <p className="text-xs font-black uppercase tracking-widest">Selected Range: {format(intervals.current.from, 'PPP')} - {format(intervals.current.to, 'PPP')}</p>
-         </div>
-      </div>
-
-      {/* KPI GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI GRID - MOBILE OPTIMIZED */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <KPICard 
           label="Gross Revenue" 
           value={`₹${metrics.current.revenue.toLocaleString()}`} 
@@ -327,17 +317,17 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
         />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
         {/* CHART NODE */}
-        <Card className="lg:col-span-2 rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 md:p-12 flex flex-col h-full overflow-hidden relative">
-          <CardHeader className="px-0 pt-0 pb-10 flex flex-row items-center justify-between border-b border-dashed mb-10">
+        <Card className="lg:col-span-2 rounded-[2rem] md:rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-6 md:p-12 flex flex-col h-full overflow-hidden relative border">
+          <CardHeader className="px-0 pt-0 pb-6 md:pb-10 flex flex-row items-center justify-between border-b border-dashed mb-6 md:mb-10">
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-black font-headline uppercase tracking-tighter italic">Operational <span className="text-primary">Velocity</span></CardTitle>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">Period Transaction Performance</p>
+              <CardTitle className="text-xl md:text-2xl font-black font-headline uppercase tracking-tighter italic">Operational <span className="text-primary">Velocity</span></CardTitle>
+              <p className="text-[8px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">Period Performance</p>
             </div>
-            <Badge className="bg-primary/10 text-primary border-none px-4 py-1.5 font-black text-[9px] uppercase tracking-widest rounded-full">Live Signal</Badge>
+            <Badge className="bg-primary/10 text-primary border-none px-2 md:px-4 py-1 md:py-1.5 font-black text-[7px] md:text-[9px] uppercase tracking-widest rounded-full">Live Signal</Badge>
           </CardHeader>
-          <div className="flex-1 min-h-[400px]">
+          <div className="flex-1 min-h-[300px] md:min-h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.chartData}>
                 <defs>
@@ -347,26 +337,26 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} dy={15} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 900, fill: '#94a3b8'}} tickFormatter={(val) => `₹${val}`} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 8, fontWeight: 900, fill: '#94a3b8'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 8, fontWeight: 900, fill: '#94a3b8'}} tickFormatter={(val) => `₹${val}`} />
                 <Tooltip 
                   cursor={{ stroke: '#ef4444', strokeWidth: 1, strokeDasharray: '4 4' }}
-                  contentStyle={{borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: 11}}
+                  contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: 10}}
                   formatter={(v: any) => [`₹${v}`, 'Gross']}
                 />
-                <Area type="monotone" dataKey="val" stroke="#ef4444" strokeWidth={5} fill="url(#velocity)" animationDuration={1000} />
+                <Area type="monotone" dataKey="val" stroke="#ef4444" strokeWidth={4} fill="url(#velocity)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
         {/* STATUS LEDGER */}
-        <Card className="rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-10 space-y-12">
+        <Card className="rounded-[2rem] md:rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-6 md:p-10 space-y-8 md:space-y-12">
           <div className="space-y-1">
-            <h4 className="text-2xl font-black font-headline uppercase tracking-tighter italic">Status <span className="text-primary">Ledger</span></h4>
-            <p className="text-[10px] font-black uppercase text-muted-foreground opacity-40 tracking-widest">Real-time Node Distribution</p>
+            <h4 className="text-xl md:text-2xl font-black font-headline uppercase tracking-tighter italic">Status <span className="text-primary">Ledger</span></h4>
+            <p className="text-[8px] md:text-[10px] font-black uppercase text-muted-foreground opacity-40 tracking-widest">Node Distribution</p>
           </div>
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
              <MetricBar label="Delivered" count={metrics.current.delivered} total={metrics.current.total} color="bg-emerald-500" icon={ShoppingBag} />
              <MetricBar label="In Cooking" count={metrics.current.preparing} total={metrics.current.total} color="bg-orange-500" icon={ChefHat} />
              <MetricBar label="Pending Hub" count={metrics.current.pending} total={metrics.current.total} color="bg-primary" icon={BellRing} />
@@ -381,24 +371,23 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
 const KPICard = ({ label, value, icon: Icon, trend, color, bg }: any) => {
   const isPositive = trend >= 0;
   return (
-    <Card className="rounded-[2.5rem] border-none shadow-xl bg-white dark:bg-zinc-900 p-8 group hover:scale-[1.03] transition-all duration-500 overflow-hidden relative border">
-      <div className="absolute -right-4 -top-4 w-20 h-20 bg-secondary/30 rounded-full blur-2xl group-hover:bg-primary/5 transition-colors" />
-      <div className="flex justify-between items-start mb-8">
-        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner relative z-10", bg, color)}>
-          <Icon className="w-7 h-7" />
+    <Card className="rounded-[1.5rem] md:rounded-[2.5rem] border-none shadow-sm bg-white dark:bg-zinc-900 p-4 md:p-8 group transition-all duration-500 overflow-hidden relative border">
+      <div className="absolute -right-4 -top-4 w-12 md:w-20 h-12 md:h-20 bg-secondary/30 rounded-full blur-2xl group-hover:bg-primary/5 transition-colors" />
+      <div className="flex justify-between items-start mb-4 md:mb-8">
+        <div className={cn("w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shadow-inner relative z-10", bg, color)}>
+          <Icon className="w-5 h-5 md:w-7 md:h-7" />
         </div>
         <div className={cn(
-          "flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-tight",
+          "flex items-center gap-1 px-2 py-0.5 md:px-3 md:py-1 rounded-full border text-[7px] md:text-[9px] font-black uppercase tracking-tight",
           isPositive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
         )}>
-          {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+          {isPositive ? <ArrowUpRight className="w-2.5 h-2.5 md:w-3 md:h-3" /> : <ArrowDownRight className="w-2.5 h-2.5 md:w-3 md:h-3" />}
           {Math.abs(trend)}%
         </div>
       </div>
-      <div className="relative z-10 space-y-1">
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">{label}</p>
-        <h3 className="text-4xl font-black font-headline tracking-tighter italic leading-none">{value}</h3>
-        <p className="text-[8px] font-black uppercase tracking-widest opacity-20 mt-2">vs previous period</p>
+      <div className="relative z-10 space-y-0.5 md:space-y-1">
+        <p className="text-[7px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-40">{label}</p>
+        <h3 className="text-xl md:text-4xl font-black font-headline tracking-tighter italic leading-none">{value}</h3>
       </div>
     </Card>
   );
@@ -407,17 +396,17 @@ const KPICard = ({ label, value, icon: Icon, trend, color, bg }: any) => {
 const MetricBar = ({ label, count, total, color, icon: Icon }: any) => {
   const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 md:space-y-3">
       <div className="flex justify-between items-end">
-        <div className="flex items-center gap-3">
-          <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", color.replace('bg-', 'bg-') + '/10', color.replace('bg-', 'text-'))}>
-            <Icon className="w-4 h-4" />
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className={cn("w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center", color.replace('bg-', 'bg-') + '/10', color.replace('bg-', 'text-'))}>
+            <Icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{label}</span>
+          <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-60">{label}</span>
         </div>
-        <span className="font-mono text-xs font-black">{count} <span className="opacity-30 ml-1 text-[9px]">({percentage}%)</span></span>
+        <span className="font-mono text-[10px] md:text-xs font-black">{count} <span className="opacity-30 ml-0.5 md:ml-1 text-[8px] md:text-[9px]">({percentage}%)</span></span>
       </div>
-      <div className="h-2 w-full bg-secondary dark:bg-zinc-800 rounded-full overflow-hidden shadow-inner">
+      <div className="h-1.5 md:h-2 w-full bg-secondary dark:bg-zinc-800 rounded-full overflow-hidden shadow-inner">
         <motion.div 
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}

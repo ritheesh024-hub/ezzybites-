@@ -132,7 +132,7 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col">
-      {/* FIXED TOP HEADER - 70px */}
+      {/* FIXED TOP HEADER - 70px - Z-100 */}
       <header className="h-[70px] border-b bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md sticky top-0 z-[100] px-4 md:px-8 flex items-center justify-between shadow-sm shrink-0">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-3 group">
@@ -194,7 +194,7 @@ function DashboardContent() {
         </div>
       </header>
 
-      {/* DASHBOARD BODY */}
+      {/* DASHBOARD BODY - NO EXTRA MARGIN */}
       <AdminSection assignedRole={assignedRole as StaffRole} activeView={activeView as StaffRole} />
     </div>
   );
