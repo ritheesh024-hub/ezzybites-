@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -13,13 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Star, 
   ShoppingBag, 
-  MessageSquare, 
-  TrendingUp,
   Loader2,
   Plus,
   Minus,
   X,
-  Sparkles,
   Bot
 } from 'lucide-react';
 import { FoodItem, useStore } from '@/app/lib/store';
@@ -27,7 +24,6 @@ import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { reviewSummaryGenerator } from '@/ai/flows/review-summary-generator';
@@ -43,64 +39,54 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
   const db = useFirestore();
   const { cart, addToCart, updateQuantity } = useStore();
   const [localQty, setLocalQty] = useState(1);
-  const [filter, setFilter] = useState<'latest' | 'top'>('latest');
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [summarizing, setSummarizing] = useState(false);
+  const hasSummarized = useRef(false);
 
-  // Sync local qty if item is already in cart
   const cartItem = useMemo(() => cart.find(i => i.id === item.id), [cart, item.id]);
   
   useEffect(() => {
     if (isOpen) {
       setLocalQty(cartItem?.quantity || 1);
-      setAiSummary(null); // Reset summary on open
+      setAiSummary(null);
+      hasSummarized.current = false;
     }
   }, [isOpen, cartItem]);
 
   const reviewsQuery = useMemo(() => {
-    if (!db || !item.id) return null;
-    // Note: If this query fails due to missing index, useCollection will return error
+    if (!db || !item.id || !isOpen) return null;
+    // Descriptive query for user-generated food feedback
     return query(
       collection(db, 'reviews'),
       where('productId', '==', item.id),
       where('isHidden', '==', false),
-      orderBy(filter === 'latest' ? 'createdAt' : 'rating', 'desc'),
-      limit(10)
+      orderBy('createdAt', 'desc'),
+      limit(5)
     );
-  }, [db, item.id, filter]);
+  }, [db, item.id, isOpen]);
 
-  const { data: reviews, loading: reviewsLoading, error: reviewsError } = useCollection<any>(reviewsQuery);
-
-  const stats = useMemo(() => {
-    if (!reviews || reviews.length === 0) return null;
-    const total = reviews.length;
-    const counts = [0, 0, 0, 0, 0, 0];
-    reviews.forEach(r => counts[r.rating]++);
-    return {
-      total,
-      breakdown: counts.map(c => Math.round((c / total) * 100)).slice(1).reverse()
-    };
-  }, [reviews]);
+  const { data: reviews, loading: reviewsLoading } = useCollection<any>(reviewsQuery);
 
   const handleGenerateAISummary = async () => {
-    if (!reviews || reviews.length < 2) return;
+    if (!reviews || reviews.length < 2 || hasSummarized.current) return;
     setSummarizing(true);
+    hasSummarized.current = true;
     try {
       const reviewTexts = reviews.map((r: any) => r.comment).filter(Boolean);
       const result = await reviewSummaryGenerator({ reviews: reviewTexts });
       setAiSummary(result.summary);
     } catch (e) {
-      console.error("AI Summary Error:", e);
+      console.warn("AI Insights Node Dormant:", e);
     } finally {
       setSummarizing(false);
     }
   };
 
   useEffect(() => {
-    if (reviews && reviews.length >= 2 && !aiSummary && !summarizing) {
+    if (reviews && reviews.length >= 2 && !aiSummary && !summarizing && isOpen) {
        handleGenerateAISummary();
     }
-  }, [reviews, aiSummary]);
+  }, [reviews, aiSummary, summarizing, isOpen]);
 
   const handleAddToCartFinal = () => {
     if (cartItem) {
@@ -204,15 +190,14 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
 
                {reviewsLoading ? (
                  <div className="py-10 text-center opacity-20"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
-               ) : (reviewsError || reviews.length === 0) ? (
-                 <div className="text-center py-6 space-y-1">
-                   <p className="text-[10px] font-black uppercase opacity-20">No detailed logs yet</p>
-                   {reviewsError && <p className="text-[7px] font-bold text-destructive/40 uppercase tracking-widest">Signal Error: Indices Pending</p>}
+               ) : (!reviews || reviews.length === 0) ? (
+                 <div className="text-center py-6">
+                   <p className="text-[10px] font-black uppercase opacity-20 italic">No detailed logs in registry</p>
                  </div>
                ) : (
                  <div className="space-y-4">
-                    {reviews.slice(0, 3).map((rev: any, i: number) => (
-                      <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-2xl border border-transparent hover:border-primary/5 transition-all">
+                    {reviews.map((rev: any, i: number) => (
+                      <div key={rev.id || i} className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-2xl border border-transparent hover:border-primary/5 transition-all">
                         <div className="flex justify-between items-start mb-2">
                            <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6 rounded-lg">

@@ -6,9 +6,9 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * HARDENED FIREBASE SINGLETON v4.0
+ * HARDENED FIREBASE SINGLETON v5.0
  * Uses a global registry to survive HMR and prevent "Unexpected state (ID: ca9)" errors.
- * This is critical for stable Firestore listeners in Next.js development mode.
+ * This is the critical stabilization node for Next.js development.
  */
 
 interface FirebaseInstances {
@@ -33,12 +33,12 @@ export function initializeFirebase(): {
   }
 
   try {
-    // 1. Check for existing stable node
+    // 1. Check for existing stable node in window registry
     if (window.__EZZY_FIREBASE_STATION__) {
       return window.__EZZY_FIREBASE_STATION__;
     }
 
-    // 2. Initialize exactly once
+    // 2. Initialize exactly once per browser session
     const apps = getApps();
     const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -46,7 +46,7 @@ export function initializeFirebase(): {
     
     const instances = { app, db, auth };
     
-    // 3. Persist to window to prevent ID: ca9 on re-renders
+    // 3. Persist to window to neutralize HMR race conditions
     window.__EZZY_FIREBASE_STATION__ = instances;
     
     return instances;

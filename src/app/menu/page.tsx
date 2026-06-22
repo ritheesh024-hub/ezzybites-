@@ -34,44 +34,37 @@ function MenuContent() {
   const [activeCategory, setActiveCategory] = useState('All');
   
   const db = useFirestore();
-  const { trackMenuView, trackSearch, trackCategoryView } = useAnalytics();
+  const { trackMenuView, trackCategoryView } = useAnalytics();
 
   useEffect(() => {
     trackMenuView();
   }, [trackMenuView]);
 
-  // Sync searchQuery with URL params for external navigation
   useEffect(() => {
     if (urlQuery) setSearchQuery(urlQuery);
   }, [urlQuery]);
 
   const productsQuery = useMemo(() => {
     if (!db) return null;
-    // Simple query to avoid index requirements while debugging
+    // High-integrity query node for full catalog access
     return query(collection(db, 'products'), limit(150));
   }, [db]);
 
   const { data: menuItems, loading, error } = useCollection<FoodItem>(productsQuery);
-
-  // Debugging logs for operational monitoring
-  useEffect(() => {
-    if (error) {
-      console.error("🔥 [Ezzy Menu] Critical Retrieval Error:", error);
-    }
-    if (!loading && menuItems) {
-      console.log(`✅ [Ezzy Menu] Sync Complete: ${menuItems.length} items found in registry.`);
-    }
-  }, [error, loading, menuItems]);
 
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
     
     return menuItems.filter(item => {
       const search = debouncedSearch.toLowerCase();
+      const name = item.name?.toLowerCase() || '';
+      const desc = item.description?.toLowerCase() || '';
+      const cat = item.category?.toLowerCase() || '';
+
       const matchesSearch = !search || 
-                           item.name?.toLowerCase().includes(search) || 
-                           item.description?.toLowerCase().includes(search) ||
-                           item.category?.toLowerCase().includes(search);
+                           name.includes(search) || 
+                           desc.includes(search) ||
+                           cat.includes(search);
                            
       const matchesDiet = dietFilter === 'all' || 
                         (dietFilter === 'veg' && item.isVeg) || 
@@ -107,7 +100,6 @@ function MenuContent() {
       <Navbar />
       
       <main className="container mx-auto px-3 md:px-8 py-4 pt-14 md:pt-20 max-w-7xl">
-        {/* COMPACT SEARCH */}
         <div className="max-w-2xl mx-auto mb-4">
           <div className="relative group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
@@ -129,7 +121,6 @@ function MenuContent() {
           </div>
         </div>
 
-        {/* STICKY FILTER BAR */}
         <div className="sticky top-[48px] md:top-14 z-40 -mx-3 px-3 py-2 bg-[#F8F9FA]/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-border/40 mb-4">
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide snap-x">
             {filterChips.map((chip, idx) => {
@@ -167,7 +158,7 @@ function MenuContent() {
            <div className="py-20 text-center bg-destructive/5 rounded-3xl border-2 border-destructive/10 border-dashed max-w-xl mx-auto p-8">
              <AlertCircle className="w-12 h-12 text-destructive/30 mx-auto mb-4" />
              <h3 className="text-xl font-black uppercase text-destructive tracking-tighter mb-2">Sync Error</h3>
-             <p className="text-[10px] font-black uppercase mb-6 text-muted-foreground opacity-60">Identity Sync Interrupted. Check console for logs.</p>
+             <p className="text-[10px] font-black uppercase mb-6 text-muted-foreground opacity-60">Identity Sync Interrupted. Re-establish handshake?</p>
              <Button variant="outline" className="rounded-full h-10 px-8 border-destructive/20 text-destructive font-black uppercase text-[9px]" onClick={() => window.location.reload()}>Retry Handshake</Button>
            </div>
         ) : filteredItems.length > 0 ? (

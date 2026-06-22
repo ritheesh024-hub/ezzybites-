@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,7 @@ import {
   Package,
   Utensils,
   BellRing,
-  Truck,
   Flame,
-  Activity,
   CheckCircle2,
   Clock,
   Home,
@@ -28,17 +26,19 @@ interface KitchenSystemProps {
 
 export const KitchenSystem = ({ orders, onUpdateStatus, activeView }: KitchenSystemProps) => {
   const [now, setNow] = useState(new Date());
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Update "time ago" every minute
+  // Update "time ago" every minute without causing excessive re-renders
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(timer);
+    timerRef.current = setInterval(() => setNow(new Date()), 60000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, []);
 
   const kitchenOrders = (orders || []).filter(o => 
     ['pending', 'accepted', 'preparing'].includes(o.status)
   ).sort((a, b) => {
-    // Sort by priority then by time
     const orderPriority = ['preparing', 'accepted', 'pending'];
     const pA = orderPriority.indexOf(a.status);
     const pB = orderPriority.indexOf(b.status);
@@ -55,7 +55,6 @@ export const KitchenSystem = ({ orders, onUpdateStatus, activeView }: KitchenSys
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      {/* KITCHEN OVERVIEW - HORIZONTAL SCROLL ON MOBILE */}
       <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide snap-x">
         <MetricCard 
           label="In Cooking" 
@@ -80,7 +79,6 @@ export const KitchenSystem = ({ orders, onUpdateStatus, activeView }: KitchenSys
         />
       </div>
 
-      {/* ORDERS SECTION */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-black font-headline uppercase tracking-tighter italic">Live <span className="text-primary">Orders</span></h2>
@@ -145,7 +143,6 @@ const OrderCard = ({ order, onUpdateStatus, now }: any) => {
       "rounded-2xl border-none shadow-md overflow-hidden flex flex-col h-full transition-all group",
       order.status === 'pending' ? 'ring-2 ring-yellow-400/20' : ''
     )}>
-      {/* Header */}
       <div className={cn("p-2.5 flex justify-between items-center", config.color)}>
         <span className="font-black text-[9px] italic">#{order.orderId}</span>
         <config.icon className="w-3 h-3" />
@@ -170,7 +167,6 @@ const OrderCard = ({ order, onUpdateStatus, now }: any) => {
         </div>
       </CardContent>
 
-      {/* Action Footer */}
       <div className="p-2 pt-0 bg-white dark:bg-zinc-900">
         <Button 
           onClick={() => onUpdateStatus(order.id, config.next)}

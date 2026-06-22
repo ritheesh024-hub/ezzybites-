@@ -36,7 +36,6 @@ function DashboardContent() {
   const [mounted, setMounted] = useState(false);
   
   const isCheckingRef = useRef(false);
-
   const PRIMARY_ADMIN_EMAIL = "sunnyritheesh@gmail.com";
   const requestedView = searchParams.get('view') as StaffRole;
 
@@ -44,7 +43,7 @@ function DashboardContent() {
     setMounted(true);
   }, []);
 
-  // Optimized Identity & Role Sync Logic
+  // Optimized Identity & Role Sync Node
   useEffect(() => {
     async function checkRole() {
       if (userLoading || !mounted || isCheckingRef.current) return;
@@ -54,8 +53,7 @@ function DashboardContent() {
         return;
       }
 
-      // If we already have an assigned role and it's Master Admin, 
-      // we can switch views instantly without re-checking Firestore
+      // INSTANT SWITCH PROTOCOL: If already identified as Master Admin, update view without Firestore call
       if (assignedRole === 'admin' && user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
         const view = ['admin', 'cashier', 'kitchen'].includes(requestedView) ? requestedView : 'admin';
         if (activeView !== view) {
@@ -70,7 +68,7 @@ function DashboardContent() {
       try {
         isCheckingRef.current = true;
         
-        // 1. Master Admin Protocol (Exclusive bypass)
+        // 1. Master Admin Validation
         if (user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
           setAssignedRole('admin');
           const view = ['admin', 'cashier', 'kitchen'].includes(requestedView) ? requestedView : 'admin';
@@ -80,7 +78,7 @@ function DashboardContent() {
           return;
         }
 
-        // 2. Standard Staff Protocol
+        // 2. Staff Registry Sync
         const adminRef = doc(db, 'admins', user.uid);
         const adminSnap = await getDoc(adminRef);
 
@@ -89,22 +87,22 @@ function DashboardContent() {
           const role = (data.role as StaffRole) || 'cashier';
           
           if (data.status === 'disabled') {
-            toast({ variant: "destructive", title: "Access Revoked", description: "Account disabled." });
+            toast({ variant: "destructive", title: "Access Revoked", description: "This node is restricted." });
             await auth.signOut();
             router.push('/admin/login');
             return;
           }
 
           setAssignedRole(role);
-          setActiveView(role); // Standard staff are locked to their role
+          setActiveView(role); // Staff nodes are locked to their assignment
           setCheckingRole(false);
         } else {
-          toast({ variant: "destructive", title: "Access Restricted", description: "No staff record found." });
+          toast({ variant: "destructive", title: "Access Restricted", description: "Identity not found in registry." });
           await auth.signOut();
           router.push('/admin/login');
         }
       } catch (e: any) {
-        console.error("Hub role sync error:", e);
+        console.warn("Hub role sync interrupted:", e);
         setCheckingRole(false);
       } finally {
         isCheckingRef.current = false;
@@ -117,16 +115,15 @@ function DashboardContent() {
   const handleLogout = async () => {
     if (auth) {
       await auth.signOut();
-      toast({ title: "Session Closed" });
+      toast({ title: "Session Terminated" });
       router.push('/admin/login');
     }
   };
 
-  const switchView = useCallback((role: StaffRole) => {
+  const switchView = (role: StaffRole) => {
     if (assignedRole !== 'admin') return;
-    // URL-first state update. The useEffect will catch this and update activeView.
     router.push(`/admin/dashboard?view=${role}`);
-  }, [assignedRole, router]);
+  };
 
   if (!mounted || userLoading || checkingRole || !activeView) {
     return (
@@ -178,12 +175,12 @@ function DashboardContent() {
               <Button 
                 type="button"
                 variant="ghost" 
-                className="rounded-xl h-11 px-3 md:px-4 gap-3 hover:bg-secondary/80 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition-all focus-visible:ring-0 focus-visible:ring-offset-0 select-none"
+                className="rounded-xl h-11 px-3 md:px-4 gap-3 hover:bg-secondary/80 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition-all focus-visible:ring-0 focus-visible:ring-offset-0 select-none relative z-[110]"
               >
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 pointer-events-none">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
                   <UserCog className="w-4 h-4" />
                 </div>
-                <div className="hidden md:flex flex-col items-start text-left mr-2 pointer-events-none">
+                <div className="hidden md:flex flex-col items-start text-left mr-2">
                    <p className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">Identity</p>
                    <p className="text-[9px] font-bold opacity-50 truncate max-w-[100px]" suppressHydrationWarning>
                      {user?.email?.split('@')[0] || 'Staff'}
@@ -191,7 +188,7 @@ function DashboardContent() {
                 </div>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 rounded-[2rem] p-3 shadow-3xl border-none mt-2 bg-white dark:bg-zinc-950 z-[110]">
+            <DropdownMenuContent align="end" className="w-64 rounded-[2rem] p-3 shadow-4xl border-none mt-2 bg-white dark:bg-zinc-950 z-[120]">
               <DropdownMenuLabel className="text-[9px] font-black uppercase opacity-40 px-3 py-2">Staff Terminal</DropdownMenuLabel>
               <div className="px-3 py-3 bg-secondary/30 rounded-2xl mb-2">
                 <p className="text-xs font-black truncate" suppressHydrationWarning>{user?.email}</p>
