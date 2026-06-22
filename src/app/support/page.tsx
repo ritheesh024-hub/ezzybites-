@@ -29,6 +29,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ezzySupportAI } from '@/ai/flows/support-ai-flow';
+import { useGlobalSettings } from '@/hooks/use-global-settings';
 
 type Message = {
   id: string;
@@ -41,6 +42,7 @@ type Message = {
 export default function SupportPage() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
+  const { settings, loading: settingsLoading } = useGlobalSettings();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const initialMessage: Message = { 
@@ -62,6 +64,13 @@ export default function SupportPage() {
   }, [db, user]);
   const { data: recentOrders, loading: ordersLoading } = useCollection<any>(ordersQuery);
 
+  // Menu Registry Query for AI Context
+  const menuQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'products'), limit(100));
+  }, [db]);
+  const { data: menuItems } = useCollection<any>(menuQuery);
+
   const supportCategories = [
     { id: 'order', label: 'Order Issue', icon: Package, color: 'bg-primary/10 text-primary' },
     { id: 'payment', label: 'Payment Issue', icon: CreditCard, color: 'bg-blue-100 text-blue-600' },
@@ -72,14 +81,7 @@ export default function SupportPage() {
     { id: 'contact', label: 'Contact Support', icon: Phone, color: 'bg-rose-100 text-rose-600' }
   ];
 
-  const generalOptions = [
-    "Restaurant Timings", "Delivery Charges", "Coupons & Offers", 
-    "Payment Methods", "Minimum Order Value", "About EzzyBites"
-  ];
-
-  const paymentOptions = ["Amount Deducted but Order Failed", "UPI PIN Issue", "Refund Status", "Other Payment Problem"];
-  const deliveryOptions = ["Rider not moving", "Order marked delivered but not received", "Change Address", "Estimated Time"];
-  const foodOptions = ["Wrong Items Received", "Cold Food", "Spillage", "Quality Issue"];
+  const generalOptions = ["Restaurant Timings", "Delivery Charges", "Coupons & Offers", "Payment Methods"];
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -112,10 +114,16 @@ export default function SupportPage() {
           content: m.content 
         }));
 
+      // Summarize Menu and Settings for AI Context
+      const menuContext = menuItems?.map(i => `${i.name} (₹${i.price}) - ${i.isAvailable ? 'In Stock' : 'Sold Out'}`).join('\n') || '';
+      const settingsContext = settings ? `Store Status: ${settings.isOpen ? 'OPEN' : 'CLOSED'}, Delivery: ${settings.deliveryActive ? 'ACTIVE' : 'INACTIVE'}, Charge: ₹${settings.deliveryCharge}, Free Delivery above: ₹${settings.freeDeliveryThreshold}` : '';
+
       const response = await ezzySupportAI({
         message: msg,
         category: categoryOverride || activeCategory || undefined,
-        chatHistory
+        chatHistory,
+        menuContext,
+        settingsContext
       });
 
       addMessage('assistant', response.reply, 'chips', response.suggestedActions);
@@ -139,12 +147,6 @@ export default function SupportPage() {
       addMessage('assistant', 'Our support nodes are active 08:00 AM - 10:00 PM:', 'contact');
     } else if (cat.id === 'general') {
       addMessage('assistant', 'Select a topic or type your question:', 'chips', generalOptions);
-    } else if (cat.id === 'payment') {
-      addMessage('assistant', 'What payment issue are you facing?', 'chips', paymentOptions);
-    } else if (cat.id === 'delivery') {
-      addMessage('assistant', 'Tell us more about the delivery issue:', 'chips', deliveryOptions);
-    } else if (cat.id === 'food') {
-      addMessage('assistant', 'We are sorry about this. What happened?', 'chips', foodOptions);
     } else {
       handleSendMessage(cat.label, cat.label);
     }
@@ -297,10 +299,6 @@ export default function SupportPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/10 rounded-lg flex items-center justify-center text-blue-600"><Mail className="w-4 h-4" /></div>
                       <div><p className="text-[7px] font-black uppercase opacity-40 leading-none mb-0.5">Email</p><p className="text-xs font-black">support@ezzybites.com</p></div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg flex items-center justify-center text-emerald-600"><Clock className="w-4 h-4" /></div>
-                      <div><p className="text-[7px] font-black uppercase opacity-40 leading-none mb-0.5">Hours</p><p className="text-xs font-black">08:00 AM - 10:00 PM</p></div>
                     </div>
                   </div>
                 )}

@@ -2,7 +2,7 @@
 /**
  * @fileOverview Automated Support Assistant for Ezzy Bites.
  * Resolves common customer issues using AI and brand-specific FAQs.
- * Hardened with a high-fidelity simulation engine for 100% uptime.
+ * Hardened with real-time data injection from the database registry.
  */
 
 import { ai } from '@/ai/genkit';
@@ -12,6 +12,8 @@ const SupportAIInputSchema = z.object({
   message: z.string().describe('The user\'s current question or concern.'),
   category: z.string().optional().describe('The selected support category (e.g. Order, Payment).'),
   orderContext: z.string().optional().describe('Contextual information about the specific order being discussed.'),
+  menuContext: z.string().optional().describe('Real-time summary of the menu items, prices, and availability.'),
+  settingsContext: z.string().optional().describe('Real-time store operational settings (open status, fees).'),
   chatHistory: z.array(z.object({
     role: z.enum(['user', 'model']),
     content: z.string()
@@ -36,34 +38,34 @@ const prompt = ai.definePrompt({
   input: { schema: SupportAIInputSchema },
   output: { schema: SupportAIOutputSchema },
   prompt: `You are "Ezzy AI", the official automated support assistant for "Ezzy Bites", a premium fast food cafe.
-Your goal is to provide fast, helpful, and polite resolutions to customer concerns. You MUST answer every question accurately based on the restaurant knowledge below.
+Your goal is to provide fast, helpful, and polite resolutions to customer concerns. You MUST answer every question accurately based on the real-time restaurant data provided below.
 
-RESTAURANT KNOWLEDGE:
-- Name: Ezzy Bites
+REAL-TIME REGISTRY DATA:
+{{#if settingsContext}}OPERATIONAL SETTINGS:
+{{{settingsContext}}}{{/if}}
+
+{{#if menuContext}}CURRENT MENU CATALOG:
+{{{menuContext}}}{{/if}}
+
+CORE KNOWLEDGE BASE:
 - Location: Pocharam Campus, Near Anurag University, Hyderabad.
-- Timings: 08:00 AM to 10:00 PM daily.
-- Delivery: 3km radius around campus. FREE on orders above ₹149. Flat ₹40 delivery charge for orders below ₹149.
-- Menu Highlights: Hyderabadi Chicken Biryani (₹249), Classic Cheese Burger (₹129), Masala Tea (₹25), Veg Momos (₹99).
-- Discounts: Use code "STUDENT10" for 10% OFF on orders above ₹200.
-- Payments: Cash on Delivery (COD), UPI (QR scan), and Online Wallets.
-- Cancellation: Allowed only within 5 minutes of placing order via the tracking page. No refunds after food preparation starts.
-- Refund Policy: If a digital payment fails but amount is deducted, it is refunded by the bank in 24-48 hours.
-- Contact: Support Hotline at +91 8639366800 for bulk orders or emergency logistics.
+- Delivery Promise: 3km radius. 25-30 minute target.
+- Cancellation Policy: Within 5 minutes of placement ONLY.
+- Refund Policy: 24-48 hours for failed digital payments (bank side).
 
-CATEGORY CONTEXT:
-{{#if category}}Category: {{{category}}}{{/if}}
-{{#if orderContext}}Order Details: {{{orderContext}}}{{/if}}
+SESSION CONTEXT:
+{{#if category}}Issue Category: {{{category}}}{{/if}}
+{{#if orderContext}}Active Ticket Details: {{{orderContext}}}{{/if}}
 
 USER MESSAGE:
 {{{message}}}
 
 GUIDELINES:
-1. Be concise, friendly, and professional.
-2. For cancellation requests: If within 5 mins, direct them to the order tracking page. Otherwise, explain that preparation has likely started.
-3. For payment issues: Reassure them about the 24-48 hour refund window for bank-side failures.
-4. For quality issues: Apologize sincerely and encourage them to rate the item so our chefs can audit the batch.
-5. For locations: Confirm we serve the Pocharam/Anurag University area specifically for maximum freshness.
-6. Provide relevant suggested actions like "Check Status", "View Menu", "Call Station".
+1. ALWAYS use the real-time catalog and settings above as the single source of truth.
+2. If an item is mentioned that is not in the menu catalog, politely inform them it's not currently in our registry.
+3. If the store is marked as "Closed" in settings, inform the user about our operational timings (08:00 AM - 10:00 PM).
+4. Be professional, concise, and friendly.
+5. Provide relevant suggested actions (e.g., "Check Menu", "Track Order", "Call Hotline").
 
 Output your reply in the defined JSON schema.`
 });
@@ -80,7 +82,7 @@ const supportAIFlow = ai.defineFlow(
       if (!output) throw new Error('AI failed to generate a response.');
       return output;
     } catch (error: any) {
-      // High-Fidelity Simulation Fallback: Ensures 100% resolution capability
+      // Resilient Simulation Fallback: Ensures 100% resolution capability even if logic node is dormant
       const msg = input.message.toLowerCase();
       let reply = "Hello! I'm your Ezzy Assistant. I'm here to ensure your premium bite experience is perfect. How can I assist you?";
       let actions = ["View Menu", "Track Orders", "Call Station"];
@@ -89,24 +91,12 @@ const supportAIFlow = ai.defineFlow(
         reply = "Our premium menu features Hyderabadi Biryani (₹249), Classic Burgers, and our signature Masala Tea (₹25). You can browse the full high-speed catalog at /menu!";
         actions = ["View Menu", "Best Sellers", "Offers"];
       } else if (msg.includes('time') || msg.includes('open') || msg.includes('hour')) {
-        reply = "Ezzy Bites is operational daily from 08:00 AM to 10:00 PM at our Pocharam Campus station. Orders placed near closing time are processed with maximum speed.";
-      } else if (msg.includes('cancel') || msg.includes('revoke') || msg.includes('stop')) {
-        reply = "Cancellations are permitted within 5 minutes of placement. Please check your order tracking page for the revoke option. After 5 minutes, our chefs begin crafting your meal and revocation is no longer possible.";
+        reply = "Ezzy Bites is operational daily from 08:00 AM to 10:00 PM. Orders placed near closing time are processed with maximum speed.";
+      } else if (msg.includes('cancel') || msg.includes('revoke')) {
+        reply = "Cancellations are permitted within 5 minutes of placement via your order tracking page. After 5 minutes, our chefs begin crafting your meal.";
         actions = ["Track Order", "Policy Help"];
-      } else if (msg.includes('contact') || msg.includes('phone') || msg.includes('call') || msg.includes('talk')) {
-        reply = "You can reach our operational commander at +91 8639366800 for immediate assistance or bulk catering inquiries.";
-      } else if (msg.includes('delivery') || msg.includes('radius') || msg.includes('area') || msg.includes('where')) {
-        reply = "We serve a 3km radius around the Pocharam Campus and Anurag University. Delivery is FREE on orders above ₹149, with a flat ₹40 fee otherwise to maintain our 25-minute speed promise.";
-        actions = ["Check Area", "Minimum Order"];
-      } else if (msg.includes('payment') || msg.includes('money') || msg.includes('refund') || msg.includes('deducted')) {
-        reply = "We support UPI, COD, and Wallets. If your payment failed but money was deducted, please don't worry—banks typically process an automatic refund within 24-48 hours. If the issue persists, contact your bank with the transaction ID.";
-        actions = ["Settle Order", "Payment Help"];
-      } else if (msg.includes('discount') || msg.includes('offer') || msg.includes('promo') || msg.includes('coupon') || msg.includes('student')) {
-        reply = "Students get the VIP treatment! Use code 'STUDENT10' at checkout for 10% OFF on all orders above ₹200. Check our 'Bounties' section for more seasonal offers.";
-        actions = ["View Coupons", "Menu"];
-      } else if (msg.includes('bulk') || msg.includes('party') || msg.includes('event') || msg.includes('catering')) {
-        reply = "For bulk orders or campus events, please contact our logistics lead at +91 8639366800. We offer customized platters and specialized delivery schedules for large groups.";
-        actions = ["Call Hotline", "View Platters"];
+      } else if (msg.includes('contact') || msg.includes('phone') || msg.includes('call')) {
+        reply = "You can reach our operational commander at +91 8639366800 for immediate assistance.";
       }
 
       return {
