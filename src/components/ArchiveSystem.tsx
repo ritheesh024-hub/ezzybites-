@@ -219,33 +219,31 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
         </Button>
       </div>
 
-      <div className="sticky top-[118px] lg:top-[70px] z-30 bg-zinc-50 dark:bg-zinc-950 py-4 -mx-4 px-4">
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm space-y-4">
-          <div className="flex flex-col lg:flex-row gap-3 items-center">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-40" />
-              <Input 
-                placeholder="Search by Ticket ID, Customer or Mobile..." 
-                value={searchQuery} 
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
-                className="h-11 md:h-14 pl-12 rounded-xl md:rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-sm md:text-base" 
-              />
-            </div>
-            <div className="flex gap-3 w-full lg:w-auto">
-               <select 
-                 value={statusFilter} 
-                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                 className="h-11 md:h-14 px-4 md:px-6 rounded-xl md:rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[8px] md:text-[9px] tracking-widest outline-none flex-1"
-               >
-                 <option value="all">All States</option>
-                 <option value="pending">Placed</option>
-                 <option value="accepted">Confirmed</option>
-                 <option value="preparing">Preparing</option>
-                 <option value="out_for_delivery">Out for Delivery</option>
-                 <option value="delivered">Delivered</option>
-                 <option value="Cancelled">Cancelled</option>
-               </select>
-            </div>
+      <div className="sticky top-[118px] lg:top-[70px] z-30 bg-zinc-50 dark:bg-zinc-950 py-2 -mx-4 px-4">
+        <div className="bg-white dark:bg-zinc-900 p-2.5 md:p-3 rounded-2xl border shadow-sm flex flex-col lg:flex-row gap-3 items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-40" />
+            <Input 
+              placeholder="Search by Ticket ID, Customer or Mobile..." 
+              value={searchQuery} 
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} 
+              className="h-10 md:h-11 pl-12 rounded-xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold text-sm" 
+            />
+          </div>
+          <div className="flex gap-3 w-full lg:w-auto">
+             <select 
+               value={statusFilter} 
+               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+               className="h-10 md:h-11 px-4 md:px-6 rounded-xl bg-secondary/30 dark:bg-zinc-800 border-none font-black uppercase text-[8px] md:text-[9px] tracking-widest outline-none flex-1 lg:w-48"
+             >
+               <option value="all">All States</option>
+               <option value="pending">Placed</option>
+               <option value="accepted">Confirmed</option>
+               <option value="preparing">Preparing</option>
+               <option value="out_for_delivery">Out for Delivery</option>
+               <option value="delivered">Delivered</option>
+               <option value="Cancelled">Cancelled</option>
+             </select>
           </div>
         </div>
       </div>
@@ -259,7 +257,7 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
         ) : (
           groupedOrders.map(([dateKey, group]) => (
             <div key={dateKey} className="space-y-4">
-              <div className="sticky top-[210px] lg:top-[160px] z-20 flex items-center justify-between py-3 px-6 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md rounded-2xl border shadow-sm">
+              <div className="sticky top-[180px] lg:top-[130px] z-20 flex items-center justify-between py-2.5 px-6 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md rounded-2xl border shadow-sm">
                 <div className="flex items-center gap-3">
                   <CalendarDays className="w-4 h-4 text-primary" />
                   <h3 className="font-black uppercase tracking-tighter text-sm italic">{group.label}</h3>
@@ -292,11 +290,11 @@ export const ArchiveSystem = ({ orders, onViewDetails }: ArchiveSystemProps) => 
 
                         <div className="flex items-center justify-between w-full md:w-auto md:gap-12 pt-3 md:pt-0 border-t md:border-none border-zinc-100 dark:border-zinc-800">
                           <div className="flex flex-col items-start md:items-end">
-                            <span className="text-[8px] font-black uppercase opacity-30 tracking-widest">Gross</span>
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Gross</span>
                             <span className="text-lg md:text-xl font-black text-primary italic leading-none">₹{order.total}</span>
                           </div>
                           <div className="flex flex-col items-start md:items-end">
-                            <span className="text-[8px] font-black uppercase opacity-30 tracking-widest">Protocol</span>
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-30">Protocol</span>
                             <span className="text-[10px] font-bold uppercase">{order.orderType || 'Online'}</span>
                           </div>
                           <div className="flex gap-2">
