@@ -689,8 +689,8 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
                  </div>
               </div>
               <div className="flex gap-2">
-                 <Button size="icon" variant="ghost" onClick={() => copyText(staff.email)} className="h-10 w-10 rounded-xl bg-secondary/50 md:bg-transparent hover:bg-secondary"><Mail className="w-4 h-4" /></Button>
-                 <Button size="icon" variant="ghost" onClick={() => copyText(staff.phone)} className="h-10 w-10 rounded-xl bg-secondary/50 md:bg-transparent hover:bg-secondary"><Phone className="w-4 h-4" /></Button>
+                 <Button size="icon" variant="ghost" onClick={() => window.location.href = `mailto:${staff.email}`} className="h-10 w-10 rounded-xl bg-secondary/50 md:bg-transparent hover:bg-secondary"><Mail className="w-4 h-4" /></Button>
+                 <Button size="icon" variant="ghost" onClick={() => window.location.href = `tel:${staff.phone}`} className="h-10 w-10 rounded-xl bg-secondary/50 md:bg-transparent hover:bg-secondary"><Phone className="w-4 h-4" /></Button>
               </div>
            </div>
 
