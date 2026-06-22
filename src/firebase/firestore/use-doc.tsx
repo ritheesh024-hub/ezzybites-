@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -17,9 +16,16 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   const [error, setError] = useState<Error | null>(null);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastPathRef = useRef<string | null>(null);
   const docPath = docRef?.path || null;
 
   useEffect(() => {
+    // Identity Check
+    if (docPath === lastPathRef.current && docPath !== null) {
+      return;
+    }
+    lastPathRef.current = docPath;
+
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
@@ -44,7 +50,6 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
             setError(null);
           },
           async (serverError: any) => {
-            // Only emit the global permission error if it's actually a permission issue
             if (serverError.code === 'permission-denied') {
               const permissionError = new FirestorePermissionError({
                 path: docRef.path,

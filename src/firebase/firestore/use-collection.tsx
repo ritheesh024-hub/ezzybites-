@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -17,9 +16,18 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<Error | null>(null);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const lastQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Cleanup previous listener
+    // 1. Identity Check: Avoid redundant re-subscriptions if the query hasn't changed.
+    // This is critical for preventing internal state corruption during re-renders.
+    const queryKey = query ? JSON.stringify((query as any)._query || query.toString()) : null;
+    if (queryKey === lastQueryRef.current && queryKey !== null) {
+      return; 
+    }
+    lastQueryRef.current = queryKey;
+
+    // 2. Cleanup previous listener
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
@@ -33,7 +41,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
     setLoading(true);
 
-    // SETTLE-DELAY: Gives the Firestore SyncEngine time to settle during HMR
+    // 3. SETTLE-DELAY: Gives the Firestore SyncEngine time to settle during HMR
     const timeoutId = setTimeout(() => {
       try {
         const unsubscribe = onSnapshot(
@@ -48,20 +56,14 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
             setError(null);
           },
           async (serverError: any) => {
-            // Only emit the global permission error if it's actually a permission issue
             if (serverError.code === 'permission-denied') {
-              // Try to extract a useful path from the query object if possible
               let path = 'collection';
               try {
-                // Accessing internal path for better error reporting in dev
-                // This uses internal fields which might be unstable, but helpful for debugging
                 const internalQuery = (query as any)._query;
                 if (internalQuery && internalQuery.path) {
                   path = internalQuery.path.toArray().join('/');
                 }
-              } catch (e) {
-                // fallback
-              }
+              } catch (e) {}
 
               const permissionError = new FirestorePermissionError({
                 path: path,
