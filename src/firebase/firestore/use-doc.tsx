@@ -1,37 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { onSnapshot, DocumentReference, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
- * STABILIZED DOCUMENT HOOK v2.0
- * Prevents rapid-fire re-subscription crashes by tracking the document path identity.
+ * HIGH-INTEGRITY DOCUMENT HOOK v3.0
+ * Uses an active-mount guard to prevent Firestore internal state machine collisions.
  */
 export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
-  
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  const lastPathRef = useRef<string | null>(null);
-  const currentPath = docRef?.path || null;
 
   useEffect(() => {
-    // 1. Identity Check
-    if (currentPath === lastPathRef.current && currentPath !== null) {
-      return;
-    }
-    lastPathRef.current = currentPath;
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
 
-    // 2. Node Cleanup
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-
-    if (!docRef || typeof window === 'undefined') {
+    if (!docRef) {
       setData(null);
       setLoading(false);
       return;
@@ -39,52 +26,47 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
 
     setLoading(true);
 
-    // 3. SETTLE-DELAY: Synchronizes with the Firestore SyncEngine state
-    const timeoutId = setTimeout(() => {
-      try {
-        const unsubscribe = onSnapshot(
-          docRef,
-          (snapshot) => {
-            setData(snapshot.data() || null);
-            setLoading(false);
-            setError(null);
-          },
-          async (serverError: any) => {
-            console.error("🔥 [Ezzy Flux] Firestore Doc Node Error:", {
-              code: serverError.code,
-              message: serverError.message,
-              path: docRef.path
-            });
+    try {
+      unsubscribe = onSnapshot(
+        docRef,
+        (snapshot) => {
+          if (!isMounted) return;
+          setData(snapshot.data() || null);
+          setLoading(false);
+          setError(null);
+        },
+        (serverError: any) => {
+          if (!isMounted) return;
+          
+          console.error("🔥 [Ezzy Flux] Doc Sync Error:", {
+            code: serverError.code,
+            path: docRef.path
+          });
 
-            if (serverError.code === 'permission-denied') {
-              const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'get',
-              } satisfies SecurityRuleContext);
-
-              errorEmitter.emit('permission-error', permissionError);
-            }
-            
-            setError(serverError);
-            setLoading(false);
+          if (serverError.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'get',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
           }
-        );
-
-        unsubscribeRef.current = unsubscribe;
-      } catch (err: any) {
+          
+          setError(serverError);
+          setLoading(false);
+        }
+      );
+    } catch (err: any) {
+      if (isMounted) {
         setError(err);
         setLoading(false);
       }
-    }, 150);
+    }
 
     return () => {
-      clearTimeout(timeoutId);
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
     };
-  }, [currentPath]); 
+  }, [docRef?.path]); // Depend strictly on the path identity
 
   return { data, loading, error };
 }

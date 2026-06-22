@@ -6,9 +6,9 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * HARDENED FIREBASE SINGLETON v2.0
- * Prevents "ca9" Unexpected State errors by using a global window registry 
- * that survives Next.js HMR re-evaluations.
+ * HARDENED FIREBASE SINGLETON v3.0
+ * Prevents "Unexpected State" assertions by using a global window registry 
+ * and strict browser-only initialization.
  */
 
 interface FirebaseInstances {
@@ -19,7 +19,7 @@ interface FirebaseInstances {
 
 declare global {
   interface Window {
-    __FIREBASE_SINGLETON_INSTANCE__?: FirebaseInstances;
+    __FIREBASE_STATION_REGISTRY__?: FirebaseInstances;
   }
 }
 
@@ -28,32 +28,33 @@ export function initializeFirebase(): {
   db: Firestore | null; 
   auth: Auth | null;
 } {
+  // 1. Strict browser-only guard
   if (typeof window === 'undefined') {
     return { app: null, db: null, auth: null };
   }
 
   try {
-    // 1. Return cached instances if they exist
-    if (window.__FIREBASE_SINGLETON_INSTANCE__) {
-      return window.__FIREBASE_SINGLETON_INSTANCE__;
+    // 2. Return cached instances if they exist (Survivability Node)
+    if (window.__FIREBASE_STATION_REGISTRY__) {
+      return window.__FIREBASE_STATION_REGISTRY__;
     }
 
-    // 2. Initialize or retrieve existing app
+    // 3. Initialize or retrieve existing app
     const apps = getApps();
     const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     
-    // 3. Initialize services
+    // 4. Initialize services with current app context
     const db = getFirestore(app);
     const auth = getAuth(app);
     
     const instances: FirebaseInstances = { app, db, auth };
     
-    // 4. Cache globally to prevent SDK re-init collisions
-    window.__FIREBASE_SINGLETON_INSTANCE__ = instances;
+    // 5. Cache globally to prevent SDK re-init collisions during HMR
+    window.__FIREBASE_STATION_REGISTRY__ = instances;
     
     return instances;
   } catch (error) {
-    console.error('🔥 [Ezzy Ops] Firebase Critical Init Error:', error);
+    console.error('🔥 [Ezzy Ops] Firebase Registry Fail:', error);
     return { app: null, db: null, auth: null };
   }
 }
