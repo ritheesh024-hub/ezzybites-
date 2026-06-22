@@ -1,4 +1,3 @@
-
 "use client"
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -41,24 +40,28 @@ function MenuContent() {
     trackMenuView();
   }, [trackMenuView]);
 
-  // Sync searchQuery with URL params for external navigation (e.g. from Navbar)
+  // Sync searchQuery with URL params for external navigation
   useEffect(() => {
-    setSearchQuery(urlQuery);
+    if (urlQuery) setSearchQuery(urlQuery);
   }, [urlQuery]);
 
   const productsQuery = useMemo(() => {
     if (!db) return null;
-    // Robust query: Remove orderBy to ensure compatibility with all items
-    // If you need specific ordering, ensure 'createdAt' index is built in Firebase
+    // Simple query to avoid index requirements while debugging
     return query(collection(db, 'products'), limit(150));
   }, [db]);
 
   const { data: menuItems, loading, error } = useCollection<FoodItem>(productsQuery);
 
-  // Monitor errors in console for debugging
+  // Debugging logs for operational monitoring
   useEffect(() => {
-    if (error) console.error("🔥 [Ezzy Menu] Firestore Load Error:", error);
-  }, [error]);
+    if (error) {
+      console.error("🔥 [Ezzy Menu] Critical Retrieval Error:", error);
+    }
+    if (!loading && menuItems) {
+      console.log(`✅ [Ezzy Menu] Sync Complete: ${menuItems.length} items found in registry.`);
+    }
+  }, [error, loading, menuItems]);
 
   const filteredItems = useMemo(() => {
     if (!menuItems) return [];
@@ -99,11 +102,6 @@ function MenuContent() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (debouncedSearch) trackSearch(debouncedSearch);
-  };
-
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950">
       <Navbar />
@@ -111,7 +109,7 @@ function MenuContent() {
       <main className="container mx-auto px-3 md:px-8 py-4 pt-14 md:pt-20 max-w-7xl">
         {/* COMPACT SEARCH */}
         <div className="max-w-2xl mx-auto mb-4">
-          <form onSubmit={handleSearchSubmit} className="relative group">
+          <div className="relative group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
             <Input 
               placeholder="Search premium bites..." 
@@ -128,7 +126,7 @@ function MenuContent() {
                 <FilterX className="w-3.5 h-3.5" />
               </button>
             )}
-          </form>
+          </div>
         </div>
 
         {/* STICKY FILTER BAR */}
@@ -166,10 +164,11 @@ function MenuContent() {
             ))}
           </div>
         ) : error ? (
-           <div className="py-20 text-center bg-destructive/5 rounded-3xl border-2 border-destructive/10 border-dashed max-w-xl mx-auto">
+           <div className="py-20 text-center bg-destructive/5 rounded-3xl border-2 border-destructive/10 border-dashed max-w-xl mx-auto p-8">
              <AlertCircle className="w-12 h-12 text-destructive/30 mx-auto mb-4" />
-             <p className="text-[10px] font-black uppercase mb-6 text-destructive opacity-60">Identity Sync Interrupted</p>
-             <Button variant="outline" className="rounded-full h-10 px-8 border-destructive/20 text-destructive font-black uppercase text-[9px]" onClick={() => window.location.reload()}>Re-establish Node</Button>
+             <h3 className="text-xl font-black uppercase text-destructive tracking-tighter mb-2">Sync Error</h3>
+             <p className="text-[10px] font-black uppercase mb-6 text-muted-foreground opacity-60">Identity Sync Interrupted. Check console for logs.</p>
+             <Button variant="outline" className="rounded-full h-10 px-8 border-destructive/20 text-destructive font-black uppercase text-[9px]" onClick={() => window.location.reload()}>Retry Handshake</Button>
            </div>
         ) : filteredItems.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-5 pb-10">
@@ -183,15 +182,15 @@ function MenuContent() {
               <PackageX className="w-8 h-8 text-muted-foreground opacity-10" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-xl font-black uppercase tracking-tighter">No Matches</h3>
-              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-widest">Try refining your search nodes or seeding inventory in Admin.</p>
+              <h3 className="text-xl font-black uppercase tracking-tighter">No Matches Found</h3>
+              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-widest">Adjust filters or search criteria.</p>
             </div>
             <Button 
               variant="outline" 
               onClick={() => { setSearchQuery(''); setDietFilter('all'); setActiveCategory('All'); }} 
               className="rounded-full h-11 px-8 font-black uppercase text-[9px] tracking-widest border-2"
             >
-              Reset Filters
+              Reset Protocol
             </Button>
           </div>
         )}
