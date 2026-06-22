@@ -58,7 +58,6 @@ export const SmartPermissionModal = ({ type, onClose, onConfirm }: SmartPermissi
           <div className="flex flex-col">
             <div className={cn("p-10 text-white relative overflow-hidden", active.color)}>
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse" />
-              <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all z-20"><X className="w-5 h-5" /></button>
               <div className="relative z-10 flex flex-col items-center text-center space-y-6">
                  <div className="w-20 h-20 bg-white/20 rounded-[2rem] flex items-center justify-center backdrop-blur-md border border-white/20 shadow-2xl">
                     <active.icon className="w-10 h-10" />

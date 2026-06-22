@@ -228,7 +228,6 @@ export const CouponManager = () => {
                     {editingCoupon ? 'Syncing Profile Updates' : 'New Growth Node Entry'}
                   </DialogDescription>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary/20 transition-all shrink-0"><X className="w-5 h-5" /></button>
              </DialogHeader>
           </div>
 

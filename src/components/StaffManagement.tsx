@@ -494,7 +494,6 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
                  </DialogTitle>
                  <DialogDescription className="text-white/40 font-medium text-[10px] uppercase tracking-widest mt-1">Identity Registry v4.2</DialogDescription>
               </DialogHeader>
-              <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary/20 transition-all shrink-0"><X className="w-5 h-5" /></button>
            </div>
         </div>
 
@@ -600,7 +599,7 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
                         <Label className="text-[8px] md:text-[9px] font-black uppercase opacity-40 ml-1">Activation Epoch (Joining Date)</Label>
                         <Input type="date" value={formData.joiningDate} onChange={e => setFormData({...formData, joiningDate: e.target.value})} className="h-12 md:h-14 rounded-xl md:rounded-2xl border-none bg-secondary/30 dark:bg-zinc-900 font-bold px-5 md:px-6" />
                      </div>
-                     <div className="p-5 md:p-6 bg-secondary/20 dark:bg-zinc-900/50 rounded-2xl md:rounded-3xl border border-dashed">
+                     <div className="p-5 md:p-6 bg-secondary/20 dark:bg-zinc-900/50 rounded-2xl md:rounded-3xl border border-dashed space-y-4">
                         <p className="text-[7px] md:text-[8px] font-black uppercase opacity-40 mb-3 tracking-widest">Active Node Permissions</p>
                         <div className="flex flex-wrap gap-1.5 md:gap-2">
                            {getRolePermissions(formData.role).map((p: string) => (
@@ -674,7 +673,6 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
            </div>
            <div className="absolute top-6 md:top-8 right-6 md:right-10 flex gap-3">
               <Badge className={cn("px-3 md:px-4 py-1 md:py-1.5 rounded-full font-black text-[8px] md:text-[9px] uppercase tracking-widest border-none", staff.status === 'active' ? "bg-emerald-500" : "bg-rose-600")}>{staff.status}</Badge>
-              <button onClick={onClose} className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-xl"><X className="w-5 h-5" /></button>
            </div>
         </div>
 
@@ -696,19 +694,19 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
 
            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               <div className="bg-zinc-50 dark:bg-zinc-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border text-center space-y-0.5 md:space-y-1">
-                 <p className="text-[7px] md:text-[8px] font-black uppercase opacity-30 tracking-widest">Load</p>
+                 <p className="text-[7px] font-black uppercase opacity-30 tracking-widest">Load</p>
                  <p className="text-xl md:text-2xl font-black italic">{staff.stats?.ordersHandled || 0}</p>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border text-center space-y-0.5 md:space-y-1">
-                 <p className="text-[7px] md:text-[8px] font-black uppercase opacity-30 tracking-widest">Revenue</p>
+                 <p className="text-[7px] font-black uppercase opacity-30 tracking-widest">Revenue</p>
                  <p className="text-xl md:text-2xl font-black italic text-emerald-600">{staff.stats?.billsGenerated || 0}</p>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border text-center space-y-0.5 md:space-y-1">
-                 <p className="text-[7px] md:text-[8px] font-black uppercase opacity-30 tracking-widest">Updates</p>
+                 <p className="text-[7px] font-black uppercase opacity-30 tracking-widest">Updates</p>
                  <p className="text-xl md:text-2xl font-black italic text-orange-600">{staff.stats?.kitchenUpdates || 0}</p>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border text-center space-y-0.5 md:space-y-1">
-                 <p className="text-[7px] md:text-[8px] font-black uppercase opacity-30 tracking-widest">Pulse</p>
+                 <p className="text-[7px] font-black uppercase opacity-30 tracking-widest">Pulse</p>
                  <p className="text-xl md:text-2xl font-black italic text-primary">{staff.onlineStatus?.toUpperCase()}</p>
               </div>
            </div>
@@ -727,7 +725,7 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
                  <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 italic">Resident Node</h5>
                  <div className="bg-secondary/20 dark:bg-zinc-900/50 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-dashed">
                     <p className="text-[10px] md:text-[11px] font-medium leading-relaxed italic opacity-80">"{staff.address || 'Location data restricted or unmapped.'}"</p>
-                    <p className="text-[8px] md:text-[9px] font-bold uppercase mt-4 opacity-40">{staff.city}, {staff.state} - {staff.pincode}</p>
+                    <p className="text-[8px] font-bold uppercase mt-4 opacity-40">{staff.city}, {staff.state} - {staff.pincode}</p>
                  </div>
               </div>
            </div>
@@ -735,7 +733,7 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
 
         <div className="p-6 md:p-8 bg-zinc-50 dark:bg-zinc-900 border-t flex flex-col md:flex-row justify-center items-center gap-4 shrink-0">
            <Button variant="outline" className="w-full md:hidden h-12 rounded-xl font-black uppercase text-[10px] tracking-widest border-2" onClick={onClose}>Close Registry</Button>
-           <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[0.5em] opacity-20 hidden md:block">Authorized Registry • Confidential Log</p>
+           <p className="text-[7px] font-black uppercase tracking-[0.5em] opacity-20 hidden md:block">Authorized Registry • Confidential Log</p>
         </div>
       </DialogContent>
     </Dialog>

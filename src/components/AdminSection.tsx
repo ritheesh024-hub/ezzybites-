@@ -218,7 +218,6 @@ export const AdminSection = ({ assignedRole, activeView }: AdminSectionProps) =>
           <DialogHeader className="p-5 md:p-6 border-b bg-muted/5 flex flex-row items-center justify-between">
              <DialogTitle className="text-lg font-black uppercase tracking-tight">Manifest: #{selectedOrderForView?.orderId}</DialogTitle>
              <DialogDescription className="sr-only">Detailed view of order items and fulfillment node.</DialogDescription>
-             <button onClick={() => setSelectedOrderForView(null)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center hover:bg-primary hover:text-white transition-all"><X className="w-4 h-4" /></button>
           </DialogHeader>
           {selectedOrderForView && (
             <div className="flex flex-col">

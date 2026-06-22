@@ -5,7 +5,7 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle,
+  DialogTitle, 
   DialogDescription
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -129,12 +129,6 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
             unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/40 transition-all z-20 shadow-xl"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hide">

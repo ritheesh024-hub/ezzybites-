@@ -240,7 +240,6 @@ export const ProductManagement = () => {
                 <DialogTitle className="text-2xl font-black font-headline uppercase tracking-tighter italic leading-none">{editingItem ? 'Edit Protocol' : 'New Entry'}</DialogTitle>
                 <DialogDescription className="sr-only">Add or edit product inventory details.</DialogDescription>
              </DialogHeader>
-             <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all"><X className="w-4 h-4" /></button>
           </div>
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
