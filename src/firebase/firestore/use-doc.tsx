@@ -6,9 +6,8 @@ import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
- * STABILIZED DOCUMENT HOOK
- * Resolves "ca9" errors by adding a 100ms settle-delay. This ensures 
- * that the internal Firestore state machine isn't overloaded during HMR.
+ * STABILIZED DOCUMENT HOOK v2.0
+ * Prevents rapid-fire re-subscription crashes by tracking the document path identity.
  */
 export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   const [data, setData] = useState<T | null>(null);
@@ -17,15 +16,16 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const lastPathRef = useRef<string | null>(null);
-  const docPath = docRef?.path || null;
+  const currentPath = docRef?.path || null;
 
   useEffect(() => {
-    // Identity Check
-    if (docPath === lastPathRef.current && docPath !== null) {
+    // 1. Identity Check
+    if (currentPath === lastPathRef.current && currentPath !== null) {
       return;
     }
-    lastPathRef.current = docPath;
+    lastPathRef.current = currentPath;
 
+    // 2. Node Cleanup
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
@@ -39,7 +39,7 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
 
     setLoading(true);
 
-    // SETTLE-DELAY: Prevents rapid-fire subscription crashes
+    // 3. SETTLE-DELAY: Synchronizes with the Firestore SyncEngine state
     const timeoutId = setTimeout(() => {
       try {
         const unsubscribe = onSnapshot(
@@ -66,11 +66,11 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
 
         unsubscribeRef.current = unsubscribe;
       } catch (err: any) {
-        console.error("Firestore Doc Listener Failed:", err);
+        console.warn("⚠️ Document Signal Interrupted:", err.message);
         setError(err);
         setLoading(false);
       }
-    }, 100);
+    }, 150);
 
     return () => {
       clearTimeout(timeoutId);
@@ -79,7 +79,7 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
         unsubscribeRef.current = null;
       }
     };
-  }, [docPath]); 
+  }, [currentPath]); 
 
   return { data, loading, error };
 }

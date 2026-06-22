@@ -6,9 +6,9 @@ import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '../errors';
 
 /**
- * STABILIZED COLLECTION HOOK
- * Resolves "ca9" errors by adding a 100ms settle-delay. This prevents
- * race conditions during rapid Next.js HMR cycles.
+ * STABILIZED COLLECTION HOOK v2.0
+ * Uses a unique query path key to prevent redundant re-subscriptions 
+ * which trigger the "ca9" internal assertion.
  */
 export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [data, setData] = useState<T[]>([]);
@@ -16,18 +16,28 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
   const [error, setError] = useState<Error | null>(null);
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const lastQueryRef = useRef<string | null>(null);
+  const activeKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // 1. Identity Check: Avoid redundant re-subscriptions if the query hasn't changed.
-    // This is critical for preventing internal state corruption during re-renders.
-    const queryKey = query ? JSON.stringify((query as any)._query || query.toString()) : null;
-    if (queryKey === lastQueryRef.current && queryKey !== null) {
+    // 1. Path-Identity Check: Is this the same logic node?
+    // We attempt to extract a stable key from the internal _query or string representation
+    let currentKey = 'null';
+    try {
+      if (query) {
+        currentKey = (query as any)._query?.path?.toString() || JSON.stringify((query as any)._query) || 'active';
+      }
+    } catch (e) {
+      currentKey = 'error-key';
+    }
+
+    if (currentKey === activeKeyRef.current && currentKey !== 'null') {
       return; 
     }
-    lastQueryRef.current = queryKey;
+    
+    // 2. Identity Rotation
+    activeKeyRef.current = currentKey;
 
-    // 2. Cleanup previous listener
+    // 3. Cleanup previous node
     if (unsubscribeRef.current) {
       unsubscribeRef.current();
       unsubscribeRef.current = null;
@@ -41,7 +51,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
     setLoading(true);
 
-    // 3. SETTLE-DELAY: Gives the Firestore SyncEngine time to settle during HMR
+    // 4. SETTLE-DELAY: Critical for Next.js HMR stability
     const timeoutId = setTimeout(() => {
       try {
         const unsubscribe = onSnapshot(
@@ -57,16 +67,8 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           },
           async (serverError: any) => {
             if (serverError.code === 'permission-denied') {
-              let path = 'collection';
-              try {
-                const internalQuery = (query as any)._query;
-                if (internalQuery && internalQuery.path) {
-                  path = internalQuery.path.toArray().join('/');
-                }
-              } catch (e) {}
-
               const permissionError = new FirestorePermissionError({
-                path: path,
+                path: 'collection_stream',
                 operation: 'list',
               } satisfies SecurityRuleContext);
 
@@ -80,11 +82,11 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
 
         unsubscribeRef.current = unsubscribe;
       } catch (err: any) {
-        console.error("Firestore Listener Setup Failed:", err);
+        console.warn("⚠️ Firestore Flow Interrupted:", err.message);
         setError(err);
         setLoading(false);
       }
-    }, 100); 
+    }, 150); 
 
     return () => {
       clearTimeout(timeoutId);

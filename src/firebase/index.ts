@@ -6,9 +6,9 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * HARDENED FIREBASE SINGLETON
- * Prevents "ca9" Unexpected State errors by ensuring exactly one instance 
- * of each service exists globally, surviving Next.js HMR.
+ * HARDENED FIREBASE SINGLETON v2.0
+ * Prevents "ca9" Unexpected State errors by using a global window registry 
+ * that survives Next.js HMR re-evaluations.
  */
 
 interface FirebaseInstances {
@@ -33,8 +33,7 @@ export function initializeFirebase(): {
   }
 
   try {
-    // 1. Return cached instances if they exist on the window
-    // This is more reliable than module-level variables during Next.js HMR
+    // 1. Return cached instances if they exist
     if (window.__FIREBASE_SINGLETON_INSTANCE__) {
       return window.__FIREBASE_SINGLETON_INSTANCE__;
     }
@@ -49,12 +48,12 @@ export function initializeFirebase(): {
     
     const instances: FirebaseInstances = { app, db, auth };
     
-    // 4. Cache globally
+    // 4. Cache globally to prevent SDK re-init collisions
     window.__FIREBASE_SINGLETON_INSTANCE__ = instances;
     
     return instances;
   } catch (error) {
-    console.error('Firebase Critical Init Error:', error);
+    console.error('🔥 [Ezzy Ops] Firebase Critical Init Error:', error);
     return { app: null, db: null, auth: null };
   }
 }
