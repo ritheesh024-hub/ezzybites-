@@ -90,7 +90,6 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
       setAiSummary(result.summary);
     } catch (e) {
       console.error("AI Summary Error:", e);
-      toast({ variant: "destructive", title: "AI Sync Interrupted" });
     } finally {
       setSummarizing(false);
     }
@@ -123,7 +122,7 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[500px] w-[95vw] md:w-full rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950 flex flex-col animate-in zoom-in-95 duration-300">
         <DialogHeader className="sr-only">
           <DialogTitle>{item.name}</DialogTitle>
@@ -166,7 +165,6 @@ export const ProductDetails = ({ item, isOpen, onClose, onAddToCart }: ProductDe
               {item.description}
             </p>
 
-            {/* AI SUMMARY BOX */}
             {(summarizing || aiSummary) && (
               <div className="p-5 bg-primary/5 rounded-[1.5rem] border border-dashed border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2">
                  <div className="flex items-center justify-between">

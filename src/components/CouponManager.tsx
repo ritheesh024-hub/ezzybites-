@@ -11,7 +11,7 @@ import {
   TicketPercent, Plus, Trash2, 
   Loader2, Edit2, Info, AlertCircle, 
   CheckCircle2, IndianRupee, Hash,
-  Calendar, Percent
+  Calendar, Percent, X
 } from 'lucide-react';
 import { useFirestore, useCollection } from '@/firebase';
 import { 
@@ -101,16 +101,13 @@ export const CouponManager = () => {
     try {
       // If we are editing and the code (document ID) has changed
       if (editingCoupon && editingCoupon.code !== code) {
-        // 1. Check if new code already exists
         const checkSnap = await getDoc(couponRef);
         if (checkSnap.exists()) {
           throw new Error(`The code ${code} is already in use by another node.`);
         }
-        // 2. Create new doc and delete old one
         await setDoc(couponRef, couponData);
         await deleteDoc(doc(db, 'coupons', editingCoupon.code));
       } else {
-        // Standard Add or Update (same ID)
         await setDoc(couponRef, couponData, { merge: true });
       }
 
@@ -123,12 +120,6 @@ export const CouponManager = () => {
       console.error(error);
       const message = error.message || "Operation failed.";
       toast({ variant: "destructive", title: "Sync Failed", description: message });
-      
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: couponRef.path,
-        operation: editingCoupon ? 'update' : 'create',
-        requestResourceData: couponData
-      } as any));
     } finally {
       setSubmitting(false);
     }
@@ -137,24 +128,13 @@ export const CouponManager = () => {
   const toggleCoupon = (code: string, currentState: boolean) => {
     if (!db) return;
     const couponRef = doc(db, 'coupons', code);
-    updateDoc(couponRef, { isActive: !currentState }).catch(async (error) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: couponRef.path,
-        operation: 'update',
-        requestResourceData: { isActive: !currentState }
-      } as any));
-    });
+    updateDoc(couponRef, { isActive: !currentState });
   };
 
   const handleDelete = (code: string) => {
     if (!db) return;
     const couponRef = doc(db, 'coupons', code);
-    deleteDoc(couponRef).catch(async (error) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: couponRef.path,
-        operation: 'delete'
-      } as any));
-    });
+    deleteDoc(couponRef);
   };
 
   return (
@@ -164,7 +144,7 @@ export const CouponManager = () => {
           <h2 className="text-4xl font-black font-headline uppercase tracking-tighter italic">Offer <span className="text-primary">Engine</span></h2>
           <p className="text-muted-foreground text-sm font-medium tracking-tight">Provision promotional codes and scale your growth velocity.</p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 bg-primary text-white shadow-3xl hover:scale-[1.02] transition-all">
+        <Button onClick={() => handleOpenModal()} className="h-16 px-10 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-3 bg-primary text-white shadow-3xl hover:scale-[1.02] transition-all w-full md:w-auto">
           Add Coupon +
         </Button>
       </div>
@@ -207,7 +187,7 @@ export const CouponManager = () => {
                       <p className="text-[7px] font-black uppercase opacity-40 mb-1">Threshold</p>
                       <p className="text-xs font-black">Min ₹{coupon.minOrderValue || 0}</p>
                    </div>
-                   <div className="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-xl border">
+                   <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border">
                       <p className="text-[7px] font-black uppercase opacity-40 mb-1">Redemptions</p>
                       <p className="text-xs font-black">{coupon.usageCount || 0} / {coupon.usageLimit > 0 ? coupon.usageLimit : '∞'}</p>
                    </div>
@@ -235,17 +215,20 @@ export const CouponManager = () => {
         ))}
       </div>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
         <DialogContent className="max-w-2xl rounded-[3.5rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950">
           <div className="p-10 bg-primary text-white shrink-0 relative overflow-hidden">
              <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-             <DialogHeader className="relative z-10">
-                <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter leading-none italic">
-                  {editingCoupon ? 'Modify' : 'Provision'} <span className="opacity-80">Bounty</span>
-                </DialogTitle>
-                <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-widest mt-2">
-                  {editingCoupon ? 'Syncing Profile Updates' : 'New Growth Node Entry'}
-                </DialogDescription>
+             <DialogHeader className="relative z-10 flex flex-row justify-between items-center pr-12">
+                <div>
+                  <DialogTitle className="text-4xl font-black font-headline uppercase tracking-tighter leading-none italic">
+                    {editingCoupon ? 'Modify' : 'Provision'} <span className="opacity-80">Bounty</span>
+                  </DialogTitle>
+                  <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-widest mt-2">
+                    {editingCoupon ? 'Syncing Profile Updates' : 'New Growth Node Entry'}
+                  </DialogDescription>
+                </div>
+                <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary/20 transition-all shrink-0"><X className="w-5 h-5" /></button>
              </DialogHeader>
           </div>
 
@@ -268,7 +251,7 @@ export const CouponManager = () => {
                        <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold px-6">
                          <SelectValue />
                        </SelectTrigger>
-                       <SelectContent className="rounded-2xl">
+                       <SelectContent className="rounded-xl">
                           <SelectItem value="percent" className="font-bold">Percentage (%)</SelectItem>
                           <SelectItem value="flat" className="font-bold">Flat Unit (₹)</SelectItem>
                        </SelectContent>
@@ -285,17 +268,17 @@ export const CouponManager = () => {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Min. Basket (₹)</Label>
-                      <Input type="number" value={formData.minOrderValue} onChange={e => setFormData({...formData, minOrderValue: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black px-6" />
+                      <Input type="number" value={formData.minOrderValue} onChange={e => setFormData({...formData, minOrderValue: e.target.value})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 border-none font-black px-6" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Expiration Node</Label>
-                      <Input type="date" value={formData.expiryDate} onChange={e => setFormData({...formData, expiryDate: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-bold px-6" />
+                      <Input type="date" value={formData.expiryDate} onChange={e => setFormData({...formData, expiryDate: e.target.value})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 border-none font-bold px-6" />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase opacity-40 ml-1">Usage Limit (0=∞)</Label>
-                      <Input type="number" value={formData.usageLimit} onChange={e => setFormData({...formData, usageLimit: e.target.value})} className="h-14 rounded-2xl bg-secondary/30 dark:bg-zinc-800 border-none font-black px-6" />
+                      <Input type="number" value={formData.usageLimit} onChange={e => setFormData({...formData, usageLimit: e.target.value})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 border-none font-black px-6" />
                     </div>
                   </div>
                </div>

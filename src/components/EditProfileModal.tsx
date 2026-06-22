@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Loader2, Save, Phone, Mail, User, MapPin } from 'lucide-react';
+import { Camera, Loader2, Save, Phone, Mail, User, MapPin, X } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -80,7 +80,6 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
   }, [user, db, isOpen]);
 
   const handleImageClick = async () => {
-    // Smart Trigger: Request camera/storage access before file selection
     await requestSmartly('camera');
     fileInputRef.current?.click();
   };
@@ -89,14 +88,9 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        toast({ 
-          variant: "destructive", 
-          title: "File too large", 
-          description: "Please select an image smaller than 2MB." 
-        });
+        toast({ variant: "destructive", title: "File too large", description: "Max 2MB allowed." });
         return;
       }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, photoUrl: reader.result as string }));
@@ -107,7 +101,6 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
 
   const handleSave = async () => {
     if (!user || !db) return;
-    
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.uid);
@@ -118,133 +111,72 @@ export const EditProfileModal = ({ isOpen, onClose }: EditProfileModalProps) => 
         photoUrl: formData.photoUrl,
         updatedAt: serverTimestamp()
       };
-      
       await setDoc(userRef, updateData, { merge: true });
-      
-      toast({ title: "Profile Updated", description: "Your details have been successfully saved." });
+      toast({ title: "Profile Updated" });
       onClose();
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Update Failed", 
-        description: error.message 
-      });
+      toast({ variant: "destructive", title: "Update Failed", description: error.message });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !loading && !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950 max-h-[90vh] flex flex-col">
-        <div className="p-8 bg-primary text-white shrink-0 relative overflow-hidden">
+        <div className="p-8 bg-primary text-white shrink-0 relative overflow-hidden flex justify-between items-center">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-black font-headline uppercase tracking-tighter relative z-10">
+          <DialogHeader className="relative z-10">
+            <DialogTitle className="text-3xl font-black font-headline uppercase tracking-tighter">
               Edit <span className="italic opacity-80">Profile</span>
             </DialogTitle>
-            <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-widest relative z-10">
+            <DialogDescription className="text-white/70 font-medium text-xs uppercase tracking-widest mt-1">
               Personalize your account details
             </DialogDescription>
           </DialogHeader>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all relative z-20"><X className="w-5 h-5" /></button>
         </div>
 
         {fetching ? (
           <div className="p-20 text-center space-y-4 flex-1">
             <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Connecting to Cloud...</p>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing Node...</p>
           </div>
         ) : (
           <div className="p-8 space-y-8 overflow-y-auto scrollbar-hide flex-1">
             <div className="flex flex-col items-center gap-4">
-              <div 
-                className="relative group cursor-pointer" 
-                onClick={handleImageClick}
-              >
+              <div className="relative group cursor-pointer" onClick={handleImageClick}>
                 <Avatar className="w-32 h-32 rounded-[2.5rem] border-4 border-primary/20 shadow-2xl transition-transform group-hover:scale-105">
                   <AvatarImage src={formData.photoUrl} />
-                  <AvatarFallback className="bg-primary/10 text-primary font-black text-3xl">
-                    {formData.name.slice(0, 2).toUpperCase() || 'EB'}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-primary font-black text-3xl">{(formData.name.slice(0, 2).toUpperCase() || 'EB')}</AvatarFallback>
                 </Avatar>
                 <div className="absolute bottom-0 right-0 p-2.5 bg-primary text-white rounded-2xl shadow-xl border-4 border-white dark:border-zinc-950 hover:bg-primary/90 transition-colors">
                   <Camera className="w-5 h-5" />
                 </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={handleFileChange}
-                />
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-40 text-center">Tap to change photo</p>
             </div>
 
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2">
-                  <User className="w-3 h-3" /> Full Name
-                </Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6 focus:ring-2 focus:ring-primary/20"
-                  placeholder="Your Name"
-                />
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2"><User className="w-3 h-3" /> Full Name</Label>
+                <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6" />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2">
-                    <Phone className="w-3 h-3" /> Mobile Number
-                  </Label>
-                  <Input 
-                    value={formData.phone} 
-                    onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})}
-                    className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6"
-                    placeholder="10-digit mobile"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2">
-                    <Mail className="w-3 h-3" /> Email Address
-                  </Label>
-                  <Input 
-                    value={formData.email} 
-                    disabled
-                    className="h-14 rounded-2xl border-none bg-secondary/10 dark:bg-zinc-900/50 font-medium px-6 opacity-60"
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2">
-                  <MapPin className="w-3 h-3" /> Delivery Address
-                </Label>
-                <Textarea 
-                  value={formData.address} 
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="min-h-[100px] rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-medium px-6 py-4"
-                  placeholder="Street, Building, Area..."
-                />
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2"><Phone className="w-3 h-3" /> Mobile Number</Label>
+                <Input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})} className="h-14 rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-bold px-6" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-60 flex items-center gap-2"><MapPin className="w-3 h-3" /> Address</Label>
+                <Textarea value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="min-h-[100px] rounded-2xl border-none bg-secondary/30 dark:bg-zinc-800 font-medium px-6 py-4" />
               </div>
             </div>
           </div>
         )}
 
         <DialogFooter className="p-8 bg-secondary/10 shrink-0">
-          <Button 
-            onClick={handleSave}
-            disabled={loading || fetching}
-            className="w-full h-16 rounded-[1.5rem] font-black text-lg shadow-xl shadow-primary/20 gap-3 bg-primary"
-          >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-              <>
-                <Save className="w-5 h-5" />
-                Save
-              </>
-            )}
+          <Button onClick={handleSave} disabled={loading || fetching} className="w-full h-16 rounded-[1.5rem] font-black text-lg shadow-xl bg-primary">
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Save Protocol'}
           </Button>
         </DialogFooter>
       </DialogContent>

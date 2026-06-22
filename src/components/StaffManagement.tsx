@@ -483,7 +483,7 @@ export const StaffManagement = () => {
 
 const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, submitting, isEdit, fileInputRef, handlePhotoClick, handleFileChange, getRolePermissions }: any) => {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-[95vw] rounded-[2rem] md:rounded-[2.5rem] p-0 overflow-hidden border-none shadow-4xl bg-white dark:bg-zinc-950 max-h-[90vh] flex flex-col">
         <div className="p-6 md:p-8 bg-zinc-950 text-white shrink-0 relative overflow-hidden">
            <div className="absolute inset-0 bg-primary/10 animate-pulse" />
@@ -574,7 +574,7 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
             <TabsContent value="employment" className="space-y-8 md:space-y-10 animate-in fade-in duration-500 outline-none">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
                   <div className="space-y-6 md:space-y-8">
-                     <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.4em] border-b pb-2 flex items-center gap-3"><Building className="w-3 h-3" /> Assignments</h5>
+                     <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 flex items-center gap-3"><Building className="w-3 h-3" /> Assignments</h5>
                      <div className="space-y-1.5">
                         <Label className="text-[8px] md:text-[9px] font-black uppercase opacity-40 ml-1">Registry Role</Label>
                         <Select value={formData.role} onValueChange={(v: StaffRole) => setFormData({...formData, role: v})}>
@@ -595,12 +595,12 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
                      </div>
                   </div>
                   <div className="space-y-6 md:space-y-8">
-                     <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.4em] border-b pb-2 flex items-center gap-3"><Calendar className="w-3 h-3" /> Chronicles</h5>
+                     <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 flex items-center gap-3"><Calendar className="w-3 h-3" /> Chronicles</h5>
                      <div className="space-y-1.5">
                         <Label className="text-[8px] md:text-[9px] font-black uppercase opacity-40 ml-1">Activation Epoch (Joining Date)</Label>
                         <Input type="date" value={formData.joiningDate} onChange={e => setFormData({...formData, joiningDate: e.target.value})} className="h-12 md:h-14 rounded-xl md:rounded-2xl border-none bg-secondary/30 dark:bg-zinc-900 font-bold px-5 md:px-6" />
                      </div>
-                     <div className="p-5 md:p-6 bg-secondary/20 dark:bg-zinc-900/50 rounded-2xl border border-dashed">
+                     <div className="p-5 md:p-6 bg-secondary/20 dark:bg-zinc-900/50 rounded-2xl md:rounded-3xl border border-dashed">
                         <p className="text-[7px] md:text-[8px] font-black uppercase opacity-40 mb-3 tracking-widest">Active Node Permissions</p>
                         <div className="flex flex-wrap gap-1.5 md:gap-2">
                            {getRolePermissions(formData.role).map((p: string) => (
@@ -614,7 +614,7 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
 
             <TabsContent value="account" className="space-y-8 md:space-y-10 animate-in fade-in duration-500 outline-none">
                <div className="max-w-xl space-y-6 md:space-y-8">
-                  <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.4em] border-b pb-2 flex items-center gap-3"><KeyRound className="w-3 h-3" /> Protocol Credentials</h5>
+                  <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 flex items-center gap-3"><KeyRound className="w-3 h-3" /> Protocol Credentials</h5>
                   <div className="space-y-4 md:space-y-6">
                      <div className="space-y-1.5">
                         <Label className="text-[8px] md:text-[9px] font-black uppercase opacity-40 ml-1">Identity Login (Email)</Label>
@@ -658,7 +658,7 @@ const StaffFormDialog = ({ isOpen, onClose, formData, setFormData, onSubmit, sub
 const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
   if (!staff) return null;
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl w-[95vw] rounded-[2.5rem] p-0 overflow-hidden border-none bg-white dark:bg-zinc-950 shadow-4xl flex flex-col h-[85vh]">
         <DialogHeader className="sr-only">
            <DialogTitle>Staff Profile: {staff.name}</DialogTitle>
@@ -674,8 +674,8 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
            </div>
            <div className="absolute top-6 md:top-8 right-6 md:right-10 flex gap-3">
               <Badge className={cn("px-3 md:px-4 py-1 md:py-1.5 rounded-full font-black text-[8px] md:text-[9px] uppercase tracking-widest border-none", staff.status === 'active' ? "bg-emerald-500" : "bg-rose-600")}>{staff.status}</Badge>
+              <button onClick={onClose} className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-xl"><X className="w-5 h-5" /></button>
            </div>
-           <button onClick={onClose} className="absolute top-6 left-6 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white md:hidden"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto scrollbar-hide pt-16 md:pt-20 px-6 md:px-10 pb-8 md:pb-12 space-y-8 md:space-y-12">
@@ -715,7 +715,7 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
               <div className="space-y-4 md:space-y-6">
-                 <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.4em] border-b pb-2 italic">Entity Metadata</h5>
+                 <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 italic">Entity Metadata</h5>
                  <div className="space-y-3 md:space-y-4">
                     <InfoRow label="Email Identity" val={staff.email} />
                     <InfoRow label="Mobile Node" val={staff.phone} />
@@ -724,7 +724,7 @@ const StaffProfileDialog = ({ isOpen, onClose, staff, copyText }: any) => {
                  </div>
               </div>
               <div className="space-y-4 md:space-y-6">
-                 <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.4em] border-b pb-2 italic">Resident Node</h5>
+                 <h5 className="text-[9px] md:text-[10px] font-black uppercase text-primary tracking-[0.3em] border-b pb-2 italic">Resident Node</h5>
                  <div className="bg-secondary/20 dark:bg-zinc-900/50 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-dashed">
                     <p className="text-[10px] md:text-[11px] font-medium leading-relaxed italic opacity-80">"{staff.address || 'Location data restricted or unmapped.'}"</p>
                     <p className="text-[8px] md:text-[9px] font-bold uppercase mt-4 opacity-40">{staff.city}, {staff.state} - {staff.pincode}</p>

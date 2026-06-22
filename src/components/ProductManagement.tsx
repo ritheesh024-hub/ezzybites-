@@ -16,7 +16,8 @@ import {
   Search,
   Filter,
   Layers,
-  Zap
+  Zap,
+  X
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -220,12 +221,6 @@ export const ProductManagement = () => {
                 </CardContent>
               </Card>
             ))}
-            {paginatedProducts.length === 0 && (
-              <div className="col-span-full py-24 text-center opacity-10 flex flex-col items-center gap-4">
-                 <Package className="w-12 h-12" />
-                 <p className="font-black uppercase tracking-[0.4em] text-xs">Registry Node Null</p>
-              </div>
-            )}
           </div>
 
           {totalPages > 1 && (
@@ -238,13 +233,14 @@ export const ProductManagement = () => {
         </>
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && setIsModalOpen(false)}>
         <DialogContent className="max-w-xl rounded-[2rem] p-0 overflow-hidden border-none shadow-3xl bg-white dark:bg-zinc-950">
-          <div className="p-6 bg-primary text-white shrink-0">
+          <div className="p-6 bg-primary text-white shrink-0 flex justify-between items-center">
              <DialogHeader>
                 <DialogTitle className="text-2xl font-black font-headline uppercase tracking-tighter italic leading-none">{editingItem ? 'Edit Protocol' : 'New Entry'}</DialogTitle>
                 <DialogDescription className="sr-only">Add or edit product inventory details.</DialogDescription>
              </DialogHeader>
+             <button onClick={() => setIsModalOpen(false)} className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all"><X className="w-4 h-4" /></button>
           </div>
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto scrollbar-hide">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
