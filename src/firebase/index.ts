@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -6,8 +7,8 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * HARDENED FIREBASE SINGLETON v6.0
- * Includes Offline Persistence Registry.
+ * HARDENED FIREBASE SINGLETON v6.1
+ * Includes Offline Persistence Registry and API Key Integrity Guard.
  */
 
 interface FirebaseInstances {
@@ -36,21 +37,25 @@ export function initializeFirebase(): {
       return window.__EZZY_FIREBASE_STATION__;
     }
 
+    // Integrity Check: Ensure API key is present before initialization
+    if (!firebaseConfig.apiKey) {
+      console.error('🔥 [Ezzy Ops] Firebase Handshake Aborted: Missing API Key in configuration.');
+      return { app: null, db: null, auth: null };
+    }
+
     const apps = getApps();
     const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
     
     // Enable Offline Persistence for a seamless PWA experience
-    if (typeof window !== 'undefined') {
-      enableMultiTabIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn('⚠️ [Ezzy PWA] Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-          console.warn('⚠️ [Ezzy PWA] Browser does not support persistence.');
-        }
-      });
-    }
+    enableMultiTabIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('⚠️ [Ezzy PWA] Multiple tabs open, persistence can only be enabled in one tab at a time.');
+      } else if (err.code === 'unimplemented') {
+        console.warn('⚠️ [Ezzy PWA] Browser does not support persistence.');
+      }
+    });
 
     const instances = { app, db, auth };
     window.__EZZY_FIREBASE_STATION__ = instances;

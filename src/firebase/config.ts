@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -6,9 +7,13 @@
  */
 
 const getEnv = (key: string) => {
+  if (typeof process === 'undefined' || !process.env) return '';
   const val = process.env[key];
   if (!val && typeof window !== 'undefined') {
-    console.warn(`⚠️ [Ezzy Ops] Environment Node Missing: ${key}`);
+    // Only warn in development and when window is available to avoid SSR noise
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`⚠️ [Ezzy Ops] Environment Node Missing: ${key}. Ensure your .env file is populated.`);
+    }
   }
   return val || '';
 };
