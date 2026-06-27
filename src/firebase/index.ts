@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
@@ -7,7 +6,7 @@ import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
- * HARDENED FIREBASE SINGLETON v6.1
+ * HARDENED FIREBASE SINGLETON v6.2
  * Includes Offline Persistence Registry and API Key Integrity Guard.
  */
 
@@ -38,8 +37,8 @@ export function initializeFirebase(): {
     }
 
     // Integrity Check: Ensure API key is present before initialization
-    if (!firebaseConfig.apiKey) {
-      console.error('🔥 [Ezzy Ops] Firebase Handshake Aborted: Missing API Key in configuration.');
+    if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_FIREBASE_API_KEY') {
+      console.warn('⚠️ [Ezzy Ops] Firebase Handshake Pending: Credentials not found in environment.');
       return { app: null, db: null, auth: null };
     }
 
