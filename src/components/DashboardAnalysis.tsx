@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -169,13 +170,13 @@ export const DashboardAnalysis = ({ orders = [], products = [] }: DashboardAnaly
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.chartData}>
                 <defs>
-                  <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorVal" x1="0" x1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
                     <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} axisLine={false} tickLine={false} tick={{fontSize: 7, fontWeight: 900}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 7, fontWeight: 900}} />
                 <YAxis hide />
                 <Tooltip contentStyle={{borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
                 <Area type="monotone" dataKey="val" stroke="#f97316" strokeWidth={2} fill="url(#colorVal)" />
