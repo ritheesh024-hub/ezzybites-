@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useAuth, useFirestore } from '@/firebase';
 import { AdminSection } from '@/components/AdminSection';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt } from 'lucide-react';
+import { ShoppingBag, LogOut, Loader2, ShieldCheck, UserCog, ChefHat, Receipt, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
@@ -33,6 +33,7 @@ function DashboardContent() {
   const [assignedRole, setAssignedRole] = useState<StaffRole | null>(null);
   const [activeView, setActiveView] = useState<StaffRole | null>(null);
   const [checkingRole, setCheckingRole] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   
   const isCheckingRef = useRef(false);
@@ -53,22 +54,16 @@ function DashboardContent() {
         return;
       }
 
-      // INSTANT SWITCH PROTOCOL: If already identified as Master Admin, update view without Firestore call
-      if (assignedRole === 'admin' && user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
-        const view = ['admin', 'cashier', 'kitchen'].includes(requestedView) ? requestedView : 'admin';
-        if (activeView !== view) {
-          setActiveView(view);
-        }
+      if (!db || !auth) {
+        setErrorState("Firebase Registry Unreachable");
         setCheckingRole(false);
         return;
       }
 
-      if (!db || !auth) return;
-
       try {
         isCheckingRef.current = true;
         
-        // 1. Master Admin Validation
+        // 1. Master Admin Validation (Exclusive Access)
         if (user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
           setAssignedRole('admin');
           const view = ['admin', 'cashier', 'kitchen'].includes(requestedView) ? requestedView : 'admin';
@@ -94,7 +89,12 @@ function DashboardContent() {
           }
 
           setAssignedRole(role);
-          setActiveView(role); // Staff nodes are locked to their assignment
+          // Staff nodes are locked to their assignment; Admin view requires explicit role
+          const view = role === 'admin' 
+            ? (['admin', 'cashier', 'kitchen'].includes(requestedView) ? requestedView : 'admin')
+            : role;
+            
+          setActiveView(view);
           setCheckingRole(false);
         } else {
           toast({ variant: "destructive", title: "Access Restricted", description: "Identity not found in registry." });
@@ -103,6 +103,7 @@ function DashboardContent() {
         }
       } catch (e: any) {
         console.warn("Hub role sync interrupted:", e);
+        setErrorState("Sync Interrupted: " + (e.message || "Unknown error"));
         setCheckingRole(false);
       } finally {
         isCheckingRef.current = false;
@@ -110,7 +111,7 @@ function DashboardContent() {
     }
 
     checkRole();
-  }, [user, userLoading, db, router, auth, requestedView, mounted, assignedRole, activeView]);
+  }, [user, userLoading, db, router, auth, requestedView, mounted]);
 
   const handleLogout = async () => {
     if (auth) {
@@ -125,7 +126,7 @@ function DashboardContent() {
     router.push(`/admin/dashboard?view=${role}`);
   };
 
-  if (!mounted || userLoading || checkingRole || !activeView) {
+  if (!mounted || userLoading || checkingRole) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center">
         <motion.div 
@@ -141,6 +142,19 @@ function DashboardContent() {
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Establishing Identity...</p>
           </div>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (errorState || !activeView) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-6 text-center">
+        <div className="w-16 h-16 bg-rose-50 dark:bg-rose-900/10 rounded-2xl flex items-center justify-center text-rose-600 mb-6">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black uppercase tracking-tighter mb-2">Registry Offline</h2>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest max-w-xs mb-8">{errorState || "Unable to determine staff role."}</p>
+        <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full h-12 px-8 border-2 font-black uppercase text-[10px]">Retry Handshake</Button>
       </div>
     );
   }
