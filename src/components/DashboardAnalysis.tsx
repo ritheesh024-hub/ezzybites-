@@ -5,18 +5,16 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
-  IndianRupee, Zap, Loader2, Users, Target, Activity, PieChart, Star,
-  TrendingUp, TrendingDown, ShoppingBag, ChevronRight, ArrowUpRight, ArrowDownRight,
-  Filter, CalendarIcon
+  IndianRupee, Zap, Loader2, Star,
+  TrendingUp, TrendingDown, ShoppingBag
 } from 'lucide-react';
 import {
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
-  PieChart as RePieChart, Pie, Cell as ReCell
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { 
-  format, isWithinInterval, subDays, startOfDay, endOfDay, startOfWeek, 
-  startOfMonth, subMonths, eachDayOfInterval, eachHourOfInterval, isSameDay, isSameHour, endOfMonth
+  isWithinInterval, subDays, startOfDay, endOfDay, startOfWeek, 
+  startOfMonth, subMonths, endOfMonth
 } from 'date-fns';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, limit, query } from 'firebase/firestore';
